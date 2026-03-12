@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Character } from '@workspace/api-client-react';
+import { SkillSlot } from '@/lib/weapon-skills';
 
 export interface TacticalUnit {
   id: string;
@@ -27,16 +28,18 @@ export interface TacticalUnit {
   hasActed: boolean;
 }
 
+export type ActionMode = 'idle' | 'move' | 'skill_1' | 'skill_2' | 'skill_3' | 'skill_4' | 'skill_5';
+
 export interface GameState {
   phase: 'home' | 'squad-select' | 'battle' | 'result';
   allCharacters: Character[];
-  playerSquad: string[]; // selected character IDs
+  playerSquad: string[];
   grid: (TacticalUnit | null)[][];
   units: TacticalUnit[];
-  turnOrder: string[]; // unit IDs in turn order
+  turnOrder: string[];
   currentUnitId: string | null;
   selectedTile: { x: number; y: number } | null;
-  actionMode: 'idle' | 'move' | 'attack' | 'ability';
+  actionMode: ActionMode;
   reachableTiles: { x: number; y: number }[];
   attackableTiles: { x: number; y: number }[];
   combatLog: { id: number, text: string, type: 'damage' | 'heal' | 'buff' | 'debuff' | 'info' }[];
@@ -45,6 +48,9 @@ export interface GameState {
   totalWins: number;
   totalLosses: number;
   characterUsed: string;
+  equippedSkills: Record<string, Record<SkillSlot, string>>;
+  skillCooldowns: Record<string, Record<string, number>>;
+  usedUltimates: Record<string, boolean>;
 
   setPhase: (phase: GameState['phase']) => void;
   setAllCharacters: (characters: Character[]) => void;
@@ -55,11 +61,15 @@ export interface GameState {
   setCurrentUnitId: (id: string | null) => void;
   setTurnOrder: (order: string[]) => void;
   setSelectedTile: (tile: { x: number; y: number } | null) => void;
-  setActionMode: (mode: GameState['actionMode']) => void;
+  setActionMode: (mode: ActionMode) => void;
   setReachableTiles: (tiles: { x: number; y: number }[]) => void;
   setAttackableTiles: (tiles: { x: number; y: number }[]) => void;
   addLog: (text: string, type?: 'damage' | 'heal' | 'buff' | 'debuff' | 'info') => void;
   setResult: (result: 'win' | 'loss' | 'fled', score: number, characterUsed: string) => void;
+  setEquippedSkills: (unitId: string, loadout: Record<SkillSlot, string>) => void;
+  setSkillCooldown: (unitId: string, skillId: string, turns: number) => void;
+  tickSkillCooldowns: (unitId: string) => void;
+  markUltimateUsed: (unitId: string) => void;
   reset: () => void;
 }
 
@@ -83,6 +93,9 @@ export const useGameStore = create<GameState>((set) => ({
   totalWins: 0,
   totalLosses: 0,
   characterUsed: '',
+  equippedSkills: {},
+  skillCooldowns: {},
+  usedUltimates: {},
 
   setPhase: (phase) => set({ phase }),
   setAllCharacters: (characters) => set({ allCharacters: characters }),
@@ -98,7 +111,9 @@ export const useGameStore = create<GameState>((set) => ({
     actionMode: 'idle',
     selectedTile: null,
     reachableTiles: [],
-    attackableTiles: []
+    attackableTiles: [],
+    skillCooldowns: {},
+    usedUltimates: {},
   }),
 
   setUnits: (units) => set({ units }),
@@ -119,7 +134,31 @@ export const useGameStore = create<GameState>((set) => ({
   })),
   
   setResult: (result, score, characterUsed) => set({ battleResult: result, score, characterUsed, phase: 'result' }),
-  
+
+  setEquippedSkills: (unitId, loadout) => set((state) => ({
+    equippedSkills: { ...state.equippedSkills, [unitId]: loadout }
+  })),
+
+  setSkillCooldown: (unitId, skillId, turns) => set((state) => ({
+    skillCooldowns: {
+      ...state.skillCooldowns,
+      [unitId]: { ...(state.skillCooldowns[unitId] || {}), [skillId]: turns }
+    }
+  })),
+
+  tickSkillCooldowns: (unitId) => set((state) => {
+    const current = state.skillCooldowns[unitId] || {};
+    const ticked: Record<string, number> = {};
+    for (const [skillId, cd] of Object.entries(current)) {
+      if (cd > 0) ticked[skillId] = cd - 1;
+    }
+    return { skillCooldowns: { ...state.skillCooldowns, [unitId]: ticked } };
+  }),
+
+  markUltimateUsed: (unitId) => set((state) => ({
+    usedUltimates: { ...state.usedUltimates, [unitId]: true }
+  })),
+
   reset: () => set({ 
     playerSquad: [], 
     units: [], 
@@ -127,6 +166,9 @@ export const useGameStore = create<GameState>((set) => ({
     score: 0, 
     characterUsed: '',
     phase: 'squad-select',
-    combatLog: []
+    combatLog: [],
+    equippedSkills: {},
+    skillCooldowns: {},
+    usedUltimates: {},
   })
 }));

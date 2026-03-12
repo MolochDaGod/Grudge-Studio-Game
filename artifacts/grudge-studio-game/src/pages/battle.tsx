@@ -4,11 +4,15 @@ import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { HealthBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Sword, Zap, Skull, Move, FastForward } from "lucide-react";
+import { Skull, Move, FastForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BattleScene } from "@/components/three/BattleScene";
 import { AnimState } from "@/components/three/CharacterModel";
 import { CHARACTER_LORE } from "@/lib/lore";
+import {
+  getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
+  SkillSlot, Skill
+} from "@/lib/weapon-skills";
 
 const GRID_W = 8;
 const GRID_H = 6;
@@ -19,7 +23,9 @@ export default function Battle() {
     units, updateUnit, currentUnitId, setCurrentUnitId, 
     turnOrder, setTurnOrder, actionMode, setActionMode,
     reachableTiles, setReachableTiles, attackableTiles, setAttackableTiles,
-    combatLog, addLog, setResult, phase
+    combatLog, addLog, setResult, phase,
+    equippedSkills, skillCooldowns, usedUltimates,
+    setSkillCooldown, tickSkillCooldowns, markUltimateUsed,
   } = useGameStore();
 
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
@@ -165,11 +171,12 @@ export default function Battle() {
       hasActed: true,
       specialAbilityCooldown: Math.max(0, unit.specialAbilityCooldown - 1)
     });
+    tickSkillCooldowns(unit.id);
     setCurrentUnitId(null);
     setActionMode('idle');
     setReachableTiles([]);
     setAttackableTiles([]);
-  }, [currentUnitId, units, updateUnit, setCurrentUnitId, setActionMode, setReachableTiles, setAttackableTiles]);
+  }, [currentUnitId, units, updateUnit, setCurrentUnitId, setActionMode, setReachableTiles, setAttackableTiles, tickSkillCooldowns]);
 
   // Actions
   const handleTileClick = (x: number, y: number) => {
@@ -184,26 +191,71 @@ export default function Battle() {
         setActionMode('idle');
         setReachableTiles([]);
         addLog(`${unit.name} moves to [${x}, ${y}].`);
-        
-        // Animation
         setAnimStates(prev => ({...prev, [unit.id]: 'moving'}));
         setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 500);
       }
-    } else if (actionMode === 'attack' && !unit.hasActed) {
+    } else if (actionMode.startsWith('skill_') && !unit.hasActed) {
+      const slotNum = parseInt(actionMode.split('_')[1]) as SkillSlot;
+      const loadout = equippedSkills[unit.id] || getDefaultSkillLoadout(unit.characterId);
+      const skillId = loadout[slotNum];
+      if (!skillId) return;
+      const skill = getSkillById(skillId);
+      if (!skill) return;
+
       const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
-      if (isAttackable) {
-        const target = getUnitAt(x, y);
-        if (target && target.hp > 0 && target.isPlayerControlled !== unit.isPlayerControlled) {
-          executeAttack(unit, target);
-        }
+      if (!isAttackable) return;
+
+      const target = getUnitAt(x, y);
+      if (target && target.hp > 0 && target.isPlayerControlled !== unit.isPlayerControlled) {
+        executeSkill(unit, skill, target);
       }
-    } else if (actionMode === 'ability' && !unit.hasActed) {
-       const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
-       if (isAttackable || (x === unit.position.x && y === unit.position.y)) {
-         const target = getUnitAt(x, y) || unit;
-         executeAbility(unit, target);
-       }
     }
+  };
+
+  const executeSkill = (attacker: TacticalUnit, skill: Skill, target: TacticalUnit) => {
+    const isCrit = Math.random() < 0.12;
+    const penFactor = 1 + (skill.armorPen || 0) / 100;
+    const baseDmg = skill.dmgMultiplier !== undefined
+      ? Math.max(1, Math.floor((attacker.attack * skill.dmgMultiplier - target.defense * (1 / penFactor)) + Math.floor(Math.random() * 6) - 2))
+      : 0;
+    const finalDmg = isCrit ? Math.floor(baseDmg * 1.8) : baseDmg;
+
+    updateUnit(attacker.id, { hasActed: true });
+    setActionMode('idle');
+    setAttackableTiles([]);
+
+    // Track cooldown
+    if (skill.cooldown > 0 && skill.cooldown !== 999) {
+      setSkillCooldown(attacker.id, skill.id, skill.cooldown);
+    }
+    if (skill.cooldown === 999) {
+      markUltimateUsed(attacker.id);
+      setSkillCooldown(attacker.id, skill.id, 999);
+    }
+
+    // Animations
+    setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
+
+    if (finalDmg > 0) {
+      updateUnit(target.id, { hp: Math.max(0, target.hp - finalDmg) });
+      const suffix = isCrit ? ' (CRITICAL!)' : '';
+      const aoeNote = skill.aoe ? ' [AoE]' : '';
+      addLog(`${attacker.name} uses ${skill.name}${aoeNote} on ${target.name} for ${finalDmg} dmg!${suffix}`, 'damage');
+
+      setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
+      setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
+
+      if (target.hp - finalDmg <= 0) {
+        addLog(`${target.name} is defeated!`, 'debuff');
+        setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
+      }
+    }
+
+    setTimeout(() => {
+      const u = useGameStore.getState().units.find(u => u.id === attacker.id);
+      if (u?.hasMoved && u?.hasActed) endTurn();
+    }, 600);
   };
 
   const executeAttack = (attacker: TacticalUnit, target: TacticalUnit) => {
@@ -214,13 +266,10 @@ export default function Battle() {
     updateUnit(attacker.id, { hasActed: true });
     setActionMode('idle');
     setAttackableTiles([]);
-    
     addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}`, 'damage');
     
-    // Animations
     setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
     setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
-
     setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
     setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
 
@@ -238,12 +287,9 @@ export default function Battle() {
   const executeAbility = (attacker: TacticalUnit, target: TacticalUnit) => {
     const ability = attacker.specialAbility;
     let damage = 0;
-    
     updateUnit(attacker.id, { hasActed: true, specialAbilityCooldown: 3 });
     setActionMode('idle');
     setAttackableTiles([]);
-
-    // Animations
     setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
     setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
 
@@ -255,16 +301,13 @@ export default function Battle() {
        damage = calculateDamage(attacker, target) + Math.floor(attacker.attack * 0.5);
        updateUnit(target.id, { hp: Math.max(0, target.hp - damage) });
        addLog(`${attacker.name} uses ${ability} on ${target.name} for ${damage} damage!`, 'damage');
-       
        setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
        setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
-
        if (target.hp - damage <= 0) {
          addLog(`${target.name} is defeated!`, 'debuff');
          setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
        }
     }
-
     setTimeout(() => {
       const u = useGameStore.getState().units.find(u => u.id === attacker.id);
       if (u?.hasMoved && u?.hasActed) endTurn();
@@ -459,63 +502,117 @@ export default function Battle() {
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="p-4 border-b border-white/10 grid grid-cols-2 gap-2 shrink-0">
+        {/* Action Bar */}
+        <div className="p-3 border-b border-white/10 shrink-0">
           {activeUnit?.isPlayerControlled && activeUnit.id === currentUnitId ? (
             <>
-              <FantasyButton 
-                onClick={() => {
-                  setActionMode(actionMode === 'move' ? 'idle' : 'move');
-                  setAttackableTiles([]);
-                  if (actionMode !== 'move') setReachableTiles(getReachableTiles(activeUnit.position, activeUnit.move));
-                  else setReachableTiles([]);
-                }}
-                disabled={activeUnit.hasMoved}
-                variant={actionMode === 'move' ? 'default' : 'secondary'}
-                className="w-full text-xs"
-              >
-                <Move className="w-3 h-3 mr-2" /> {activeUnit.hasMoved ? 'Moved' : 'Move'}
-              </FantasyButton>
-              
-              <FantasyButton 
-                onClick={() => {
-                  setActionMode(actionMode === 'attack' ? 'idle' : 'attack');
-                  setReachableTiles([]);
-                  if (actionMode !== 'attack') setAttackableTiles(getAttackableTiles(activeUnit.position, activeUnit.range));
-                  else setAttackableTiles([]);
-                }}
-                disabled={activeUnit.hasActed}
-                variant={actionMode === 'attack' ? 'default' : 'secondary'}
-                className="w-full text-xs"
-              >
-                <Sword className="w-3 h-3 mr-2" /> {activeUnit.hasActed ? 'Attacked' : 'Attack'}
-              </FantasyButton>
+              {/* Move Button */}
+              <div className="mb-2">
+                <FantasyButton 
+                  onClick={() => {
+                    const isMove = actionMode === 'move';
+                    setActionMode(isMove ? 'idle' : 'move');
+                    setAttackableTiles([]);
+                    setReachableTiles(isMove ? [] : getReachableTiles(activeUnit.position, activeUnit.move));
+                  }}
+                  disabled={activeUnit.hasMoved}
+                  variant={actionMode === 'move' ? 'default' : 'secondary'}
+                  className="w-full text-xs h-8"
+                >
+                  <Move className="w-3 h-3 mr-2" />
+                  {activeUnit.hasMoved ? 'Moved' : 'Move'}
+                </FantasyButton>
+              </div>
 
-              <FantasyButton 
-                onClick={() => {
-                  setActionMode(actionMode === 'ability' ? 'idle' : 'ability');
-                  setReachableTiles([]);
-                  if (actionMode !== 'ability') setAttackableTiles(getAttackableTiles(activeUnit.position, activeUnit.range + 1));
-                  else setAttackableTiles([]);
-                }}
-                disabled={activeUnit.hasActed || activeUnit.specialAbilityCooldown > 0}
-                variant={actionMode === 'ability' ? 'default' : 'secondary'}
-                className="w-full text-xs col-span-2 relative group"
-              >
-                <Zap className="w-3 h-3 mr-2 text-accent" /> 
-                {activeUnit.specialAbilityCooldown > 0 ? `Ability (CD: ${activeUnit.specialAbilityCooldown})` : activeUnit.specialAbility}
-              </FantasyButton>
+              {/* 5-Slot Skill Action Bar */}
+              <div className="flex gap-1 mb-2">
+                {([1, 2, 3, 4, 5] as SkillSlot[]).map(slot => {
+                  const slotKey = `skill_${slot}` as const;
+                  const loadout = equippedSkills[activeUnit.id] || getDefaultSkillLoadout(activeUnit.characterId);
+                  const skillId = loadout[slot];
+                  const skill = skillId ? getSkillById(skillId) : undefined;
+                  const cdMap = skillCooldowns[activeUnit.id] || {};
+                  const cd = skillId ? (cdMap[skillId] || 0) : 0;
+                  const isUltimateUsed = skillId ? (cdMap[skillId] === 999) : false;
+                  const isOnCooldown = cd > 0;
+                  const isActive = actionMode === slotKey;
+                  const slotStyle = SLOT_LABELS[slot];
+                  const isDisabled = activeUnit.hasActed || isOnCooldown || isUltimateUsed;
 
+                  return (
+                    <button
+                      key={slot}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (isDisabled) return;
+                        if (isActive) {
+                          setActionMode('idle');
+                          setAttackableTiles([]);
+                        } else {
+                          setActionMode(slotKey);
+                          setReachableTiles([]);
+                          setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range));
+                        }
+                      }}
+                      title={skill ? `${skill.name}\n${skill.description}\n${skill.stats.join(' · ')}` : `Slot ${slot}`}
+                      className={cn(
+                        "relative flex-1 flex flex-col items-center justify-center rounded border transition-all duration-150 py-1.5 px-1",
+                        "min-h-[56px] overflow-hidden",
+                        isActive
+                          ? "border-primary bg-primary/20 shadow-[0_0_8px_rgba(212,160,23,0.4)]"
+                          : isDisabled
+                            ? "border-white/5 bg-black/30 opacity-50 cursor-not-allowed"
+                            : "border-white/15 bg-black/40 hover:border-white/30 hover:bg-white/5 cursor-pointer"
+                      )}
+                    >
+                      {/* Slot Roman numeral */}
+                      <div
+                        className="absolute top-0.5 left-1 text-[8px] font-display font-bold"
+                        style={{ color: slotStyle.color }}
+                      >
+                        {slotStyle.roman}
+                      </div>
+
+                      {/* Skill icon + name */}
+                      {skill ? (
+                        <>
+                          <div className="text-lg leading-none mt-1">{skill.icon}</div>
+                          <div className="text-[8px] text-center leading-tight text-white/70 mt-0.5 px-0.5 truncate w-full text-center">
+                            {skill.name}
+                          </div>
+                          {isOnCooldown && !isUltimateUsed && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-bold text-orange-400">
+                              {cd}
+                            </div>
+                          )}
+                          {isUltimateUsed && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-[9px] text-muted-foreground">
+                              Used
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-white/20 text-xs font-display mt-1">{slotStyle.roman}</div>
+                      )}
+
+                      {/* Hotkey number */}
+                      <div className="absolute bottom-0.5 right-1 text-[8px] text-white/25 font-mono">{slot}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* End Turn */}
               <FantasyButton 
                 onClick={endTurn}
                 variant="ghost"
-                className="w-full text-xs col-span-2 border border-white/10"
+                className="w-full text-xs h-8 border border-white/10"
               >
                 End Turn / Wait
               </FantasyButton>
             </>
           ) : (
-            <div className="col-span-2 py-4 text-center text-muted-foreground animate-pulse flex items-center justify-center gap-2">
+            <div className="py-4 text-center text-muted-foreground animate-pulse flex items-center justify-center gap-2">
               <Skull className="w-4 h-4" /> Enemy is thinking...
             </div>
           )}

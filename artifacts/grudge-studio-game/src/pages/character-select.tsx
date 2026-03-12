@@ -83,7 +83,7 @@ export default function CharacterSelect() {
     const enemyUnits = enemyChars.map((c, i) => createTacticalUnit(c, false, i));
 
     initBattle([...playerUnits, ...enemyUnits]);
-    setLocation("/battle");
+    setLocation("/skill-tree");
   };
 
   if (isLoading) {
