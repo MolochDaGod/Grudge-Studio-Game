@@ -7,22 +7,23 @@ import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { Trophy, Skull, Loader2, RefreshCw, ListOrdered } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function Result() {
   const [, setLocation] = useLocation();
-  const { lastResult, score, playerCharacter, reset } = useGameStore();
+  const { battleResult, score, characterUsed, reset } = useGameStore();
   const { mutate: submitScore, isPending } = useSubmitScore();
   const { toast } = useToast();
   
   const [playerName, setPlayerName] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  if (!lastResult || !playerCharacter) {
+  if (!battleResult) {
     setLocation("/");
     return null;
   }
 
-  const isWin = lastResult === 'win';
+  const isWin = battleResult === 'win';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ export default function Result() {
           score: score,
           wins: isWin ? 1 : 0,
           losses: isWin ? 0 : 1,
-          characterUsed: playerCharacter.name
+          characterUsed: characterUsed || "Unknown"
         }
       },
       {
@@ -77,23 +78,23 @@ export default function Result() {
         </div>
 
         <h1 className={cn("text-5xl font-display font-black uppercase tracking-widest mb-2", isWin ? "text-glow" : "text-glow-red")}>
-          {isWin ? "Victory" : lastResult === 'fled' ? "Cowardice" : "Defeat"}
+          {isWin ? "Victory" : battleResult === 'fled' ? "Cowardice" : "Defeat"}
         </h1>
         
         <p className="text-muted-foreground font-serif italic mb-8">
-          {isWin ? "The enemy falls before your might." : lastResult === 'fled' ? "You live to fight another day." : "Your soul joins the cursed fallen."}
+          {isWin ? "The enemy falls before your might." : battleResult === 'fled' ? "You live to fight another day." : "Your soul joins the cursed fallen."}
         </p>
 
         <div className="bg-black/50 border border-white/10 p-6 rounded-sm mb-8">
           <p className="text-sm text-muted-foreground uppercase tracking-widest mb-1">Final Score</p>
           <p className="text-4xl font-mono text-white">{score.toLocaleString()}</p>
-          <p className="text-xs text-primary mt-2">Character: {playerCharacter.name}</p>
+          <p className="text-xs text-primary mt-2">Squad Leader: {characterUsed}</p>
         </div>
 
-        {!submitted && lastResult !== 'fled' ? (
+        {!submitted && battleResult !== 'fled' ? (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 mb-8">
             <Input 
-              placeholder="Enter your name, Champion" 
+              placeholder="Enter your name, Commander" 
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               className="bg-black/40 border-border text-center text-lg h-12 focus-visible:ring-primary"

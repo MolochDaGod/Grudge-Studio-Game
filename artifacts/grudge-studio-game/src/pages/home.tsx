@@ -26,7 +26,7 @@ export default function Home() {
           className="mb-12 flex flex-col items-center"
         >
           <img 
-            src={`${import.meta.env.BASE_URL}images/logo.png`} 
+            src={`${import.meta.env.BASE_URL}images/logo-nobg.png`} 
             alt="Grudge Studio Logo" 
             className="w-48 h-48 md:w-64 md:h-64 object-contain mb-[-40px] drop-shadow-2xl animate-float"
           />

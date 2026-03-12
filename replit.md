@@ -16,6 +16,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+### `artifacts/grudge-studio-game` — Grudge Studio: Realm of Grudges (FFT-style Tactical RPG)
+- **React + Vite** web app at path `/`
+- **Theme:** Dark fantasy, gold/amber accents, Cinzel Decorative font
+- **Game type:** Final Fantasy Tactics–style tactical grid RPG
+- **Grid:** 8×6 tile battlefield with BFS movement and CT-based turn order
+- **Characters:** All 11 Grudge Studio characters from the Character Index lore doc (Frost Orc Berserker, Magma Orc Destroyer, Brother Maltheus, Canal Lurker, Warlord Garnok, Elven Archer, Orcish Warrior, Human Knight, Human Barbarian, Skeleton Warrior, Dwarven Forge Master)
+- **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`
+- **Logo:** `public/images/logo-nobg.png` (background removed)
+- **API endpoints:** `/api/game/characters`, `/api/game/leaderboard`, `POST /api/game/scores`
+
 ## Structure
 
 ```text
