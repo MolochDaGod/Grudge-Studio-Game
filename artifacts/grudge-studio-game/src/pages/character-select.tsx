@@ -6,6 +6,7 @@ import { FantasyButton } from "@/components/ui/fantasy-button";
 import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { motion } from "framer-motion";
 import { Loader2, ArrowLeft, Skull, Sword } from "lucide-react";
+import { CHARACTER_LORE } from "@/lib/lore";
 
 export default function CharacterSelect() {
   const [, setLocation] = useLocation();
@@ -106,34 +107,40 @@ export default function CharacterSelect() {
   }
 
   return (
-    <div className="min-h-screen pb-32 pt-8 px-4 md:px-8 container mx-auto">
+    <div 
+      className="min-h-screen pb-32 bg-background bg-cover bg-center bg-fixed bg-no-repeat"
+      style={{ backgroundImage: `url('${import.meta.env.BASE_URL}images/select-bg.png')` }}
+    >
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-0" />
       
-      <div className="flex items-center justify-between mb-12">
-        <FantasyButton variant="ghost" onClick={() => setLocation("/")} className="gap-2">
-          <ArrowLeft className="w-4 h-4" /> Return
-        </FantasyButton>
-        <div className="text-center">
-          <h1 className="text-3xl md:text-5xl font-display font-bold text-glow uppercase">Assemble Your Squad</h1>
-          <p className="text-muted-foreground mt-2 font-serif italic">Select 3 warriors to enter the tactical arena.</p>
+      <div className="relative z-10 pt-8 px-4 md:px-8 container mx-auto">
+        <div className="flex items-center justify-between mb-12">
+          <FantasyButton variant="ghost" onClick={() => setLocation("/")} className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> Return
+          </FantasyButton>
+          <div className="text-center">
+            <h1 className="text-3xl md:text-5xl font-display font-bold text-glow uppercase">Assemble Your Squad</h1>
+            <p className="text-muted-foreground mt-2 font-serif italic drop-shadow-md text-white/80">Select 3 warriors to enter the tactical arena.</p>
+          </div>
+          <div className="w-[100px]" />
         </div>
-        <div className="w-[100px]" />
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {characters.map((char, i) => (
-          <motion.div
-            key={char.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
-            <CharacterCard 
-              character={char}
-              selected={selectedIds.includes(char.id)}
-              onClick={() => toggleSelection(char.id)}
-            />
-          </motion.div>
-        ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {characters.map((char, i) => (
+            <motion.div
+              key={char.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+            >
+              <CharacterCard 
+                character={char}
+                selected={selectedIds.includes(char.id)}
+                onClick={() => toggleSelection(char.id)}
+              />
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       <motion.div 

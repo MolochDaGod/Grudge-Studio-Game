@@ -4,8 +4,11 @@ import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { HealthBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Sword, Zap, Skull, Move, FastForward, Navigation } from "lucide-react";
+import { Shield, Sword, Zap, Skull, Move, FastForward } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BattleScene } from "@/components/three/BattleScene";
+import { AnimState } from "@/components/three/CharacterModel";
+import { CHARACTER_LORE } from "@/lib/lore";
 
 const GRID_W = 8;
 const GRID_H = 6;
@@ -19,7 +22,7 @@ export default function Battle() {
     combatLog, addLog, setResult, phase
   } = useGameStore();
 
-  const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
+  const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
 
   // Route protection
   useEffect(() => {
@@ -181,6 +184,10 @@ export default function Battle() {
         setActionMode('idle');
         setReachableTiles([]);
         addLog(`${unit.name} moves to [${x}, ${y}].`);
+        
+        // Animation
+        setAnimStates(prev => ({...prev, [unit.id]: 'moving'}));
+        setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 500);
       }
     } else if (actionMode === 'attack' && !unit.hasActed) {
       const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
@@ -209,14 +216,23 @@ export default function Battle() {
     setAttackableTiles([]);
     
     addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}`, 'damage');
+    
+    // Animations
+    setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
+
+    setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
+
     if (target.hp - damage <= 0) {
       addLog(`${target.name} is defeated!`, 'debuff');
+      setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
     }
     
     setTimeout(() => {
       const u = useGameStore.getState().units.find(u => u.id === attacker.id);
       if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 500);
+    }, 600);
   };
 
   const executeAbility = (attacker: TacticalUnit, target: TacticalUnit) => {
@@ -227,6 +243,10 @@ export default function Battle() {
     setActionMode('idle');
     setAttackableTiles([]);
 
+    // Animations
+    setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
+
     if (ability.includes("Heal") || ability === "Death's Embrace") {
        const heal = Math.floor(attacker.attack * 1.5);
        updateUnit(attacker.id, { hp: Math.min(attacker.maxHp, attacker.hp + heal) });
@@ -235,13 +255,20 @@ export default function Battle() {
        damage = calculateDamage(attacker, target) + Math.floor(attacker.attack * 0.5);
        updateUnit(target.id, { hp: Math.max(0, target.hp - damage) });
        addLog(`${attacker.name} uses ${ability} on ${target.name} for ${damage} damage!`, 'damage');
-       if (target.hp - damage <= 0) addLog(`${target.name} is defeated!`, 'debuff');
+       
+       setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
+       setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
+
+       if (target.hp - damage <= 0) {
+         addLog(`${target.name} is defeated!`, 'debuff');
+         setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
+       }
     }
 
     setTimeout(() => {
       const u = useGameStore.getState().units.find(u => u.id === attacker.id);
       if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 500);
+    }, 600);
   };
 
   // AI Logic
@@ -271,6 +298,8 @@ export default function Battle() {
           if (bestMove) {
             updateUnit(unit.id, { position: bestMove, hasMoved: true });
             addLog(`${unit.name} moves.`);
+            setAnimStates(prev => ({...prev, [unit.id]: 'moving'}));
+            setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 500);
           } else {
             updateUnit(unit.id, { hasMoved: true });
           }
@@ -294,7 +323,7 @@ export default function Battle() {
       } else {
         endTurn();
       }
-    }, 800);
+    }, 1200); // Slower AI to allow animations to be seen
 
     return () => clearTimeout(aiTimer);
   }, [currentUnitId, units, endTurn, updateUnit, addLog]);
@@ -309,89 +338,32 @@ export default function Battle() {
   if (phase !== 'battle') return null;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden font-sans">
-      {/* Dynamic Background */}
-      <div 
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20 mix-blend-luminosity"
-        style={{ backgroundImage: `url('${import.meta.env.BASE_URL}images/battle-bg.png')` }}
-      />
+    <div className="flex h-screen overflow-hidden bg-background font-sans">
       
-      {/* Left Area: The Grid */}
-      <div className="relative z-10 flex-grow flex flex-col items-center justify-center p-4 min-h-[60vh] overflow-x-auto">
-        <div className="mb-4 text-center">
-          <h2 className="font-display text-2xl text-primary text-glow uppercase tracking-widest">Tactical Arena</h2>
-          <p className="text-sm text-muted-foreground">Destroy the enemy forces to claim victory</p>
+      {/* 3D Canvas Area */}
+      <div className="flex-1 relative min-h-0 flex flex-col">
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 z-10 p-4 pointer-events-none text-center">
+          <h2 className="font-display text-3xl text-primary text-glow uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Tactical Arena</h2>
+          <p className="text-sm text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Destroy the enemy forces to claim victory</p>
         </div>
 
-        {/* The Grid Board */}
-        <div 
-          className="relative bg-black/60 p-4 rounded-xl border border-border shadow-2xl backdrop-blur-md"
-          style={{
-             display: 'grid',
-             gridTemplateColumns: `repeat(${GRID_W}, 72px)`,
-             gridTemplateRows: `repeat(${GRID_H}, 72px)`,
-             gap: '2px',
-          }}
-        >
-          {Array.from({ length: GRID_W * GRID_H }).map((_, i) => {
-            const x = i % GRID_W;
-            const y = Math.floor(i / GRID_W);
-            const isDark = (x + y) % 2 === 0;
-            
-            const isReachable = reachableTiles.some(t => t.x === x && t.y === y);
-            const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
-            const unitOnTile = getUnitAt(x, y);
-
-            return (
-              <div 
-                key={i}
-                onMouseEnter={() => setHoveredTile({x, y})}
-                onMouseLeave={() => setHoveredTile(null)}
-                onClick={() => handleTileClick(x, y)}
-                className={cn(
-                  "relative w-[72px] h-[72px] flex items-center justify-center transition-colors cursor-pointer border",
-                  isDark ? "bg-[#1a1a2e] border-[#16213e]" : "bg-[#16213e] border-[#1a1a2e]",
-                  isReachable && "after:absolute after:inset-0 after:bg-blue-500/30 after:border-2 after:border-blue-400 after:animate-pulse z-10",
-                  isAttackable && "after:absolute after:inset-0 after:bg-red-500/40 after:border-2 after:border-red-500 after:animate-pulse z-10",
-                  hoveredTile?.x === x && hoveredTile?.y === y && !isReachable && !isAttackable && "after:absolute after:inset-0 after:bg-white/10 z-20"
-                )}
-              >
-                {/* Unit Token */}
-                <AnimatePresence>
-                  {unitOnTile && unitOnTile.hp > 0 && (
-                    <motion.div
-                      layoutId={unitOnTile.id}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-xl shadow-[0_4px_10px_rgba(0,0,0,0.5)] border-2 z-30 transition-transform",
-                        unitOnTile.isPlayerControlled ? "bg-primary text-black border-yellow-300" : "bg-destructive text-white border-red-300",
-                        currentUnitId === unitOnTile.id && "ring-4 ring-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.8)] z-40"
-                      )}
-                    >
-                      {unitOnTile.name.charAt(0)}
-                      {/* Mini HP bar */}
-                      <div className="absolute -bottom-2 w-10 h-1 bg-black rounded-full overflow-hidden">
-                        <div 
-                          className={cn("h-full", unitOnTile.isPlayerControlled ? "bg-green-500" : "bg-red-500")}
-                          style={{ width: `${(unitOnTile.hp / unitOnTile.maxHp) * 100}%` }}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </div>
+        <BattleScene 
+          units={units}
+          reachableTiles={reachableTiles}
+          attackableTiles={attackableTiles}
+          currentUnitId={currentUnitId}
+          actionMode={actionMode}
+          onTileClick={handleTileClick}
+          animStates={animStates}
+        />
       </div>
 
       {/* Right Area: Sidebar */}
-      <div className="relative z-10 w-full md:w-[400px] border-l border-border bg-black/80 backdrop-blur-xl flex flex-col h-[40vh] md:h-screen shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+      <div className="relative z-10 w-full md:w-[320px] lg:w-[380px] border-l border-border bg-black/90 flex flex-col h-screen shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
         
         {/* Turn Order */}
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-white/10 shrink-0">
           <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
             <FastForward className="w-3 h-3" /> Turn Order
           </h3>
@@ -406,12 +378,26 @@ export default function Battle() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     className={cn(
-                      "flex-shrink-0 w-10 h-10 rounded border flex items-center justify-center font-display text-sm",
-                      u.isPlayerControlled ? "bg-primary/20 border-primary text-primary" : "bg-destructive/20 border-destructive text-destructive",
-                      currentUnitId === u.id && "ring-2 ring-white bg-opacity-50"
+                      "flex-shrink-0 w-12 h-12 rounded border overflow-hidden relative",
+                      u.isPlayerControlled ? "border-primary" : "border-destructive",
+                      currentUnitId === u.id && "ring-2 ring-white scale-110 z-10"
                     )}
                   >
-                    {u.name.charAt(0)}
+                    <img 
+                      src={`${import.meta.env.BASE_URL}images/chars/${u.characterId}.png`} 
+                      alt={u.name} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiNmZmYiPj88L3RleHQ+PC9zdmc+';
+                      }}
+                    />
+                    {/* HP fraction overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black">
+                      <div 
+                        className={cn("h-full", u.isPlayerControlled ? "bg-green-500" : "bg-red-500")}
+                        style={{ width: `${(u.hp / u.maxHp) * 100}%` }}
+                      />
+                    </div>
                   </motion.div>
                 );
               })}
@@ -420,37 +406,51 @@ export default function Battle() {
         </div>
 
         {/* Current Unit Info */}
-        <div className="p-6 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent">
+        <div className="p-4 border-b border-white/10 shrink-0 bg-gradient-to-b from-white/5 to-transparent relative overflow-hidden">
           {activeUnit ? (
-            <div className="animate-in fade-in">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h2 className={cn("font-display text-2xl font-bold", activeUnit.isPlayerControlled ? "text-primary text-glow" : "text-destructive text-glow-red")}>
+            <div className="animate-in fade-in relative z-10">
+              <div className="flex gap-4 mb-3">
+                <div className="w-20 h-20 rounded border border-white/20 overflow-hidden shrink-0 bg-black/50">
+                  <img 
+                    src={`${import.meta.env.BASE_URL}images/chars/${activeUnit.characterId}.png`} 
+                    alt={activeUnit.name} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiNmZmYiPj88L3RleHQ+PC9zdmc+';
+                    }}
+                  />
+                </div>
+                <div className="flex-1">
+                  <h2 className={cn("font-display text-lg font-bold leading-tight uppercase", activeUnit.isPlayerControlled ? "text-primary text-glow" : "text-destructive text-glow-red")}>
                     {activeUnit.name}
                   </h2>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest">{activeUnit.role}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-mono font-bold">CT: <span className={activeUnit.ct >= 100 ? "text-green-400" : "text-white"}>{Math.min(100, activeUnit.ct)}</span></div>
+                  <div className="text-xs font-mono font-bold mt-1">CT: <span className={activeUnit.ct >= 100 ? "text-green-400" : "text-white"}>{Math.min(100, activeUnit.ct)}</span></div>
                 </div>
               </div>
               
               <HealthBar current={activeUnit.hp} max={activeUnit.maxHp} />
               
-              <div className="grid grid-cols-4 gap-2 mt-4 text-xs font-mono text-center">
+              <div className="grid grid-cols-4 gap-2 mt-3 text-xs font-mono text-center">
                 <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block">ATK</span>{activeUnit.attack}
+                  <span className="text-muted-foreground block text-[10px]">ATK</span>{activeUnit.attack}
                 </div>
                 <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block">DEF</span>{activeUnit.defense}
+                  <span className="text-muted-foreground block text-[10px]">DEF</span>{activeUnit.defense}
                 </div>
                 <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block">MOV</span>{activeUnit.move}
+                  <span className="text-muted-foreground block text-[10px]">MOV</span>{activeUnit.move}
                 </div>
                 <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block">RNG</span>{activeUnit.range}
+                  <span className="text-muted-foreground block text-[10px]">RNG</span>{activeUnit.range}
                 </div>
               </div>
+
+              {CHARACTER_LORE[activeUnit.characterId] && (
+                 <div className="mt-3 text-[10px] text-muted-foreground italic border-l-2 border-primary/30 pl-2 line-clamp-2">
+                    {CHARACTER_LORE[activeUnit.characterId].quote}
+                 </div>
+              )}
             </div>
           ) : (
             <div className="h-32 flex items-center justify-center text-muted-foreground italic">
@@ -460,7 +460,7 @@ export default function Battle() {
         </div>
 
         {/* Action Buttons */}
-        <div className="p-4 border-b border-white/10 grid grid-cols-2 gap-2">
+        <div className="p-4 border-b border-white/10 grid grid-cols-2 gap-2 shrink-0">
           {activeUnit?.isPlayerControlled && activeUnit.id === currentUnitId ? (
             <>
               <FantasyButton 

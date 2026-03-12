@@ -38,6 +38,25 @@ export default function Home() {
           </p>
         </motion.div>
 
+        {/* Character Portrait Teaser */}
+        <motion.div
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           transition={{ delay: 0.8, duration: 1 }}
+           className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3 opacity-30 mix-blend-screen pointer-events-none"
+        >
+           <img src={`${import.meta.env.BASE_URL}images/chars/magma-orc-destroyer.png`} alt="Magma Orc Destroyer" className="h-[80vh] object-contain drop-shadow-[0_0_50px_rgba(255,0,0,0.5)]" />
+        </motion.div>
+
+        <motion.div
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           transition={{ delay: 0.8, duration: 1 }}
+           className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/3 opacity-30 mix-blend-screen pointer-events-none"
+        >
+           <img src={`${import.meta.env.BASE_URL}images/chars/elven-archer.png`} alt="Elven Archer" className="h-[80vh] object-contain drop-shadow-[0_0_50px_rgba(0,255,0,0.5)]" />
+        </motion.div>
+
         {/* Action Buttons */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
@@ -65,7 +84,7 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 max-w-4xl text-left"
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 max-w-4xl text-left relative z-20"
         >
           <div className="bg-glass p-6 rounded-sm">
             <ShieldQuestion className="w-8 h-8 text-primary mb-4" />

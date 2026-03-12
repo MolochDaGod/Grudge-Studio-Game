@@ -24,8 +24,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Game type:** Final Fantasy Tactics–style tactical grid RPG
 - **Grid:** 8×6 tile battlefield with BFS movement and CT-based turn order
 - **Characters:** All 11 Grudge Studio characters from the Character Index lore doc (Frost Orc Berserker, Magma Orc Destroyer, Brother Maltheus, Canal Lurker, Warlord Garnok, Elven Archer, Orcish Warrior, Human Knight, Human Barbarian, Skeleton Warrior, Dwarven Forge Master)
-- **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`
+- **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`, `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
 - **Logo:** `public/images/logo-nobg.png` (background removed)
+- **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 11 characters, 3:4 ratio)
+- **Battle terrain:** `public/images/battle-terrain.png`, `public/images/select-bg.png`
+- **Three.js 3D Battle Scene:** `src/components/three/` — BattleScene.tsx (R3F Canvas with camera/lights/stars/fog), TileGrid.tsx (8×6 elevated 3D tile grid with highlight), CharacterModel.tsx (procedural animated character meshes)
+- **Lore data:** `src/lib/lore.ts` — CHARACTER_LORE with title, quote, backstory for all 11 characters
+- **Animation system:** CharacterModel.tsx supports idle (floating), moving (step bounce), attacking (forward lunge), hurt (shake + flash), dead (fall + fade) via useFrame
+- **Camera:** Perspective, fov=50, isometric-style angle with OrbitControls (limited polar range)
+- **Tile elevation map:** Pre-defined terrain variation in TileGrid.tsx
 - **API endpoints:** `/api/game/characters`, `/api/game/leaderboard`, `POST /api/game/scores`
 
 ## Structure
