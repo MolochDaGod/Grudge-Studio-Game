@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Grudge Studio Fantasy RPG API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: game
+    description: Game operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /game/characters:
+    get:
+      operationId: getCharacters
+      tags: [game]
+      summary: Get all characters
+      description: Returns all available characters in the game
+      responses:
+        "200":
+          description: List of characters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Character"
+  /game/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [game]
+      summary: Get leaderboard
+      description: Returns top players
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+  /game/scores:
+    post:
+      operationId: submitScore
+      tags: [game]
+      summary: Submit a score
+      description: Submit a player score after a game session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitScoreRequest"
+      responses:
+        "201":
+          description: Score submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardEntry"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +83,95 @@ components:
           type: string
       required:
         - status
-
+    Character:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        race:
+          type: string
+        role:
+          type: string
+        lore:
+          type: string
+        hp:
+          type: integer
+        attack:
+          type: integer
+        defense:
+          type: integer
+        speed:
+          type: integer
+        specialAbility:
+          type: string
+        specialAbilityDescription:
+          type: string
+        weakness:
+          type: string
+        faction:
+          type: string
+          enum: [hero, villain, neutral]
+        rarity:
+          type: string
+          enum: [common, uncommon, rare, legendary]
+      required:
+        - id
+        - name
+        - race
+        - role
+        - lore
+        - hp
+        - attack
+        - defense
+        - speed
+        - specialAbility
+        - specialAbilityDescription
+        - weakness
+        - faction
+        - rarity
+    LeaderboardEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        playerName:
+          type: string
+        score:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        characterUsed:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - playerName
+        - score
+        - wins
+        - losses
+        - characterUsed
+        - createdAt
+    SubmitScoreRequest:
+      type: object
+      properties:
+        playerName:
+          type: string
+        score:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        characterUsed:
+          type: string
+      required:
+        - playerName
+        - score
+        - wins
+        - losses
+        - characterUsed

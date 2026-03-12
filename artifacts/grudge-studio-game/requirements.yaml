@@ -1,0 +1,20 @@
+packages:
+  "framer-motion": "For immersive, dramatic page transitions and combat impact animations"
+  "zustand": "For clean global state management of game sessions and final scores"
+  "clsx": "For dynamic class name merging in complex game UI components"
+  "tailwind-merge": "For reliable tailwind class overriding"
+
+images:
+  - path: "artifacts/grudge-studio-game/public/images/hero-bg.png"
+    description: "Dark, gritty fantasy landscape, medieval ruins, fiery volcanic ember atmosphere, deep shadows, cinematic lighting, conceptual art style"
+    aspect_ratio: "16:9"
+  - path: "artifacts/grudge-studio-game/public/images/battle-bg.png"
+    description: "Dark misty arena, scattered ancient weapons, glowing arcane runes on the ground, ominous dungeon atmosphere, cinematic lighting"
+    aspect_ratio: "16:9"
+  - path: "artifacts/grudge-studio-game/public/images/logo.png"
+    description: "Epic metallic fantasy RPG logo emblem, golden and dark iron colors, sharp gothic edges, transparent background"
+    aspect_ratio: "16:9"
+
+notes:
+  - "Assuming @workspace/api-client-react exports useGetCharacters, useGetLeaderboard, and useSubmitScore based on standard Orval generation"
+  - "API paths are prefixed with /api"
