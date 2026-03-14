@@ -26,8 +26,19 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Characters:** All 11 Grudge Studio characters from the Character Index lore doc (Frost Orc Berserker, Magma Orc Destroyer, Brother Maltheus, Canal Lurker, Warlord Garnok, Elven Archer, Orcish Warrior, Human Knight, Human Barbarian, Skeleton Warrior, Dwarven Forge Master)
 - **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`, `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
 - **Logo:** `public/images/logo-nobg.png` (background removed)
-- **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 11 characters, 3:4 ratio)
+- **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 11 characters, 3:4 ratio); `-nobg.png` variants with background removed for overlay use (home page side decorations)
 - **Battle terrain:** `public/images/battle-terrain.png`, `public/images/select-bg.png`
+- **Craftpix 3D Map Assets:** 94 GLB files converted from FBX (assimp) in `public/models/maps/`:
+  - `ruins/` — 28 files: `ruin_1.glb` through `ruin_21.glb` (scattered graveyard/tombstone pieces)
+  - `medieval/` — 26 files: fortress_full, 5 tower types, 2 wall types, 2 gate types, barracks, ammourry, stairs, bridge, brazier, fire_bell, firewoods, sentry_hurt, props_full, fense_fyull
+  - `elven/` — 20 files: fortress_full, 5 tower types, watchtoer_1, 2 wall types, 2 gate types, kazarm_1, arsenal_1, stairs, bridge, fense, brazier_1, fire_bell_1, andiron1, props_full
+  - `orc/` — 20 files: fortress_full, 5 tower types, 2 wall types, 2 gate types, barracks, arsenal, shed_01, stairs, bridge, fense_full, brazier_01, alarm_drum, firewoods, props_full
+  - **Scale:** ~0.009–0.012 for all craftpix models (FBX in cm converted 1:1 to GLB; scale applied in game for cm→meters)
+- **Level system:** `src/lib/levels.ts` — 4 LevelDef entries:
+  1. **Graveyard of the Fallen** (80×80): 590+ obstacles, 50 ruin props using all 21 ruin types in graveyard clusters
+  2. **Orc Stronghold** (100×100): 1645+ obstacles, 50+ orc props — 2-ring fortress (outer OW=8, inner IW=28), keep, barracks, arsenal, shed, towers, gates
+  3. **Elven Citadel** (120×120): 1800+ obstacles, 50+ elven props — 2-ring fortress + watchtowers + bridges + kazarm + arsenal
+  4. **Iron Bastion** (140×140): 3000+ obstacles, 60+ medieval props — 3-ring fortress (outer/middle/inner walls) + keeps + barracks + ammourry + stairs
 - **Three.js 3D Battle Scene:** `src/components/three/` — BattleScene.tsx (R3F Canvas with camera/lights/stars/fog), TileGrid.tsx (8×6 elevated 3D tile grid with highlight), CharacterModel.tsx (GLTF animated character with weapons via bone attachment)
 - **3D Models:** `public/models/characters/` (orc/elf/human/barbarian/undead/dwarf/rogue/mage .glb from Quaternius packs), `public/models/weapons/` (greataxe/fire_staff/dark_staff/daggers/greatsword/bow/sword/shield/rusted_sword/war_hammer .glb)
 - **Character config map:** `src/lib/character-model-map.ts` — per-character GLB model ID, scale [x,y,z], named material color overrides (sRGB hex), weapon attachment params, attack animation type

@@ -43,18 +43,18 @@ export default function Home() {
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
            transition={{ delay: 0.8, duration: 1 }}
-           className="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3 opacity-30 mix-blend-screen pointer-events-none"
+           className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 opacity-70 mix-blend-screen pointer-events-none"
         >
-           <img src={`${import.meta.env.BASE_URL}images/chars/magma-orc-destroyer.png`} alt="Magma Orc Destroyer" className="h-[80vh] object-contain drop-shadow-[0_0_50px_rgba(255,0,0,0.5)]" />
+           <img src={`${import.meta.env.BASE_URL}images/chars/magma-orc-destroyer-nobg.png`} alt="Magma Orc Destroyer" className="h-[80vh] object-contain brightness-200 contrast-125 drop-shadow-[0_0_80px_rgba(255,80,0,0.9)]" />
         </motion.div>
 
         <motion.div
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
            transition={{ delay: 0.8, duration: 1 }}
-           className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/3 opacity-30 mix-blend-screen pointer-events-none"
+           className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 opacity-70 mix-blend-screen pointer-events-none"
         >
-           <img src={`${import.meta.env.BASE_URL}images/chars/elven-archer.png`} alt="Elven Archer" className="h-[80vh] object-contain drop-shadow-[0_0_50px_rgba(0,255,0,0.5)]" />
+           <img src={`${import.meta.env.BASE_URL}images/chars/elven-archer-nobg.png`} alt="Elven Archer" className="h-[80vh] object-contain brightness-200 contrast-125 drop-shadow-[0_0_80px_rgba(80,255,120,0.9)]" />
         </motion.div>
 
         {/* Action Buttons */}
