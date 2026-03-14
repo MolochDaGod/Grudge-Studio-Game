@@ -53,5 +53,35 @@ export const CHARACTER_LORE: Record<string, { title: string; quote: string; back
     title: 'Master of Mountain Iron',
     quote: '"Every dent in my armor is a reminder that whatever made that dent is now dead."',
     backstory: 'He has spent ninety years at the forge and still considers himself a journeyman. His masterwork — the armor he wears — took eleven years, three failed attempts, and one extremely angry fire elemental. He entered the surface wars not for politics but because a client needed protecting and the debt of craft is sacred. He will finish his invoice when the fighting stops.'
+  },
+  'orc-blood-guard': {
+    title: 'Hammer of the Bloodtusk',
+    quote: '"You see a wall. I see something to walk through."',
+    backstory: 'He survived the Bloodtusk Warband\'s initiation rites at age sixteen — three days in a pit, no weapons, four other candidates. He was the only one who came out. For twenty years since, he has been the first orc through every door, the last one standing in every rout. His war hammer was custom-forged from the bones of a stone giant\'s knuckle. He swings it like an afterthought.'
+  },
+  'saltbone-corsair': {
+    title: 'The Pirate Who Wouldn\'t Sink',
+    quote: '"The sea owed me. It couldn\'t collect."',
+    backstory: 'His ship went down in the Demon Straits during a squall that shouldn\'t have existed. His crew drowned. He drowned too — but the blade he\'d stolen from a sea witch\'s wreck refused to go under. He woke on a reef three weeks later, bleached clean to the bone, still clutching the knife. He has no memory of who he was, only what he was — a corsair, still sailing, still sharp.'
+  },
+  'grave-shade': {
+    title: 'Grief Wearing Blades',
+    quote: '"I remember the verdict. I remember the hood. I remember that it was wrong."',
+    backstory: 'She was the kingdom\'s finest spy, serving faithfully for fifteen years. When the king needed a scapegoat for his own treason, she was the obvious choice — too skilled to defend herself without proving her methods, too loyal to flee. They buried her in a sealed vault with no name on the stone. Whatever came back through the cracks in that vault was done with loyalty entirely.'
+  },
+  'orc-warlock': {
+    title: 'The Spell-Thief in Iron',
+    quote: '"Your wizards spent thirty years learning that. I learned it in thirty minutes, at knifepoint."',
+    backstory: 'Most orcs who want power take it with their hands. He took it from a human archmage\'s library after the battle of Ashford Ridge, spending three months sleeping in the ruined tower, reading by firelight, breaking the spells\' locks one by one. He could have stayed a scholar. He strapped on his greatsword instead. The combination is, by most accounts, catastrophically unfair.'
+  },
+  'hollow-zealot': {
+    title: 'The God-Abandoned',
+    quote: '"My prayers were answered. Just not the way I expected."',
+    backstory: 'For one hundred years he served without doubt. Then the silence began — first the minor miracles stopped, then the warmth in the prayers, then his own heartbeat. He did not fall to darkness; darkness filled the space that faith had evacuated. He still wears the robes, still speaks the liturgy, but what flows through him now corrodes anything holy it touches. He considers this a theological development.'
+  },
+  'iron-pilgrim': {
+    title: 'The Monastery\'s Last Export',
+    quote: '"I left because the walls were too small. The world turned out to be the right size."',
+    backstory: 'He was a novice who kept breaking things he wasn\'t supposed to break — first equipment, then opponents, then the patience of every senior monk who tried to teach him restraint. They gave him traveling clothes and their blessing and strongly suggested the door. He has since wandered through four kingdoms, seven wars, and approximately two hundred fights he didn\'t start. He carries a greataxe now because it was either that or stop winning.'
   }
 };

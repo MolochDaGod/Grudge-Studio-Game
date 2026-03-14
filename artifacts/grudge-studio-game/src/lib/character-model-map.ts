@@ -52,7 +52,8 @@ export const DEFAULT_ANIM_MAP: Record<AnimState, string> = {
 };
 
 export interface CharacterConfig {
-  modelId: 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage';
+  modelId: 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage'
+         | 'warrior_rpg' | 'ranger_rpg' | 'rogue_rpg' | 'wizard_rpg' | 'cleric_rpg' | 'monk_rpg';
   scale: [number, number, number];
   materials: Record<string, MaterialOverride>;
   primaryWeapon: WeaponConfig;
@@ -294,6 +295,145 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
+
+  // ── RPG Characters Nov 2020 pack ──────────────────────────────────────────
+
+  'orc-blood-guard': {
+    modelId: 'warrior_rpg',
+    scale: [0.72 * 1.3, 0.72 * 1.05, 0.72 * 1.3],
+    materials: {
+      Warrior_Texture:      { color: '#28500e', roughness: 0.75 },
+      Warrior_Sword_Texture: { color: '#b08840', metalness: 0.6, roughness: 0.4 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
+    animMap: {
+      idle2:   'Idle_Weapon',
+      attack1: 'Sword_Attack',
+      attack2: 'Sword_Attack2',
+      attack3: 'Punch',
+      attack4: 'Roll',
+      cast:    'Idle_Weapon',
+      stunned: 'RecieveHit',
+      block:   'Idle_Weapon',
+      victory: 'Idle_Attacking',
+      special1:'Run_Weapon',
+      special2:'Roll',
+    },
+  },
+
+  'saltbone-corsair': {
+    modelId: 'ranger_rpg',
+    scale: [0.72 * 0.95, 0.72 * 1.05, 0.72 * 0.95],
+    materials: {
+      Ranger_Texture: { color: '#c8c0a8', emissive: '#220044', emissiveIntensity: 0.25, roughness: 0.85 },
+      Bow_Texture:    { color: '#c0b8a0', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.daggers,
+    animMap: {
+      idle2:   'Idle_Weapon',
+      attack1: 'Bow_Shoot',
+      attack2: 'Punch',
+      attack3: 'Roll',
+      attack4: 'Roll',
+      cast:    'Bow_Draw',
+      stunned: 'RecieveHit',
+      block:   'Idle_Weapon',
+      victory: 'Idle_Attacking',
+      special1:'Run_Holding',
+      special2:'Roll',
+    },
+  },
+
+  'grave-shade': {
+    modelId: 'rogue_rpg',
+    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
+    materials: {
+      Rogue_Texture:        { color: '#706860', emissive: '#6600aa', emissiveIntensity: 0.4, roughness: 0.9 },
+      Rogue_Dagger_Texture: { color: '#909090', metalness: 0.4, roughness: 0.6 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    animMap: {
+      idle2:   'Attacking_Idle',
+      attack1: 'Dagger_Attack',
+      attack2: 'Dagger_Attack2',
+      attack3: 'Roll',
+      attack4: 'Roll',
+      cast:    'Attacking_Idle',
+      stunned: 'RecieveHit',
+      block:   'Attacking_Idle',
+      victory: 'Attacking_Idle',
+      special1:'Run',
+      special2:'Roll',
+    },
+  },
+
+  'orc-warlock': {
+    modelId: 'wizard_rpg',
+    scale: [0.72 * 1.2, 0.72 * 1.08, 0.72 * 1.2],
+    materials: {
+      Wizard_Texture:      { color: '#1c3806', emissive: '#ff4400', emissiveIntensity: 0.12, roughness: 0.8 },
+      Wizard_Staff_Texture: { color: '#a06020', metalness: 0.5, roughness: 0.5 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: {
+      idle2:   'Idle_Weapon',
+      attack1: 'Staff_Attack',
+      attack2: 'Punch',
+      attack3: 'Roll',
+      attack4: 'Roll',
+      cast:    'Spell1',
+      stunned: 'RecieveHit',
+      block:   'Idle_Weapon',
+      victory: 'Idle_Attacking',
+      special1:'Spell2',
+      special2:'Roll',
+    },
+  },
+
+  'hollow-zealot': {
+    modelId: 'cleric_rpg',
+    scale: [0.72 * 1.0, 0.72 * 1.05, 0.72 * 1.0],
+    materials: {
+      Cleric_Texture:      { color: '#cbb870', emissive: '#aa8800', emissiveIntensity: 0.18, roughness: 0.85 },
+      Cleric_Staff_Texture: { color: '#a8a070', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.rusted_sword,
+    animMap: {
+      idle2:   'Idle_Weapon',
+      attack1: 'Staff_Attack',
+      attack2: 'Punch',
+      attack3: 'Punch',
+      attack4: 'RecieveHit_Attacking',
+      cast:    'Spell1',
+      stunned: 'RecieveHit',
+      block:   'Idle_Weapon',
+      victory: 'RecieveHit_Attacking',
+      special1:'Run',
+      special2:'Punch',
+    },
+  },
+
+  'iron-pilgrim': {
+    modelId: 'monk_rpg',
+    scale: [0.72 * 1.05, 0.72 * 1.05, 0.72 * 1.05],
+    materials: {
+      Monk_Texture: { color: '#8a6040', roughness: 0.7 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    animMap: {
+      idle2:   'Idle_Attacking',
+      attack1: 'Attack',
+      attack2: 'Attack2',
+      attack3: 'Roll',
+      attack4: 'Roll',
+      cast:    'Attack',
+      stunned: 'RecieveHit',
+      block:   'Idle_Attacking',
+      victory: 'Idle_Attacking',
+      special1:'Run',
+      special2:'Roll',
+    },
+  },
 };
 
 export function getCharacterConfig(characterId: string): CharacterConfig {
@@ -313,6 +453,12 @@ export const ALL_MODEL_URLS = [
   '/models/characters/dwarf.glb',
   '/models/characters/rogue.glb',
   '/models/characters/mage.glb',
+  '/models/characters/warrior_rpg.glb',
+  '/models/characters/ranger_rpg.glb',
+  '/models/characters/rogue_rpg.glb',
+  '/models/characters/wizard_rpg.glb',
+  '/models/characters/cleric_rpg.glb',
+  '/models/characters/monk_rpg.glb',
   '/models/weapons/greataxe.glb',
   '/models/weapons/fire_staff.glb',
   '/models/weapons/dark_staff.glb',

@@ -23,10 +23,11 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Theme:** Dark fantasy, gold/amber accents, Cinzel Decorative font
 - **Game type:** Final Fantasy Tactics–style tactical grid RPG
 - **Grid:** Dynamic level-driven grids (80×80 to 140×140) with InstancedMesh tile rendering, BFS obstacle-aware movement, and CT-based turn order
-- **Characters:** All 11 Grudge Studio characters from the Character Index lore doc (Frost Orc Berserker, Magma Orc Destroyer, Brother Maltheus, Canal Lurker, Warlord Garnok, Elven Archer, Orcish Warrior, Human Knight, Human Barbarian, Skeleton Warrior, Dwarven Forge Master)
+- **Characters:** 17 total — 11 original Grudge Studio characters + 6 from RPG Characters Nov 2020 pack (Orc Blood Guard, Saltbone Corsair, Grave Shade, Orc Warlock, Hollow Zealot, Iron Pilgrim)
+- **RPG Pack Characters (6):** Converted from Quaternius RPG Characters Nov 2020 (FBX/glTF → GLB via assimp/gltf-pipeline); models: `warrior_rpg`, `ranger_rpg`, `rogue_rpg`, `wizard_rpg`, `cleric_rpg`, `monk_rpg`; each skinned with material color tints for faction (orc green, undead bone-pale, etc.); each holds different weapons from pack defaults (modular); all unique animation states mapped to pack-specific anim names
 - **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`, `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
 - **Logo:** `public/images/logo-nobg.png` (background removed)
-- **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 11 characters, 3:4 ratio); `-nobg.png` variants with background removed for overlay use (home page side decorations)
+- **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 17 characters, 3:4 ratio); `-nobg.png` variants with background removed for overlay use (home page side decorations — original 11 only)
 - **Battle terrain:** `public/images/battle-terrain.png`, `public/images/select-bg.png`
 - **Craftpix 3D Map Assets:** 94 GLB files converted from FBX (assimp) in `public/models/maps/`:
   - `ruins/` — 28 files: `ruin_1.glb` through `ruin_21.glb` (scattered graveyard/tombstone pieces)

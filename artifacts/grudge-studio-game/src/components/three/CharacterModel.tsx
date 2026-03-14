@@ -383,7 +383,10 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
 }
 
 // Preload all assets
-const modelIds = ['orc', 'elf', 'human', 'barbarian', 'undead', 'dwarf', 'rogue', 'mage'];
+const modelIds = [
+  'orc', 'elf', 'human', 'barbarian', 'undead', 'dwarf', 'rogue', 'mage',
+  'warrior_rpg', 'ranger_rpg', 'rogue_rpg', 'wizard_rpg', 'cleric_rpg', 'monk_rpg',
+];
 const weapIds  = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
                   'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
 modelIds.forEach((id) => useGLTF.preload(C(id)));
