@@ -2,7 +2,7 @@ import { useLocation } from 'wouter';
 import { useGameStore } from '@/store/use-game-store';
 import { FantasyButton } from '@/components/ui/fantasy-button';
 import { LEVELS } from '@/lib/levels';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const THEME_IMAGES: Record<string, string> = {
@@ -105,13 +105,22 @@ export default function LevelSelect() {
                       <span>Grid: {level.gridW}×{level.gridH}</span>
                       <span>Obstacles: {level.obstacleTiles.size}</span>
                     </div>
-                    <FantasyButton
-                      variant="primary"
-                      className="text-sm px-6"
-                      onClick={(e) => { e.stopPropagation(); handleSelectLevel(level.id); }}
-                    >
-                      Deploy
-                    </FantasyButton>
+                    <div className="flex items-center gap-2">
+                      <FantasyButton
+                        variant="ghost"
+                        className="text-xs px-3 gap-1 border border-white/20"
+                        onClick={(e) => { e.stopPropagation(); setLocation(`/map-editor/${level.id}`); }}
+                      >
+                        <Pencil className="w-3 h-3" /> Edit
+                      </FantasyButton>
+                      <FantasyButton
+                        variant="primary"
+                        className="text-sm px-6"
+                        onClick={(e) => { e.stopPropagation(); handleSelectLevel(level.id); }}
+                      >
+                        Deploy
+                      </FantasyButton>
+                    </div>
                   </div>
                 </div>
               </div>

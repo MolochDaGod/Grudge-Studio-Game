@@ -702,3 +702,17 @@ export const LEVELS: LevelDef[] = [
 export function getLevelById(id: string): LevelDef {
   return LEVELS.find(l => l.id === id) ?? LEVELS[0];
 }
+
+/** Returns the level merged with any saved map-editor data from localStorage */
+export function getLevelWithEdits(id: string): LevelDef {
+  const base = getLevelById(id);
+  try {
+    const raw = localStorage.getItem(`grudge-editor-${id}`);
+    if (!raw) return base;
+    const data = JSON.parse(raw) as { props?: PropPlacement[] };
+    if (!data.props) return base;
+    return { ...base, props: data.props };
+  } catch {
+    return base;
+  }
+}

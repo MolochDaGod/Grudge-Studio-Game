@@ -11,6 +11,7 @@ import Battle from "@/pages/battle";
 import Result from "@/pages/result";
 import Leaderboard from "@/pages/leaderboard";
 import Admin from "@/pages/admin";
+import MapEditor from "@/pages/map-editor";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/result" component={Result} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/map-editor/:levelId" component={MapEditor} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -13,7 +13,7 @@ import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
   SkillSlot, Skill
 } from "@/lib/weapon-skills";
-import { LEVELS, LevelDef, hasLineOfSight } from "@/lib/levels";
+import { getLevelWithEdits, LevelDef, hasLineOfSight } from "@/lib/levels";
 
 // Determine best anim state for a given skill
 function getSkillAnimState(skill: Skill): AnimState {
@@ -37,7 +37,7 @@ export default function Battle() {
     currentLevelId, rotateFacing,
   } = useGameStore();
 
-  const level: LevelDef = LEVELS.find(l => l.id === currentLevelId) ?? LEVELS[0];
+  const level: LevelDef = getLevelWithEdits(currentLevelId);
   const GRID_W = level.gridW;
   const GRID_H = level.gridH;
 

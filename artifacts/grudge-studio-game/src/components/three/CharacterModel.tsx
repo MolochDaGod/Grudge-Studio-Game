@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { useGLTF, useAnimations, Text } from '@react-three/drei';
+import React, { useEffect, useMemo, useRef, Suspense } from 'react';
+import { useGLTF, useAnimations, Text, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
@@ -21,25 +21,49 @@ interface CharacterModelProps {
   animState: AnimState;
 }
 
+interface CharacterModelInnerProps extends CharacterModelProps {
+  config: CharacterConfig;
+  rpgTexture: THREE.Texture | null;
+}
+
 const BASE = import.meta.env.BASE_URL;
 const C = (id: string) => `${BASE}models/characters/${id}.glb`;
 const W = (id: string) => `${BASE}models/weapons/${id}.glb`;
 
-// States that play once (parent handles return-to-idle via setTimeout)
+// RPG pack models that need external texture loading (no embedded textures)
+const RPG_TEX_URLS: Partial<Record<string, string>> = {
+  ranger_rpg: `${BASE}models/characters/rpg-textures/ranger.png`,
+  wizard_rpg:  `${BASE}models/characters/rpg-textures/wizard.png`,
+  cleric_rpg:  `${BASE}models/characters/rpg-textures/cleric.png`,
+  monk_rpg:    `${BASE}models/characters/rpg-textures/monk.png`,
+};
+
+// States that play once
 const LOOP_ONCE_STATES = new Set<AnimState>([
   'attack1', 'attack2', 'attack3', 'attack4',
   'cast', 'hurt', 'special1', 'special2', 'emote',
 ]);
 
-function applyMaterialOverrides(scene: THREE.Object3D, config: CharacterConfig) {
+function applyMaterialOverrides(
+  scene: THREE.Object3D,
+  config: CharacterConfig,
+  rpgTexture: THREE.Texture | null,
+) {
   scene.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     const result = mats.map((mat) => {
       if (!(mat instanceof THREE.MeshStandardMaterial)) return mat;
       const ov = config.materials[mat.name];
-      if (!ov) return mat.clone();
       const cloned = mat.clone() as THREE.MeshStandardMaterial;
+
+      // Apply external texture for RPG models that have no embedded texture
+      if (rpgTexture && !cloned.map) {
+        cloned.map = rpgTexture;
+        cloned.needsUpdate = true;
+      }
+
+      if (!ov) return cloned;
       if (ov.color) {
         const c = new THREE.Color().setStyle(ov.color);
         c.convertSRGBToLinear();
@@ -90,9 +114,9 @@ function attachToBone(
   (bone as THREE.Object3D).add(clone);
 }
 
-export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelected, animState }: CharacterModelProps) {
-  const config = useMemo(() => getCharacterConfig(unit.characterId), [unit.characterId]);
-
+function CharacterModelInner({
+  unit, position, facingAngle = Math.PI, isSelected, animState, config, rpgTexture,
+}: CharacterModelInnerProps) {
   const charUrl   = C(config.modelId);
   const weapUrl   = W(config.primaryWeapon.modelId);
   const shieldUrl = config.secondaryWeapon ? W(config.secondaryWeapon.modelId) : weapUrl;
@@ -103,26 +127,22 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
 
   const charScene = useMemo(() => {
     const clone = SkeletonUtils.clone(rawChar);
-    applyMaterialOverrides(clone, config);
+    applyMaterialOverrides(clone, config, rpgTexture);
     return clone;
-  }, [rawChar, config]);
+  }, [rawChar, config, rpgTexture]);
 
-  const groupRef   = useRef<THREE.Group>(null!);
-  const starsRef   = useRef<THREE.Group>(null!);
-  const poisonRef  = useRef<THREE.Mesh>(null!);
+  const groupRef  = useRef<THREE.Group>(null!);
+  const starsRef  = useRef<THREE.Group>(null!);
+  const poisonRef = useRef<THREE.Mesh>(null!);
   const { actions } = useAnimations(animations, groupRef);
 
-  // Play animation
   useEffect(() => {
     if (!actions) return;
     const name = getAnimationName(animState, config);
     const action = actions[name];
     if (!action) return;
     Object.values(actions).forEach((a) => { if (a && a !== action) a.fadeOut(0.25); });
-
-    // Frozen: drastically slow the animation
     action.timeScale = animState === 'frozen' ? 0.06 : 1.0;
-
     if (animState === 'dead') {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
@@ -135,30 +155,25 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
     action.reset().fadeIn(0.2).play();
   }, [animState, actions, config]);
 
-  // Attach primary weapon
   useEffect(() => {
     const pw = config.primaryWeapon;
     attachToBone(charScene, rawWeap, 'Fist.R', pw.position, pw.rotation, pw.scale);
   }, [charScene, rawWeap, config.primaryWeapon]);
 
-  // Attach secondary weapon (shield)
   useEffect(() => {
     if (!config.secondaryWeapon) return;
     const sw = config.secondaryWeapon;
     attachToBone(charScene, rawShield, sw.attachBone, sw.position, sw.rotation, sw.scale);
   }, [charScene, rawShield, config.secondaryWeapon]);
 
-  // Smooth position lerp
   const targetPos = useRef(new THREE.Vector3(...position));
   useEffect(() => { targetPos.current.set(...position); }, [position]);
 
-  // Status flags
   const isStunned  = unit.statusEffects.includes('stunned');
   const isPoisoned = unit.statusEffects.includes('poisoned');
   const isFrozen   = unit.statusEffects.includes('frozen');
   const isBlocked  = animState === 'block';
 
-  // Hurt flash ref
   const hurtFlash = useRef(0);
   useEffect(() => {
     if (animState === 'hurt') hurtFlash.current = 1.0;
@@ -167,16 +182,12 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
   const isDead  = unit.hp <= 0 || animState === 'dead';
   const hpPct   = unit.hp / unit.maxHp;
   const hpColor = hpPct > 0.5 ? '#00ff88' : hpPct > 0.2 ? '#ffdd00' : '#ff3300';
-
   const poisonPhase = useRef(0);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
-
-    // Position smoothing
     groupRef.current.position.lerp(targetPos.current, 0.12);
 
-    // Hurt emissive flash
     if (hurtFlash.current > 0) {
       hurtFlash.current = Math.max(0, hurtFlash.current - delta * 5);
       charScene.traverse((obj) => {
@@ -190,7 +201,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
       });
     }
 
-    // Status emissive tints (lower priority than hurt flash)
     if (hurtFlash.current <= 0) {
       if (isFrozen) {
         charScene.traverse((obj) => {
@@ -206,8 +216,7 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
             if (mat?.emissive) { mat.emissive.setRGB(0.0, 0.3, 0.04); mat.emissiveIntensity = 0.2 + 0.12 * Math.sin(poisonPhase.current); }
           }
         });
-      } else if (hurtFlash.current === 0 && !isFrozen && !isPoisoned) {
-        // Restore base emissive from config
+      } else {
         charScene.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             const mat = obj.material as THREE.MeshStandardMaterial;
@@ -228,19 +237,14 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
       }
     }
 
-    // Poison ring pulsing
     poisonPhase.current += delta * 3;
     if (poisonRef.current && isPoisoned) {
       const mat = poisonRef.current.material as THREE.MeshBasicMaterial;
       if (mat) mat.opacity = 0.4 + 0.25 * Math.sin(poisonPhase.current);
     }
-
-    // Stunned stars rotation
     if (starsRef.current && isStunned) {
       starsRef.current.rotation.y += delta * 3.5;
     }
-
-    // Death fall
     if (isDead) {
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI / 2, delta * 2);
     } else {
@@ -259,7 +263,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         <primitive object={charScene} />
       </group>
 
-      {/* Selection ring */}
       {isSelected && !isDead && (
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[ringRad * 0.82, ringRad, 48]} />
@@ -267,7 +270,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </mesh>
       )}
 
-      {/* HP arc */}
       {!isDead && (
         <mesh position={[0, hpRingY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.17, 0.22, 32, 1, 0, hpPct * Math.PI * 2]} />
@@ -275,7 +277,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </mesh>
       )}
 
-      {/* Faction dot */}
       {!isDead && (
         <mesh position={[0, hpRingY + 0.06, 0]}>
           <sphereGeometry args={[0.04, 8, 8]} />
@@ -283,7 +284,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </mesh>
       )}
 
-      {/* Name label */}
       {!isDead && (
         <Text
           position={[0, labelY, 0]}
@@ -298,7 +298,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </Text>
       )}
 
-      {/* Status badge label */}
       {!isDead && (isStunned || isPoisoned || isFrozen) && (
         <Text
           position={[0, labelY + 0.28, 0]}
@@ -313,7 +312,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </Text>
       )}
 
-      {/* STUNNED: orbiting yellow stars */}
       {isStunned && !isDead && (
         <group ref={starsRef} position={[0, labelY - 0.25, 0]}>
           {[0, 1, 2].map((i) => (
@@ -325,7 +323,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </group>
       )}
 
-      {/* POISONED: pulsing green ring at feet + drifting dots */}
       {isPoisoned && !isDead && (
         <group>
           <mesh ref={poisonRef} position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -345,7 +342,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </group>
       )}
 
-      {/* FROZEN: ice crystal shards around character */}
       {isFrozen && !isDead && (
         <group>
           {[0, 1, 2, 3].map((i) => {
@@ -363,7 +359,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
               </mesh>
             );
           })}
-          {/* Frost ring at feet */}
           <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <ringGeometry args={[0.36, 0.50, 20]} />
             <meshBasicMaterial color="#88ccff" transparent opacity={0.65} depthWrite={false} />
@@ -371,7 +366,6 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
         </group>
       )}
 
-      {/* BLOCKED: golden shield aura */}
       {isBlocked && !isDead && (
         <mesh position={[0, sy * 0.9, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[ringRad * 0.9, ringRad * 1.15, 32]} />
@@ -382,12 +376,34 @@ export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelect
   );
 }
 
+// Loader wrapper for RPG models needing external textures
+function CharacterModelTextureLoader(props: CharacterModelInnerProps & { textureUrl: string }) {
+  const { textureUrl, ...rest } = props;
+  const texture = useTexture(textureUrl);
+  texture.flipY = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return <CharacterModelInner {...rest} rpgTexture={texture} />;
+}
+
+export function CharacterModel(props: CharacterModelProps) {
+  const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
+  const texUrl = RPG_TEX_URLS[config.modelId];
+  if (texUrl) {
+    return (
+      <Suspense fallback={null}>
+        <CharacterModelTextureLoader {...props} config={config} textureUrl={texUrl} rpgTexture={null} />
+      </Suspense>
+    );
+  }
+  return <CharacterModelInner {...props} config={config} rpgTexture={null} />;
+}
+
 // Preload all assets
 const modelIds = [
   'orc', 'elf', 'human', 'barbarian', 'undead', 'dwarf', 'rogue', 'mage',
   'warrior_rpg', 'ranger_rpg', 'rogue_rpg', 'wizard_rpg', 'cleric_rpg', 'monk_rpg',
 ];
-const weapIds  = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
-                  'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
+const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
+                 'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
 modelIds.forEach((id) => useGLTF.preload(C(id)));
 weapIds.forEach((id)  => useGLTF.preload(W(id)));
