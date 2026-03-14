@@ -2,18 +2,23 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGetCharacters } from "@workspace/api-client-react";
 import { CharacterCard } from "@/components/ui/character-card";
+import { WeaponPicker } from "@/components/ui/weapon-picker";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { motion } from "framer-motion";
 import { Loader2, ArrowLeft, Skull, Sword } from "lucide-react";
 import { CHARACTER_LORE } from "@/lib/lore";
+import { getHeroWeaponOptions } from "@/lib/hero-weapons";
+import { WEAPON_SKILL_TREES, SkillSlot } from "@/lib/weapon-skills";
 
 export default function CharacterSelect() {
   const [, setLocation] = useLocation();
   const { data: characters, isLoading, error } = useGetCharacters();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
-  const { initBattle, setAllCharacters, setPlayerSquad } = useGameStore();
+  const [pendingHeroId, setPendingHeroId] = useState<string | null>(null);
+  const [weaponByCharId, setWeaponByCharId] = useState<Record<string, string>>({});
+
+  const { initBattle, setAllCharacters, setPlayerSquad, setEquippedSkills } = useGameStore();
 
   useEffect(() => {
     if (characters) {
@@ -21,24 +26,34 @@ export default function CharacterSelect() {
     }
   }, [characters, setAllCharacters]);
 
-  const toggleSelection = (id: string) => {
+  const handleCardClick = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter(x => x !== id));
-    } else {
-      if (selectedIds.length < 3) {
-        setSelectedIds([...selectedIds, id]);
-      }
+      setWeaponByCharId(prev => { const n = { ...prev }; delete n[id]; return n; });
+      return;
     }
+    if (selectedIds.length >= 3) return;
+    setPendingHeroId(id);
+  };
+
+  const handleWeaponSelect = (weaponType: string) => {
+    if (!pendingHeroId) return;
+    setWeaponByCharId(prev => ({ ...prev, [pendingHeroId]: weaponType }));
+    setSelectedIds(prev => [...prev, pendingHeroId]);
+    setPendingHeroId(null);
+  };
+
+  const handleCancelWeapon = () => {
+    setPendingHeroId(null);
   };
 
   const handleStartBattle = () => {
     if (selectedIds.length !== 3 || !characters) return;
-    
+
     setPlayerSquad(selectedIds);
 
     const playerChars = characters.filter(c => selectedIds.includes(c.id));
-    
-    // Pick 3 random enemies that aren't the player
+
     const possibleEnemies = characters.filter(c => !selectedIds.includes(c.id));
     const enemyChars = [...possibleEnemies].sort(() => 0.5 - Math.random()).slice(0, 3);
 
@@ -46,19 +61,16 @@ export default function CharacterSelect() {
 
     const createTacticalUnit = (char: typeof characters[0], isPlayer: boolean, index: number): TacticalUnit => {
       const speed = char.speed;
-      // Larger board → more movement (speed 52–78 → move 7–11)
       const move = Math.max(4, Math.floor(speed / 7));
-      // Class determines attack range
       const range = char.role === 'Ranger' ? 6
                   : char.role === 'Mage'   ? 5
                   : char.role === 'Worg'   ? 2
                   : 1.5;
 
-      // Player starts on the left (x=0,1), enemies on the right (x=14,15)
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = isPlayer ? col : (15 - col);
-      const y = row * 4 + 2; // spread vertically across the 12-tile height
+      const y = row * 4 + 2;
 
       const maxMana    = Math.round(Math.max(20, 10 + speed * 3));
       const maxStamina = Math.round(Math.max(40, 30 + speed * 2));
@@ -100,8 +112,26 @@ export default function CharacterSelect() {
     const enemyUnits = enemyChars.map((c, i) => createTacticalUnit(c, false, i));
 
     initBattle([...playerUnits, ...enemyUnits]);
+
+    playerUnits.forEach((unit, i) => {
+      const charId = playerChars[i].id;
+      const weaponType = weaponByCharId[charId];
+      const tree = weaponType ? WEAPON_SKILL_TREES[weaponType] : undefined;
+      if (tree) {
+        const loadout = {} as Record<SkillSlot, string>;
+        for (const slot of tree.slots) {
+          if (slot.skills.length > 0) {
+            loadout[slot.slot as SkillSlot] = slot.skills[0].id;
+          }
+        }
+        setEquippedSkills(unit.id, loadout);
+      }
+    });
+
     setLocation("/level-select");
   };
+
+  const pendingHero = pendingHeroId ? characters?.find(c => c.id === pendingHeroId) : null;
 
   if (isLoading) {
     return (
@@ -124,69 +154,114 @@ export default function CharacterSelect() {
   }
 
   return (
-    <div 
-      className="min-h-screen pb-32 bg-background bg-cover bg-center bg-fixed bg-no-repeat"
-      style={{ backgroundImage: `url('${import.meta.env.BASE_URL}images/select-bg.png')` }}
-    >
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-0" />
-      
-      <div className="relative z-10 pt-8 px-4 md:px-8 container mx-auto">
-        <div className="flex items-center justify-between mb-12">
-          <FantasyButton variant="ghost" onClick={() => setLocation("/")} className="gap-2">
-            <ArrowLeft className="w-4 h-4" /> Return
-          </FantasyButton>
-          <div className="text-center">
-            <h1 className="text-3xl md:text-5xl font-display font-bold text-glow uppercase">Assemble Your Squad</h1>
-            <p className="text-muted-foreground mt-2 font-serif italic drop-shadow-md text-white/80">Select 3 warriors to enter the tactical arena.</p>
-          </div>
-          <div className="w-[100px]" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {characters.map((char, i) => (
-            <motion.div
-              key={char.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <CharacterCard 
-                character={char}
-                selected={selectedIds.includes(char.id)}
-                onClick={() => toggleSelection(char.id)}
-              />
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      <motion.div 
-        initial={{ y: 100 }}
-        animate={{ y: selectedIds.length > 0 ? 0 : 100 }}
-        className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-primary/50 p-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]"
+    <>
+      <div
+        className="min-h-screen pb-32 bg-background bg-cover bg-center bg-fixed bg-no-repeat"
+        style={{ backgroundImage: `url('${import.meta.env.BASE_URL}images/select-bg.png')` }}
       >
-        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-black border border-primary flex items-center justify-center rounded-sm">
-              <span className="font-display text-primary text-xl font-bold">{selectedIds.length}/3</span>
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-0" />
+
+        <div className="relative z-10 pt-8 px-4 md:px-8 container mx-auto">
+          <div className="flex items-center justify-between mb-12">
+            <FantasyButton variant="ghost" onClick={() => setLocation("/")} className="gap-2">
+              <ArrowLeft className="w-4 h-4" /> Return
+            </FantasyButton>
+            <div className="text-center">
+              <h1 className="text-3xl md:text-5xl font-display font-bold text-glow uppercase">Assemble Your Squad</h1>
+              <p className="text-muted-foreground mt-2 font-serif italic drop-shadow-md text-white/80">
+                Select 3 warriors. Choose their weapon before the fight.
+              </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wider">Champions Selected</p>
-              <div className="flex gap-2 text-primary font-display font-bold">
-                {selectedIds.map(id => characters.find(c => c.id === id)?.name).join(", ") || "None"}
+            <div className="w-[100px]" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {characters.map((char, i) => {
+              const equipped = weaponByCharId[char.id];
+              const tree = equipped ? WEAPON_SKILL_TREES[equipped] : undefined;
+              return (
+                <motion.div
+                  key={char.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <CharacterCard
+                    character={char}
+                    selected={selectedIds.includes(char.id)}
+                    onClick={() => handleCardClick(char.id)}
+                  />
+                  {tree && selectedIds.includes(char.id) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1 flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-sm"
+                    >
+                      <span className="text-sm">{tree.icon}</span>
+                      <span className="text-xs font-display text-primary font-semibold">{tree.displayName}</span>
+                      <button
+                        onClick={e => { e.stopPropagation(); setPendingHeroId(char.id); }}
+                        className="ml-auto text-[10px] text-primary/50 hover:text-primary underline"
+                      >
+                        change
+                      </button>
+                    </motion.div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ y: 100 }}
+          animate={{ y: selectedIds.length > 0 ? 0 : 100 }}
+          className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-primary/50 p-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]"
+        >
+          <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-black border border-primary flex items-center justify-center rounded-sm">
+                <span className="font-display text-primary text-xl font-bold">{selectedIds.length}/3</span>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground uppercase tracking-wider">Champions Selected</p>
+                <div className="flex gap-3 text-primary font-display font-bold flex-wrap">
+                  {selectedIds.map(id => {
+                    const char = characters.find(c => c.id === id);
+                    const weapon = weaponByCharId[id];
+                    const tree = weapon ? WEAPON_SKILL_TREES[weapon] : undefined;
+                    return char ? (
+                      <span key={id} className="text-sm">
+                        {char.name}
+                        {tree && <span className="text-primary/50 font-normal ml-1 text-xs">({tree.icon} {tree.displayName})</span>}
+                      </span>
+                    ) : null;
+                  })}
+                  {selectedIds.length === 0 && <span className="text-sm text-muted-foreground">None</span>}
+                </div>
               </div>
             </div>
+            <FantasyButton
+              size="lg"
+              onClick={handleStartBattle}
+              disabled={selectedIds.length !== 3}
+              className="w-full sm:w-auto px-12"
+            >
+              <Sword className="w-5 h-5 mr-2" /> Enter The Arena
+            </FantasyButton>
           </div>
-          <FantasyButton 
-            size="lg" 
-            onClick={handleStartBattle}
-            disabled={selectedIds.length !== 3}
-            className="w-full sm:w-auto px-12"
-          >
-            <Sword className="w-5 h-5 mr-2" /> Enter The Arena
-          </FantasyButton>
-        </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </div>
+
+      {pendingHero && (
+        <WeaponPicker
+          heroName={pendingHero.name}
+          heroPortrait={`${import.meta.env.BASE_URL}images/chars/${pendingHero.id}.png`}
+          weapons={getHeroWeaponOptions(pendingHero.id)}
+          onSelect={handleWeaponSelect}
+          onCancel={handleCancelWeapon}
+        />
+      )}
+    </>
   );
 }

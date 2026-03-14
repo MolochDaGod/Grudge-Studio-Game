@@ -1227,6 +1227,262 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     ]
   },
 
+  sword: {
+    weaponType: 'sword', displayName: 'Sword', icon: '⚔️',
+    description: 'A reliable one-handed blade. Balanced between offense and defense, versatile in any warrior\'s hand.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Striking options', skills: [
+        { id: 'swd_slash',  name: 'Slash',       icon: '⚔️', description: 'Clean horizontal cut. Reliable damage.',          slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['95% DMG'],                   dmgMultiplier: 0.95 },
+        { id: 'swd_thrust', name: 'Thrust',      icon: '🗡️', description: 'Precise stab. Pierces gaps in armor.',            slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['85% DMG','+12% armor pen'],   dmgMultiplier: 0.85, armorPen: 12 },
+        { id: 'swd_quick',  name: 'Quick Strike', icon: '💨', description: 'Rapid strike, trade power for positioning.',      slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['80% DMG','+1 move'],          dmgMultiplier: 0.80, moveBonus: 1 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Battle techniques', skills: [
+        { id: 'swd_parry',   name: 'Parry',    icon: '🛡️', description: 'Deflect and counter immediately.',           slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['buff','attack'],  stats: ['50% DEF 1t','80% counter'],   dmgMultiplier: 0.80 },
+        { id: 'swd_disarm',  name: 'Disarm',   icon: '✋', description: 'Knock weapon aside. Reduces enemy ATK.',      slot: 2, tier: 'T1', cooldown: 3, range: 1, tags: ['debuff'],          stats: ['-20% ATK 2t'] },
+        { id: 'swd_feint',   name: 'Feint',    icon: '🎭', description: 'Fake opening. Ignores enemy counter.',        slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','damage'], stats: ['90% DMG','no counter'],       dmgMultiplier: 0.90 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Tactical moves', skills: [
+        { id: 'swd_advance',   name: 'Advance',   icon: '👣', description: 'Step forward and attack in one motion.', slot: 3, tier: 'T2', cooldown: 3, range: 2, tags: ['move','attack'],   stats: ['+2 move','70% DMG'], dmgMultiplier: 0.70, moveBonus: 2 },
+        { id: 'swd_challenge', name: 'Challenge', icon: '😤', description: 'Taunt enemy. +15% ATK for 2 turns.',     slot: 3, tier: 'T2', cooldown: 4, range: 4, tags: ['debuff','utility'], stats: ['Pull 2 tiles','ATK+15% 2t'] },
+        { id: 'swd_riposte',   name: 'Riposte',   icon: '🔄', description: 'Counter the next attack at full force.',slot: 3, tier: 'T2', cooldown: 3, range: 1, tags: ['buff'],             stats: ['200% counter next'] },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Signature moves', skills: [
+        { id: 'swd_flurry',  name: 'Flurry',         icon: '🌀', description: 'Three rapid strikes in one action.',       slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage'],           stats: ['3×50% DMG'],              dmgMultiplier: 1.50 },
+        { id: 'swd_bleed',   name: 'Jugular Strike',  icon: '🩸', description: 'Vital spot hit. Apply poison bleed.',      slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage','debuff'],   stats: ['110% DMG','Bleed 3t'],    dmgMultiplier: 1.10, applyStatus: 'poisoned', statusDuration: 3 },
+        { id: 'swd_execute', name: 'Execute',         icon: '💀', description: 'Bonus damage on low HP targets.',          slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage'],           stats: ['180% DMG vs <30% HP'],    dmgMultiplier: 1.80 },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Finishing blow', skills: [
+        { id: 'swd_storm',  name: 'Sword Storm',     icon: '⚡', description: 'Blinding flurry on all adjacent foes.',   slot: 5, tier: 'T3', cooldown: 6, range: 1, tags: ['attack','aoe','ultimate'],    stats: ['120% DMG','All adjacent'], dmgMultiplier: 1.20, aoe: true },
+        { id: 'swd_duel',   name: 'Honor Duel',      icon: '🏅', description: 'Lock target in one-on-one. +40% mutual.', slot: 5, tier: 'T3', cooldown: 6, range: 2, tags: ['debuff','ultimate'],          stats: ['+40% mutual DMG 3t'] },
+        { id: 'swd_legend', name: 'Legendary Slash', icon: '🌟', description: 'Devastating strike, ignores all armor.',  slot: 5, tier: 'T3', cooldown: 7, range: 1, tags: ['attack','damage','ultimate'],  stats: ['200% DMG','full pierce'],  dmgMultiplier: 2.0, armorPen: 100 },
+      ]},
+    ],
+  },
+
+  axe: {
+    weaponType: 'axe', displayName: 'Axe', icon: '🪓',
+    description: 'A one-handed chopping axe. Brutal and efficient, landing powerful overhead blows that splinter shields.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Chop options', skills: [
+        { id: 'axe1_chop',   name: 'Chop',       icon: '🪓', description: 'Downward chop. Raw impact.',       slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['100% DMG'],              dmgMultiplier: 1.0 },
+        { id: 'axe1_hack',   name: 'Hack',        icon: '⚔️', description: 'Rapid hack. Low damage, fast.',   slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['75% DMG','fast'],         dmgMultiplier: 0.75 },
+        { id: 'axe1_hurl',   name: 'Throw Axe',   icon: '🎯', description: 'Hurl the axe. Short range throw.',slot: 1, tier: 'T1', cooldown: 1, range: 3, tags: ['attack','damage'], stats: ['85% DMG','range 3'],      dmgMultiplier: 0.85 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Axe techniques', skills: [
+        { id: 'axe1_shatter', name: 'Shield Shatter', icon: '💥', description: 'Smash through blocking stance.',slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','damage'], stats: ['90% DMG','break block'],  dmgMultiplier: 0.90 },
+        { id: 'axe1_maim',    name: 'Maim',           icon: '🦵', description: 'Cripple leg. Reduce target SPD.',slot: 2, tier: 'T1', cooldown: 3, range: 1, tags: ['debuff','attack'],  stats: ['80% DMG','-2 move 2t'],  dmgMultiplier: 0.80 },
+        { id: 'axe1_berserk', name: 'Berserk Blow',   icon: '😤', description: 'Hit hard, leave yourself open.',slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','damage'], stats: ['140% DMG','-20% DEF 1t'],dmgMultiplier: 1.40 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Tactical', skills: [
+        { id: 'axe1_spin',  name: 'Axe Spin',    icon: '🌀', description: 'Spin attack on adjacent tiles.',   slot: 3, tier: 'T2', cooldown: 3, range: 1, tags: ['attack','aoe'],    stats: ['70% DMG','all adjacent'], dmgMultiplier: 0.70, aoe: true },
+        { id: 'axe1_pull',  name: 'Hooking Pull',icon: '⛓️', description: 'Hook and drag enemy closer.',      slot: 3, tier: 'T2', cooldown: 4, range: 2, tags: ['utility','debuff'],stats: ['Pull to melee'] },
+        { id: 'axe1_blood', name: 'Bloodlust',   icon: '🩸', description: 'Regain stamina on kill.',          slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['buff'],            stats: ['+30 stamina on kill'], selfTarget: true },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Signature', skills: [
+        { id: 'axe1_cleave',  name: 'Cleave',       icon: '⚔️', description: 'Hit two adjacent enemies.',          slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','aoe'],    stats: ['90% DMG 2 targets'],  dmgMultiplier: 0.90 },
+        { id: 'axe1_whirl',   name: 'Whirlwind',    icon: '💨', description: 'Wide swing, stun on hit.',            slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage'], stats: ['100% DMG','Stun 1t'],  dmgMultiplier: 1.0, applyStatus: 'stunned', statusDuration: 1 },
+        { id: 'axe1_rampage', name: 'Rampage',      icon: '🔥', description: 'Attack again if target is killed.',   slot: 4, tier: 'T2', cooldown: 5, range: 1, tags: ['attack','damage'], stats: ['110% DMG','re-attack'],dmgMultiplier: 1.10 },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Rampage', skills: [
+        { id: 'axe1_frenzy',  name: 'Battle Frenzy', icon: '🌋', description: 'Attack 4 times at reduced damage.', slot: 5, tier: 'T3', cooldown: 6, range: 1, tags: ['attack','ultimate'], stats: ['4×60% DMG'],           dmgMultiplier: 2.40 },
+        { id: 'axe1_warcry',  name: 'War Cry',       icon: '📣', description: 'Buff all allies ATK+25% 2 turns.',   slot: 5, tier: 'T3', cooldown: 6, range: 0, tags: ['buff','ultimate'],   stats: ['+25% ATK allies 2t'],  selfTarget: true },
+        { id: 'axe1_skull',   name: 'Skull Breaker', icon: '💀', description: 'Devastating overhead, stun target.', slot: 5, tier: 'T3', cooldown: 7, range: 1, tags: ['attack','ultimate'], stats: ['180% DMG','Stun 2t'],  dmgMultiplier: 1.80, applyStatus: 'stunned', statusDuration: 2 },
+      ]},
+    ],
+  },
+
+  mace: {
+    weaponType: 'mace', displayName: 'Mace', icon: '🔨',
+    description: 'A heavy blunt weapon. Crushes armor and bones alike. Preferred by holy warriors and siege fighters.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Bludgeon options', skills: [
+        { id: 'mce_smash',  name: 'Smash',       icon: '🔨', description: 'Crushing blow. Ignores some armor.',  slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['100% DMG','+10% armor pen'], dmgMultiplier: 1.0, armorPen: 10 },
+        { id: 'mce_bash',   name: 'Shield Bash', icon: '🛡️', description: 'Bash with shield edge, stagger foe.', slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','debuff'],  stats: ['70% DMG','stagger'],          dmgMultiplier: 0.70 },
+        { id: 'mce_pummel', name: 'Pummel',      icon: '👊', description: 'Rapid blows. Low per-hit damage.',    slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['2×50% DMG'],                  dmgMultiplier: 1.0 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Impact techniques', skills: [
+        { id: 'mce_concuss',  name: 'Concussion', icon: '💫', description: 'Daze target. Reduce accuracy.',          slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','debuff'],  stats: ['80% DMG','Stun 1t'],         dmgMultiplier: 0.80, applyStatus: 'stunned', statusDuration: 1 },
+        { id: 'mce_crack',    name: 'Armor Crack',icon: '🔓', description: 'Crack armor. Permanent DEF reduction.',  slot: 2, tier: 'T1', cooldown: 3, range: 1, tags: ['debuff','attack'],  stats: ['75% DMG','-15% DEF perm'],   dmgMultiplier: 0.75 },
+        { id: 'mce_rally',    name: 'Rally',       icon: '🏳️', description: 'Strike bolsters own defense.',          slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','buff'],    stats: ['80% DMG','+20% DEF 2t'],     dmgMultiplier: 0.80 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Field control', skills: [
+        { id: 'mce_groundpound', name: 'Ground Pound', icon: '💥', description: 'Slam ground. Knock nearby back.',  slot: 3, tier: 'T2', cooldown: 3, range: 1, tags: ['aoe','utility'], stats: ['60% DMG','push 1 tile'],    dmgMultiplier: 0.60, aoe: true },
+        { id: 'mce_tremble',     name: 'Earth Tremble',icon: '🌍', description: 'Shockwave slows all nearby foes.', slot: 3, tier: 'T2', cooldown: 4, range: 2, tags: ['aoe','debuff'],  stats: ['-1 move 2t','all nearby'] },
+        { id: 'mce_ironwill',    name: 'Iron Will',    icon: '🪨', description: 'Fortify self. Halve damage 1t.',   slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['buff'],          stats: ['50% damage reduction 1t'],  selfTarget: true },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Heavy blows', skills: [
+        { id: 'mce_obliterate', name: 'Obliterate',   icon: '💢', description: 'Massive overhead. Ignore 30% armor.', slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage'], stats: ['140% DMG','+30% armor pen'], dmgMultiplier: 1.40, armorPen: 30 },
+        { id: 'mce_detonate',   name: 'Holy Detonate',icon: '✨', description: 'Imbue strike with holy force.',       slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage'], stats: ['120% DMG','undead bonus'],   dmgMultiplier: 1.20 },
+        { id: 'mce_earthquake', name: 'Earthquake',   icon: '🌋', description: 'Shockwave freezes all in range.',    slot: 4, tier: 'T2', cooldown: 5, range: 2, tags: ['aoe','debuff'],    stats: ['80% DMG','Freeze 2t'],       dmgMultiplier: 0.80, applyStatus: 'frozen', statusDuration: 2 },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Judgment', skills: [
+        { id: 'mce_armageddon', name: 'Armageddon', icon: '☄️', description: 'Crushing AoE smash. Stun all hit.',    slot: 5, tier: 'T3', cooldown: 6, range: 2, tags: ['attack','aoe','ultimate'], stats: ['120% DMG','Stun 2t AoE'], dmgMultiplier: 1.20, aoe: true, applyStatus: 'stunned', statusDuration: 2 },
+        { id: 'mce_divine',     name: 'Divine Wrath',icon: '⚡', description: 'Call down holy judgment on target.', slot: 5, tier: 'T3', cooldown: 6, range: 3, tags: ['attack','ultimate'],        stats: ['200% DMG','divine'],     dmgMultiplier: 2.0 },
+        { id: 'mce_fortress',   name: 'Living Fortress',icon:'🏰',description: 'Become immovable. +60% DEF 3t.',   slot: 5, tier: 'T3', cooldown: 7, range: 0, tags: ['buff','ultimate'],          stats: ['+60% DEF 3t'],          selfTarget: true },
+      ]},
+    ],
+  },
+
+  greathammer: {
+    weaponType: 'greathammer', displayName: 'Greathammer', icon: '🔩',
+    description: 'A massive two-handed maul. Crushes everything in its path. Slow to swing but devastating on contact.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Maul options', skills: [
+        { id: 'ghm_maul',    name: 'Maul',        icon: '🔩', description: 'Massive overhead crush.',         slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['130% DMG','+20% armor pen'], dmgMultiplier: 1.30, armorPen: 20 },
+        { id: 'ghm_sweep',   name: 'Wide Sweep',  icon: '↔️', description: 'Horizontal sweep, hits 2 targets.',slot: 1, tier: 'T1', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['90% DMG','2 targets'],       dmgMultiplier: 0.90 },
+        { id: 'ghm_pound',   name: 'Ground Pound',icon: '💢', description: 'Slam into ground, AoE shockwave.', slot: 1, tier: 'T1', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['80% DMG','push back'],       dmgMultiplier: 0.80, aoe: true },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Demolition', skills: [
+        { id: 'ghm_shockwave', name: 'Shockwave',    icon: '🌊', description: 'Impact sends shockwave forward.',     slot: 2, tier: 'T1', cooldown: 2, range: 3, tags: ['attack','aoe'],    stats: ['70% DMG','line of 3'],       dmgMultiplier: 0.70 },
+        { id: 'ghm_demolish',  name: 'Demolish',     icon: '🏚️', description: 'Annihilate armor in one blow.',       slot: 2, tier: 'T1', cooldown: 3, range: 1, tags: ['attack','damage'], stats: ['110% DMG','-30% DEF'],       dmgMultiplier: 1.10 },
+        { id: 'ghm_brace',     name: 'Brace Impact', icon: '🛡️', description: 'Brace and counterattack powerfully.', slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['buff','attack'],   stats: ['+30% DEF','150% counter'],   dmgMultiplier: 1.50 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Area control', skills: [
+        { id: 'ghm_tremor',  name: 'Tremor',      icon: '🌍', description: 'Stamp ground. Freeze all near.',     slot: 3, tier: 'T2', cooldown: 3, range: 2, tags: ['aoe','debuff'],  stats: ['Freeze 1t all nearby'],  applyStatus: 'frozen', statusDuration: 1 },
+        { id: 'ghm_heave',   name: 'Heave',       icon: '💨', description: 'Throw enemy back 2 tiles.',         slot: 3, tier: 'T2', cooldown: 3, range: 1, tags: ['utility'],       stats: ['60% DMG','push 2 tiles'], dmgMultiplier: 0.60 },
+        { id: 'ghm_fortify', name: 'Fortify',     icon: '🪨', description: 'Channel strength. +40% ATK next.',  slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['buff'],          stats: ['+40% next attack'],       selfTarget: true },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Devastation', skills: [
+        { id: 'ghm_crater',   name: 'Crater Blow',  icon: '☄️', description: 'Massive hit. Stun and push.',         slot: 4, tier: 'T2', cooldown: 4, range: 1, tags: ['attack','damage'], stats: ['150% DMG','Stun 2t'],        dmgMultiplier: 1.50, applyStatus: 'stunned', statusDuration: 2 },
+        { id: 'ghm_juggernaut',name: 'Juggernaut',  icon: '🚂', description: 'Charge through all enemies in path.',  slot: 4, tier: 'T2', cooldown: 4, range: 3, tags: ['move','attack'],   stats: ['100% DMG','trample all'],    dmgMultiplier: 1.0, moveBonus: 3 },
+        { id: 'ghm_seismic',  name: 'Seismic Slam', icon: '🌋', description: 'Enormous shockwave. Hits all nearby.', slot: 4, tier: 'T2', cooldown: 5, range: 2, tags: ['attack','aoe'],   stats: ['110% DMG AoE'],              dmgMultiplier: 1.10, aoe: true },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'World-Ender', skills: [
+        { id: 'ghm_cataclysm',  name: 'Cataclysm',      icon: '💥', description: 'Apocalyptic slam. Stun entire field.',slot: 5, tier: 'T3', cooldown: 7, range: 2, tags: ['attack','aoe','ultimate'], stats: ['120% DMG AoE','Stun 2t'],  dmgMultiplier: 1.20, aoe: true, applyStatus: 'stunned', statusDuration: 2 },
+        { id: 'ghm_mountain',   name: 'Mountain Fall',   icon: '🏔️', description: 'Summon the weight of a mountain.',    slot: 5, tier: 'T3', cooldown: 7, range: 1, tags: ['attack','ultimate'],        stats: ['250% DMG','full pierce'],  dmgMultiplier: 2.50, armorPen: 100 },
+        { id: 'ghm_colossus',   name: 'Colossus Blow',   icon: '🗿', description: 'Become a colossus. 200% DMG next.',   slot: 5, tier: 'T3', cooldown: 6, range: 0, tags: ['buff','ultimate'],          stats: ['200% ATK 1 turn'],         selfTarget: true },
+      ]},
+    ],
+  },
+
+  lance: {
+    weaponType: 'lance', displayName: 'Lance', icon: '🏹',
+    description: 'A long reach polearm. Strikes enemies from 2 tiles away and punishes advancing foes with brutal counters.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Reach strikes', skills: [
+        { id: 'lnc_pierce',  name: 'Piercing Thrust', icon: '🏹', description: 'Thrust forward at reach-2.',      slot: 1, tier: 'T1', cooldown: 0, range: 2, tags: ['attack','damage'], stats: ['95% DMG','range 2'],         dmgMultiplier: 0.95 },
+        { id: 'lnc_sweep',   name: 'Pole Sweep',       icon: '↔️', description: 'Wide polearm sweep at melee.',   slot: 1, tier: 'T1', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['80% DMG','hits adjacent'],    dmgMultiplier: 0.80, aoe: true },
+        { id: 'lnc_poke',    name: 'Quick Poke',        icon: '💨', description: 'Fast jab, no cooldown.',        slot: 1, tier: 'T1', cooldown: 0, range: 2, tags: ['attack','damage'], stats: ['70% DMG','fast'],             dmgMultiplier: 0.70 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Polearm control', skills: [
+        { id: 'lnc_opport',  name: 'Opportunity',  icon: '⚡', description: 'Counter any enemy entering melee.',  slot: 2, tier: 'T1', cooldown: 2, range: 2, tags: ['buff'],            stats: ['150% counter on approach'] },
+        { id: 'lnc_keepback', name: 'Keep Back',   icon: '🚫', description: 'Push all melee attackers back 1.',   slot: 2, tier: 'T1', cooldown: 3, range: 1, tags: ['utility','debuff'],stats: ['Push all melee back 1'] },
+        { id: 'lnc_skewer',  name: 'Skewer',       icon: '🗡️', description: 'Impale. Pin enemy for 1 turn.',      slot: 2, tier: 'T1', cooldown: 2, range: 2, tags: ['attack','debuff'],  stats: ['90% DMG','Pin 1t'],          dmgMultiplier: 0.90, applyStatus: 'stunned', statusDuration: 1 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Tactical reach', skills: [
+        { id: 'lnc_vault',   name: 'Vault',       icon: '🦘', description: 'Vault over an obstacle tile.',       slot: 3, tier: 'T2', cooldown: 3, range: 2, tags: ['move','utility'],  stats: ['Teleport 2 tiles'] },
+        { id: 'lnc_guard',   name: 'Guard Stance',icon: '🛡️', description: 'Block with shaft. +30% DEF 2t.',    slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['buff'],            stats: ['+30% DEF 2t'],             selfTarget: true },
+        { id: 'lnc_line',    name: 'Line Control', icon: '📏', description: 'Zone off a row of tiles.',          slot: 3, tier: 'T2', cooldown: 4, range: 3, tags: ['utility'],        stats: ['Block movement row 1t'] },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Charge attacks', skills: [
+        { id: 'lnc_charge',   name: 'Cavalry Charge', icon: '🐴', description: 'Charge forward 3 tiles and strike.', slot: 4, tier: 'T2', cooldown: 4, range: 3, tags: ['move','attack'],  stats: ['3 move+140% DMG'],   dmgMultiplier: 1.40, moveBonus: 3 },
+        { id: 'lnc_impale',   name: 'Impale',         icon: '💀', description: 'Pin enemy to ground. Freeze 2t.',    slot: 4, tier: 'T2', cooldown: 4, range: 2, tags: ['attack','debuff'],stats: ['120% DMG','Freeze 2t'], dmgMultiplier: 1.20, applyStatus: 'frozen', statusDuration: 2 },
+        { id: 'lnc_blitz',    name: 'Blitz',          icon: '⚡', description: 'Strike and reposition behind.',      slot: 4, tier: 'T2', cooldown: 4, range: 2, tags: ['move','attack'],  stats: ['100% DMG','pass through'],dmgMultiplier: 1.0, moveBonus: 2 },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Polearm master', skills: [
+        { id: 'lnc_hurricane', name: 'Hurricane Spin', icon: '🌪️', description: 'Spin and hit all within 2 tiles.',  slot: 5, tier: 'T3', cooldown: 6, range: 2, tags: ['attack','aoe','ultimate'], stats: ['130% DMG all nearby'],  dmgMultiplier: 1.30, aoe: true },
+        { id: 'lnc_dragoon',   name: 'Dragoon Dive',   icon: '🐉', description: 'Leap high and crash down on enemy.',slot: 5, tier: 'T3', cooldown: 6, range: 4, tags: ['attack','ultimate'],        stats: ['180% DMG','leap 4'],     dmgMultiplier: 1.80, moveBonus: 4 },
+        { id: 'lnc_formation', name: 'Formation Call', icon: '📣', description: 'Phalanx: +30% DEF all allies 2t.',  slot: 5, tier: 'T3', cooldown: 7, range: 0, tags: ['buff','ultimate'],          stats: ['+30% DEF all allies 2t'], selfTarget: true },
+      ]},
+    ],
+  },
+
+  crossbow: {
+    weaponType: 'crossbow', displayName: 'Crossbow', icon: '🎯',
+    description: 'A mechanical ranged weapon. Powerful bolts pierce deeply. Slower to reload but devastating accuracy.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Bolt options', skills: [
+        { id: 'xbw_bolt',   name: 'Bolt Shot',    icon: '🎯', description: 'Fire a heavy bolt. High penetration.', slot: 1, tier: 'T1', cooldown: 0, range: 5, tags: ['attack','damage'], stats: ['105% DMG','+15% armor pen'], dmgMultiplier: 1.05, armorPen: 15 },
+        { id: 'xbw_rapid',  name: 'Rapid Bolt',   icon: '💨', description: 'Two quick bolts, lower accuracy.',      slot: 1, tier: 'T1', cooldown: 1, range: 5, tags: ['attack','damage'], stats: ['2×65% DMG'],                  dmgMultiplier: 1.30 },
+        { id: 'xbw_snipe',  name: 'Aimed Shot',   icon: '🔭', description: 'Take aim. Higher crit chance.',        slot: 1, tier: 'T1', cooldown: 1, range: 7, tags: ['attack','damage'], stats: ['90% DMG','crit+25%','range 7'],dmgMultiplier: 0.90 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Bolt techniques', skills: [
+        { id: 'xbw_pin',     name: 'Pinning Bolt', icon: '📌', description: 'Pin enemy to ground. Can\'t move 1t.',  slot: 2, tier: 'T1', cooldown: 2, range: 5, tags: ['attack','debuff'],  stats: ['80% DMG','Pin 1t'],          dmgMultiplier: 0.80, applyStatus: 'stunned', statusDuration: 1 },
+        { id: 'xbw_toxic',   name: 'Toxic Bolt',   icon: '🧪', description: 'Poisoned tip. Damage over time.',       slot: 2, tier: 'T1', cooldown: 2, range: 5, tags: ['attack','debuff'],  stats: ['75% DMG','Poison 3t'],       dmgMultiplier: 0.75, applyStatus: 'poisoned', statusDuration: 3 },
+        { id: 'xbw_recoil',  name: 'Recoil Shot',  icon: '💥', description: 'Powerful shot knocks you back 1.',      slot: 2, tier: 'T1', cooldown: 2, range: 6, tags: ['attack','move'],    stats: ['120% DMG','self push 1'],    dmgMultiplier: 1.20 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Field support', skills: [
+        { id: 'xbw_volley', name: 'Volley',        icon: '🌧️', description: 'Rain bolts on small area.',          slot: 3, tier: 'T2', cooldown: 3, range: 5, tags: ['attack','aoe'],  stats: ['60% DMG','3×3 area'],      dmgMultiplier: 0.60, aoe: true },
+        { id: 'xbw_scope',  name: 'Scope',         icon: '🔭', description: 'Reveal all enemies. +1 range 2t.',   slot: 3, tier: 'T2', cooldown: 4, range: 0, tags: ['utility','buff'], stats: ['Reveal all','+1 range 2t'], selfTarget: true },
+        { id: 'xbw_dodge',  name: 'Reload & Roll', icon: '🎲', description: 'Reload while dodging back 1 tile.',  slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['move','buff'],    stats: ['Reload','retreat 1'],       selfTarget: true },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Precision bolts', skills: [
+        { id: 'xbw_explode',  name: 'Explosive Bolt',icon: '💣', description: 'Bolt detonates on impact. AoE.',     slot: 4, tier: 'T2', cooldown: 4, range: 5, tags: ['attack','aoe'],    stats: ['80% DMG','2-tile AoE'],     dmgMultiplier: 0.80, aoe: true },
+        { id: 'xbw_freeze',   name: 'Frost Bolt',    icon: '❄️', description: 'Enchanted ice bolt. Freeze target.',  slot: 4, tier: 'T2', cooldown: 4, range: 5, tags: ['attack','debuff'],  stats: ['90% DMG','Freeze 2t'],     dmgMultiplier: 0.90, applyStatus: 'frozen', statusDuration: 2 },
+        { id: 'xbw_armor',    name: 'Armor Piercer', icon: '🔩', description: 'Bolt ignores 50% armor.',             slot: 4, tier: 'T2', cooldown: 4, range: 6, tags: ['attack','damage'],  stats: ['100% DMG','+50% armor pen'],dmgMultiplier: 1.0, armorPen: 50 },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Deadeye', skills: [
+        { id: 'xbw_deadeye', name: 'Deadeye',      icon: '🎯', description: 'Perfect shot. Cannot miss, crit.',      slot: 5, tier: 'T3', cooldown: 6, range: 8, tags: ['attack','ultimate'],        stats: ['200% DMG','guaranteed crit'],dmgMultiplier: 2.0 },
+        { id: 'xbw_barrage', name: 'Barrage',      icon: '🌩️', description: 'Fire 6 bolts at different targets.',    slot: 5, tier: 'T3', cooldown: 7, range: 6, tags: ['attack','aoe','ultimate'],   stats: ['6×50% DMG diff targets'],   dmgMultiplier: 3.0 },
+        { id: 'xbw_silence', name: 'Silence Shot', icon: '🔇', description: 'Anti-magic bolt. Disables spells 2t.', slot: 5, tier: 'T3', cooldown: 6, range: 6, tags: ['debuff','ultimate'],          stats: ['80% DMG','No spells 2t'],   dmgMultiplier: 0.80 },
+      ]},
+    ],
+  },
+
+  gun: {
+    weaponType: 'gun', displayName: 'Flintlock Gun', icon: '🔫',
+    description: 'A fearsome ranged firearm. Loud, powerful, and unexpected on the battlefield. Long range with punishing hits.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Fire options', skills: [
+        { id: 'gun_shot',   name: 'Fire',        icon: '🔫', description: 'Single powerful shot at range.',     slot: 1, tier: 'T1', cooldown: 1, range: 7, tags: ['attack','damage'], stats: ['120% DMG','long range'],     dmgMultiplier: 1.20 },
+        { id: 'gun_shot2',  name: 'Double Shot', icon: '⚡', description: 'Two barrels at once. Short range.',  slot: 1, tier: 'T1', cooldown: 2, range: 4, tags: ['attack','damage'], stats: ['2×80% DMG','range 4'],       dmgMultiplier: 1.60 },
+        { id: 'gun_quick',  name: 'Quick Draw',  icon: '💨', description: 'Fast unholster and fire.',           slot: 1, tier: 'T1', cooldown: 1, range: 5, tags: ['attack','damage'], stats: ['90% DMG','fast'],            dmgMultiplier: 0.90 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Gunfighter tricks', skills: [
+        { id: 'gun_smoke',  name: 'Smoke Shot', icon: '💨', description: 'Smoke-loaded shot. Blind enemy 2t.',  slot: 2, tier: 'T1', cooldown: 2, range: 5, tags: ['attack','debuff'],  stats: ['70% DMG','Blind 2t'],        dmgMultiplier: 0.70 },
+        { id: 'gun_buck',   name: 'Buckshot',   icon: '💥', description: 'Scatter shot hits 3 in a cone.',     slot: 2, tier: 'T1', cooldown: 2, range: 3, tags: ['attack','aoe'],    stats: ['60% DMG','3 targets cone'],   dmgMultiplier: 0.60, aoe: true },
+        { id: 'gun_reload', name: 'Fan & Fire', icon: '🌀', description: 'Fan the hammer. 3 fast shots.',      slot: 2, tier: 'T1', cooldown: 3, range: 5, tags: ['attack','damage'], stats: ['3×50% DMG'],                  dmgMultiplier: 1.50 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Gunslinger moves', skills: [
+        { id: 'gun_cover', name: 'Cover Fire',   icon: '🛡️', description: 'Suppress area. Enemy can\'t move.',  slot: 3, tier: 'T2', cooldown: 3, range: 5, tags: ['aoe','utility'],  stats: ['Suppress 2-tile zone 1t'] },
+        { id: 'gun_flee',  name: 'Evasive Fire', icon: '🏃', description: 'Shoot while retreating 2 tiles.',   slot: 3, tier: 'T2', cooldown: 3, range: 4, tags: ['move','attack'],   stats: ['80% DMG','retreat 2 tiles'], dmgMultiplier: 0.80, moveBonus: 2 },
+        { id: 'gun_aim',   name: 'Dead Aim',     icon: '🎯', description: 'Spend a turn. +60% DMG next shot.', slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['buff'],            stats: ['+60% DMG next shot'],        selfTarget: true },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Outlaw shots', skills: [
+        { id: 'gun_explosive', name: 'Explosive Round',icon: '💣', description: 'Grenade-tipped shot. AoE blast.',     slot: 4, tier: 'T2', cooldown: 4, range: 5, tags: ['attack','aoe'],    stats: ['90% DMG','2-tile AoE'],     dmgMultiplier: 0.90, aoe: true },
+        { id: 'gun_marked',    name: 'Mark Target',     icon: '🎯', description: 'Paint target. All allies +20% vs them.',slot: 4, tier: 'T2', cooldown: 4, range: 6, tags: ['debuff','utility'],stats: ['Mark: +20% DMG received'] },
+        { id: 'gun_execution', name: 'Execution Shot',  icon: '💀', description: 'Finish a weakened enemy.',            slot: 4, tier: 'T2', cooldown: 4, range: 7, tags: ['attack','damage'],  stats: ['150% vs <25% HP'],          dmgMultiplier: 1.50 },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Gunslinger legend', skills: [
+        { id: 'gun_legend',  name: 'Legendary Shot', icon: '🌟', description: 'Perfect shot through all enemies in line.',slot: 5, tier: 'T3', cooldown: 6, range: 8, tags: ['attack','ultimate'],        stats: ['160% DMG','full line'],  dmgMultiplier: 1.60 },
+        { id: 'gun_hailfire',name: 'Hail of Lead',   icon: '🌩️', description: 'Unload everything. 5 shots random.',    slot: 5, tier: 'T3', cooldown: 7, range: 6, tags: ['attack','aoe','ultimate'],   stats: ['5×70% random'],         dmgMultiplier: 3.50 },
+        { id: 'gun_outlawking',name:'Outlaw King',    icon: '👑', description: 'Turn and fire 360°. Hit all enemies.',   slot: 5, tier: 'T3', cooldown: 7, range: 4, tags: ['attack','aoe','ultimate'],   stats: ['100% DMG all enemies'], dmgMultiplier: 1.0, aoe: true },
+      ]},
+    ],
+  },
+
+  focus: {
+    weaponType: 'focus', displayName: 'Arcane Focus', icon: '🔮',
+    description: 'A crystalline arcane amplifier. Channels pure magical energy with precision, utility, and arcane mastery.',
+    slots: [
+      { slot: 1, label: 'Basic Attack', sublabel: 'Arcane bolts', skills: [
+        { id: 'fcs_bolt',   name: 'Arcane Bolt',  icon: '🔮', description: 'Pure arcane projectile at range.',    slot: 1, tier: 'T1', cooldown: 0, range: 5, tags: ['attack','damage'], stats: ['90% DMG (magic)'],            dmgMultiplier: 0.90 },
+        { id: 'fcs_pulse',  name: 'Mana Pulse',   icon: '💜', description: 'Wave of force. Low damage, no armor.', slot: 1, tier: 'T1', cooldown: 0, range: 4, tags: ['attack','damage'], stats: ['70% DMG','ignores DEF'],      dmgMultiplier: 0.70, armorPen: 100 },
+        { id: 'fcs_siphon', name: 'Mana Siphon',  icon: '🧲', description: 'Drain enemy MP on hit.',              slot: 1, tier: 'T1', cooldown: 1, range: 4, tags: ['attack','debuff'],  stats: ['60% DMG','-20 MP target'],    dmgMultiplier: 0.60 },
+      ]},
+      { slot: 2, label: 'Core', sublabel: 'Arcane techniques', skills: [
+        { id: 'fcs_shield', name: 'Arcane Shield',icon: '🛡️', description: 'Barrier absorbs 1 hit.',              slot: 2, tier: 'T1', cooldown: 2, range: 0, tags: ['buff'],            stats: ['Absorb 1 attack'],             selfTarget: true },
+        { id: 'fcs_slow',   name: 'Time Warp',    icon: '⏱️', description: 'Slow target. Lose 1 CT per turn.',    slot: 2, tier: 'T1', cooldown: 3, range: 4, tags: ['debuff'],          stats: ['Slow: -20 CT 2t'] },
+        { id: 'fcs_chain',  name: 'Chain Bolt',   icon: '⛓️', description: 'Bolt chains to nearby enemy.',       slot: 2, tier: 'T1', cooldown: 2, range: 4, tags: ['attack','aoe'],    stats: ['70% DMG +chain 50%'],          dmgMultiplier: 0.70 },
+      ]},
+      { slot: 3, label: 'Utility', sublabel: 'Arcane utility', skills: [
+        { id: 'fcs_teleport',name:'Blink',         icon: '✨', description: 'Teleport to any tile in range.',    slot: 3, tier: 'T2', cooldown: 3, range: 4, tags: ['move','utility'],  stats: ['Teleport 4 tiles'],           moveBonus: 4 },
+        { id: 'fcs_reveal', name: 'Arcane Eye',    icon: '👁️', description: 'See through fog. +2 range 2t.',    slot: 3, tier: 'T2', cooldown: 4, range: 0, tags: ['utility','buff'],  stats: ['Reveal map','+2 range 2t'],   selfTarget: true },
+        { id: 'fcs_drain',  name: 'Drain Life',   icon: '🩸', description: 'Steal HP from target.',             slot: 3, tier: 'T2', cooldown: 3, range: 4, tags: ['attack','heal'],   stats: ['80% DMG','steal 40% HP'],     dmgMultiplier: 0.80, healMultiplier: 0.40 },
+      ]},
+      { slot: 4, label: 'Special', sublabel: 'Advanced spells', skills: [
+        { id: 'fcs_cage',    name: 'Arcane Cage', icon: '🔒', description: 'Trap enemy. Cannot act 2 turns.',   slot: 4, tier: 'T2', cooldown: 4, range: 4, tags: ['debuff'],           stats: ['Trap 2t'],                    applyStatus: 'stunned', statusDuration: 2 },
+        { id: 'fcs_overload',name: 'Overload',    icon: '💥', description: 'Dump all MP into one burst.',       slot: 4, tier: 'T2', cooldown: 5, range: 4, tags: ['attack','damage'],  stats: ['DMG = MP spent×2'],           dmgMultiplier: 2.0 },
+        { id: 'fcs_mirror',  name: 'Mirror Force', icon: '🪞', description: 'Reflect next magical attack.',     slot: 4, tier: 'T2', cooldown: 4, range: 0, tags: ['buff'],             stats: ['Reflect next spell'],         selfTarget: true },
+      ]},
+      { slot: 5, label: 'Ultimate', sublabel: 'Arcane mastery', skills: [
+        { id: 'fcs_singularity', name: 'Singularity',  icon: '🌌', description: 'Black hole pulls all into center.',   slot: 5, tier: 'T3', cooldown: 6, range: 4, tags: ['aoe','ultimate'],        stats: ['Pull all','80% DMG center'],  dmgMultiplier: 0.80, aoe: true },
+        { id: 'fcs_timestop',    name: 'Time Stop',    icon: '⏰', description: 'Freeze all enemies for 1 full turn.', slot: 5, tier: 'T3', cooldown: 7, range: 0, tags: ['aoe','ultimate'],        stats: ['All enemies Freeze 1t'],      applyStatus: 'frozen', statusDuration: 1, selfTarget: true },
+        { id: 'fcs_arcanestorm', name: 'Arcane Storm', icon: '⚡', description: 'Storm of bolts hits all enemies.',    slot: 5, tier: 'T3', cooldown: 7, range: 5, tags: ['attack','aoe','ultimate'], stats: ['120% DMG all foes'],          dmgMultiplier: 1.20, aoe: true },
+      ]},
+    ],
+  },
+
 };
 
 // Map character ID to weapon type
