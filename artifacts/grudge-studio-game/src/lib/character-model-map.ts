@@ -19,14 +19,46 @@ export interface SecondaryWeaponConfig extends WeaponConfig {
   attachBone: string;
 }
 
+export type AnimState =
+  | 'idle' | 'idle2' | 'emote'
+  | 'walk'
+  | 'attack1' | 'attack2' | 'attack3' | 'attack4'
+  | 'cast'
+  | 'hurt' | 'stunned' | 'poisoned' | 'block' | 'frozen'
+  | 'dead' | 'victory' | 'special1' | 'special2';
+
+// Default mapping from logical AnimState → GLB animation name
+// Available GLB animations: Death, Defeat, Idle, Jump, PickUp, Punch, RecieveHit,
+//   Roll, Run, Run_Carry, Shoot_OneHanded, SitDown, StandUp, SwordSlash, Victory, Walk, Walk_Carry
+export const DEFAULT_ANIM_MAP: Record<AnimState, string> = {
+  idle:     'Idle',
+  idle2:    'SitDown',
+  emote:    'PickUp',
+  walk:     'Walk',
+  attack1:  'SwordSlash',
+  attack2:  'Punch',
+  attack3:  'Roll',
+  attack4:  'Jump',
+  cast:     'Shoot_OneHanded',
+  hurt:     'RecieveHit',
+  stunned:  'Defeat',
+  poisoned: 'Walk',
+  block:    'StandUp',
+  frozen:   'Idle',
+  dead:     'Death',
+  victory:  'Victory',
+  special1: 'Run',
+  special2: 'Jump',
+};
+
 export interface CharacterConfig {
   modelId: 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage';
   scale: [number, number, number];
   materials: Record<string, MaterialOverride>;
   primaryWeapon: WeaponConfig;
   secondaryWeapon?: SecondaryWeaponConfig;
-  attackAnim: 'SwordSlash' | 'Punch' | 'Shoot_OneHanded';
-  idleVariant?: 'normal' | 'zombie';
+  /** Per-character overrides for the DEFAULT_ANIM_MAP */
+  animMap?: Partial<Record<AnimState, string>>;
 }
 
 // Weapon natural longest-axis lengths (from actual GLB vertex bounds):
@@ -111,7 +143,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#d8c8a0' },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'magma-orc-destroyer': {
@@ -124,7 +156,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#888888', metalness: 0.5 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    attackAnim: 'Punch',
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'brother-maltheus': {
@@ -140,7 +172,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:    { color: '#888888', roughness: 0.9 },
     },
     primaryWeapon: WEAPON_DEFAULTS.dark_staff,
-    attackAnim: 'Punch',
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump', emote: 'Victory' },
   },
 
   'canal-lurker': {
@@ -154,7 +186,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Grey:    { color: '#1e2018', roughness: 0.9 },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', attack4: 'Jump', special1: 'Run', special2: 'Roll' },
   },
 
   'warlord-garnok': {
@@ -169,7 +201,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:  { color: '#050505', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump', emote: 'Jump' },
   },
 
   'elven-archer': {
@@ -184,7 +216,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hat:     { color: '#122808', roughness: 0.9 },
     },
     primaryWeapon: WEAPON_DEFAULTS.bow,
-    attackAnim: 'Shoot_OneHanded',
+    animMap: { attack1: 'Shoot_OneHanded', attack2: 'Shoot_OneHanded', attack3: 'Roll', attack4: 'Jump', cast: 'Shoot_OneHanded', special1: 'Shoot_OneHanded', special2: 'Jump' },
   },
 
   'orcish-warrior': {
@@ -197,7 +229,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#c8a050' },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'human-knight': {
@@ -213,7 +245,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     },
     primaryWeapon: WEAPON_DEFAULTS.sword,
     secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', block: 'StandUp', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'human-barbarian': {
@@ -228,7 +260,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:  { color: '#1e0c04', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
   'skeleton-undead': {
@@ -245,8 +277,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Brain:       { color: '#0a0a0a' },
     },
     primaryWeapon: WEAPON_DEFAULTS.rusted_sword,
-    attackAnim: 'SwordSlash',
-    idleVariant: 'zombie',
+    animMap: { idle2: 'StandUp', emote: 'Roll', attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'dwarven-forge-master': {
@@ -261,7 +292,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#880000', roughness: 0.7 },
     },
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
-    attackAnim: 'SwordSlash',
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 };
 
@@ -269,17 +300,8 @@ export function getCharacterConfig(characterId: string): CharacterConfig {
   return CHARACTER_CONFIGS[characterId] ?? CHARACTER_CONFIGS['orcish-warrior'];
 }
 
-export type AnimState = 'idle' | 'moving' | 'attacking' | 'hurt' | 'dead';
-
 export function getAnimationName(state: AnimState, config: CharacterConfig): string {
-  switch (state) {
-    case 'idle':      return config.idleVariant === 'zombie' ? 'Idle' : 'Idle';
-    case 'moving':    return 'Run';
-    case 'attacking': return config.attackAnim;
-    case 'hurt':      return 'RecieveHit';
-    case 'dead':      return 'Death';
-    default:          return 'Idle';
-  }
+  return config.animMap?.[state] ?? DEFAULT_ANIM_MAP[state] ?? 'Idle';
 }
 
 export const ALL_MODEL_URLS = [

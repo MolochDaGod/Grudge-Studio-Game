@@ -24,6 +24,7 @@ export interface TacticalUnit {
   faction: string;
   rarity: string;
   statusEffects: string[];
+  statusDurations: Record<string, number>;
   hasMoved: boolean;
   hasActed: boolean;
 }
@@ -70,6 +71,8 @@ export interface GameState {
   setSkillCooldown: (unitId: string, skillId: string, turns: number) => void;
   tickSkillCooldowns: (unitId: string) => void;
   markUltimateUsed: (unitId: string) => void;
+  applyStatus: (unitId: string, effect: string, duration: number) => void;
+  tickStatusEffects: (unitId: string) => void;
   reset: () => void;
 }
 
@@ -158,6 +161,25 @@ export const useGameStore = create<GameState>((set) => ({
   markUltimateUsed: (unitId) => set((state) => ({
     usedUltimates: { ...state.usedUltimates, [unitId]: true }
   })),
+
+  applyStatus: (unitId, effect, duration) => set((state) => {
+    const unit = state.units.find(u => u.id === unitId);
+    if (!unit) return state;
+    const newDurs = { ...unit.statusDurations, [effect]: duration };
+    const effects = Array.from(new Set([...unit.statusEffects, effect]));
+    return { units: state.units.map(u => u.id === unitId ? { ...u, statusEffects: effects, statusDurations: newDurs } : u) };
+  }),
+
+  tickStatusEffects: (unitId) => set((state) => {
+    const unit = state.units.find(u => u.id === unitId);
+    if (!unit) return state;
+    const newDurs: Record<string, number> = {};
+    const active: string[] = [];
+    for (const [effect, dur] of Object.entries(unit.statusDurations)) {
+      if (dur > 1) { newDurs[effect] = dur - 1; active.push(effect); }
+    }
+    return { units: state.units.map(u => u.id === unitId ? { ...u, statusEffects: active, statusDurations: newDurs } : u) };
+  }),
 
   reset: () => set({ 
     playerSquad: [], 

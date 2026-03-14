@@ -13,9 +13,16 @@ import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
   SkillSlot, Skill
 } from "@/lib/weapon-skills";
+import { GRID_W, GRID_H } from "@/components/three/TileGrid";
 
-const GRID_W = 8;
-const GRID_H = 6;
+// Determine best anim state for a given skill
+function getSkillAnimState(skill: Skill): AnimState {
+  if (skill.tags.includes('ultimate')) return 'special1';
+  if (skill.tags.includes('heal') || skill.tags.includes('buff')) return 'cast';
+  if (skill.aoe) return 'attack3';
+  if (skill.range > 2) return 'attack2';
+  return 'attack1';
+}
 
 export default function Battle() {
   const [, setLocation] = useLocation();
@@ -26,6 +33,7 @@ export default function Battle() {
     combatLog, addLog, setResult, phase,
     equippedSkills, skillCooldowns, usedUltimates,
     setSkillCooldown, tickSkillCooldowns, markUltimateUsed,
+    applyStatus, tickStatusEffects,
   } = useGameStore();
 
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
@@ -36,6 +44,34 @@ export default function Battle() {
       setLocation("/select");
     }
   }, [phase, units, setLocation]);
+
+  // Idle2/emote cycling — randomly fire idle2 or emote for resting units every 6-12s
+  useEffect(() => {
+    const intervals: ReturnType<typeof setInterval>[] = [];
+    units.forEach((unit) => {
+      if (unit.hp <= 0) return;
+      const delay = 6000 + Math.random() * 6000;
+      const iv = setInterval(() => {
+        setAnimStates((prev) => {
+          const cur = prev[unit.id] ?? 'idle';
+          if (cur !== 'idle') return prev;
+          const variant: AnimState = Math.random() < 0.5 ? 'idle2' : 'emote';
+          return { ...prev, [unit.id]: variant };
+        });
+        setTimeout(() => {
+          setAnimStates((prev) => {
+            const cur = prev[unit.id] ?? 'idle';
+            if (cur === 'idle2' || cur === 'emote') {
+              return { ...prev, [unit.id]: 'idle' };
+            }
+            return prev;
+          });
+        }, 2800);
+      }, delay);
+      intervals.push(iv);
+    });
+    return () => intervals.forEach(clearInterval);
+  }, [units.map((u) => u.id).join(','), units.filter(u => u.hp > 0).length]);
 
   const grid = useMemo(() => {
     const g = Array(GRID_W).fill(null).map(() => Array(GRID_H).fill(null));
@@ -172,11 +208,20 @@ export default function Battle() {
       specialAbilityCooldown: Math.max(0, unit.specialAbilityCooldown - 1)
     });
     tickSkillCooldowns(unit.id);
+    tickStatusEffects(unit.id);
+
+    // Poison tick: -8% max HP damage per turn
+    if (unit.statusEffects.includes('poisoned') && unit.hp > 0) {
+      const poisonDmg = Math.max(1, Math.floor(unit.maxHp * 0.08));
+      updateUnit(unit.id, { hp: Math.max(1, unit.hp - poisonDmg) });
+      addLog(`${unit.name} takes ${poisonDmg} poison damage!`, 'debuff');
+    }
+
     setCurrentUnitId(null);
     setActionMode('idle');
     setReachableTiles([]);
     setAttackableTiles([]);
-  }, [currentUnitId, units, updateUnit, setCurrentUnitId, setActionMode, setReachableTiles, setAttackableTiles, tickSkillCooldowns]);
+  }, [currentUnitId, units, updateUnit, setCurrentUnitId, setActionMode, setReachableTiles, setAttackableTiles, tickSkillCooldowns, tickStatusEffects, addLog]);
 
   // Actions
   const handleTileClick = (x: number, y: number) => {
@@ -191,8 +236,8 @@ export default function Battle() {
         setActionMode('idle');
         setReachableTiles([]);
         addLog(`${unit.name} moves to [${x}, ${y}].`);
-        setAnimStates(prev => ({...prev, [unit.id]: 'moving'}));
-        setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 500);
+        setAnimStates(prev => ({...prev, [unit.id]: 'walk'}));
+        setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 700);
       }
     } else if (actionMode.startsWith('skill_') && !unit.hasActed) {
       const slotNum = parseInt(actionMode.split('_')[1]) as SkillSlot;
@@ -233,9 +278,10 @@ export default function Battle() {
       setSkillCooldown(attacker.id, skill.id, 999);
     }
 
-    // Animations
-    setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
+    // Pick appropriate attack animation
+    const atkAnim = getSkillAnimState(skill);
+    setAnimStates(prev => ({...prev, [attacker.id]: atkAnim}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 700);
 
     if (finalDmg > 0) {
       updateUnit(target.id, { hp: Math.max(0, target.hp - finalDmg) });
@@ -243,19 +289,27 @@ export default function Battle() {
       const aoeNote = skill.aoe ? ' [AoE]' : '';
       addLog(`${attacker.name} uses ${skill.name}${aoeNote} on ${target.name} for ${finalDmg} dmg!${suffix}`, 'damage');
 
-      setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
-      setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
-
-      if (target.hp - finalDmg <= 0) {
+      const newHp = target.hp - finalDmg;
+      if (newHp <= 0) {
         addLog(`${target.name} is defeated!`, 'debuff');
         setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
+      } else {
+        setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
+        setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 500);
+      }
+
+      // Apply status effect on hit
+      if (skill.applyStatus && skill.statusDuration) {
+        applyStatus(target.id, skill.applyStatus, skill.statusDuration);
+        setAnimStates(prev => ({...prev, [target.id]: skill.applyStatus! as AnimState}));
+        addLog(`${target.name} is ${skill.applyStatus}! (${skill.statusDuration} turns)`, 'debuff');
       }
     }
 
     setTimeout(() => {
       const u = useGameStore.getState().units.find(u => u.id === attacker.id);
       if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 600);
+    }, 700);
   };
 
   const executeAttack = (attacker: TacticalUnit, target: TacticalUnit) => {
@@ -268,20 +322,21 @@ export default function Battle() {
     setAttackableTiles([]);
     addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}`, 'damage');
     
-    setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
-    setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
+    setAnimStates(prev => ({...prev, [attacker.id]: 'attack1'}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 700);
 
     if (target.hp - damage <= 0) {
       addLog(`${target.name} is defeated!`, 'debuff');
       setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
+    } else {
+      setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
+      setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 500);
     }
     
     setTimeout(() => {
       const u = useGameStore.getState().units.find(u => u.id === attacker.id);
       if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 600);
+    }, 700);
   };
 
   const executeAbility = (attacker: TacticalUnit, target: TacticalUnit) => {
@@ -290,8 +345,8 @@ export default function Battle() {
     updateUnit(attacker.id, { hasActed: true, specialAbilityCooldown: 3 });
     setActionMode('idle');
     setAttackableTiles([]);
-    setAnimStates(prev => ({...prev, [attacker.id]: 'attacking'}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 600);
+    setAnimStates(prev => ({...prev, [attacker.id]: 'special2'}));
+    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 800);
 
     if (ability.includes("Heal") || ability === "Death's Embrace") {
        const heal = Math.floor(attacker.attack * 1.5);
@@ -301,17 +356,18 @@ export default function Battle() {
        damage = calculateDamage(attacker, target) + Math.floor(attacker.attack * 0.5);
        updateUnit(target.id, { hp: Math.max(0, target.hp - damage) });
        addLog(`${attacker.name} uses ${ability} on ${target.name} for ${damage} damage!`, 'damage');
-       setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
-       setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 400);
        if (target.hp - damage <= 0) {
          addLog(`${target.name} is defeated!`, 'debuff');
          setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
+       } else {
+         setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
+         setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 500);
        }
     }
     setTimeout(() => {
       const u = useGameStore.getState().units.find(u => u.id === attacker.id);
       if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 600);
+    }, 800);
   };
 
   // AI Logic
@@ -319,10 +375,16 @@ export default function Battle() {
     const unit = units.find(u => u.id === currentUnitId);
     if (!unit || unit.isPlayerControlled || unit.hp <= 0) return;
 
-    // Enemy Turn processing
     const aiTimer = setTimeout(() => {
+      // Stunned: skip entire turn
+      if (unit.statusEffects.includes('stunned')) {
+        addLog(`${unit.name} is STUNNED and loses their turn!`, 'debuff');
+        updateUnit(unit.id, { hasMoved: true, hasActed: true });
+        endTurn();
+        return;
+      }
+
       if (!unit.hasMoved) {
-        // Find closest player unit
         const players = units.filter(u => u.isPlayerControlled && u.hp > 0);
         if (players.length > 0) {
           const target = players.sort((a, b) => {
@@ -331,7 +393,9 @@ export default function Battle() {
             return distA - distB;
           })[0];
 
-          const reach = getReachableTiles(unit.position, unit.move);
+          // Frozen: heavily reduced movement
+          const effectiveMove = unit.statusEffects.includes('frozen') ? 1 : unit.move;
+          const reach = getReachableTiles(unit.position, effectiveMove);
           const bestMove = reach.sort((a, b) => {
             const distA = Math.abs(a.x - target.position.x) + Math.abs(a.y - target.position.y);
             const distB = Math.abs(b.x - target.position.x) + Math.abs(b.y - target.position.y);
@@ -341,14 +405,20 @@ export default function Battle() {
           if (bestMove) {
             updateUnit(unit.id, { position: bestMove, hasMoved: true });
             addLog(`${unit.name} moves.`);
-            setAnimStates(prev => ({...prev, [unit.id]: 'moving'}));
-            setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 500);
+            setAnimStates(prev => ({...prev, [unit.id]: 'walk'}));
+            setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 600);
           } else {
             updateUnit(unit.id, { hasMoved: true });
           }
         }
       } else if (!unit.hasActed) {
-        // Find targets in range
+        // Frozen: skip attack
+        if (unit.statusEffects.includes('frozen')) {
+          addLog(`${unit.name} is FROZEN and cannot attack!`, 'debuff');
+          updateUnit(unit.id, { hasActed: true });
+          endTurn();
+          return;
+        }
         const currentPos = useGameStore.getState().units.find(u => u.id === currentUnitId)?.position || unit.position;
         const targets = units.filter(u => u.isPlayerControlled && u.hp > 0 && 
           (Math.abs(u.position.x - currentPos.x) + Math.abs(u.position.y - currentPos.y)) <= unit.range);
@@ -366,10 +436,22 @@ export default function Battle() {
       } else {
         endTurn();
       }
-    }, 1200); // Slower AI to allow animations to be seen
+    }, 1300);
 
     return () => clearTimeout(aiTimer);
   }, [currentUnitId, units, endTurn, updateUnit, addLog]);
+
+  // Player stunned: auto-skip their turn after brief delay
+  useEffect(() => {
+    const unit = units.find(u => u.id === currentUnitId);
+    if (!unit || !unit.isPlayerControlled || unit.hp <= 0) return;
+    if (!unit.statusEffects.includes('stunned')) return;
+    const t = setTimeout(() => {
+      addLog(`${unit.name} is STUNNED and loses their turn!`, 'debuff');
+      endTurn();
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [currentUnitId, units, endTurn, addLog]);
 
   const activeUnit = currentUnitId ? units.find(u => u.id === currentUnitId) : null;
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -516,7 +598,7 @@ export default function Battle() {
                     setReachableTiles(isMove ? [] : getReachableTiles(activeUnit.position, activeUnit.move));
                   }}
                   disabled={activeUnit.hasMoved}
-                  variant={actionMode === 'move' ? 'default' : 'secondary'}
+                  variant={actionMode === 'move' ? 'primary' : 'secondary'}
                   className="w-full text-xs h-8"
                 >
                   <Move className="w-3 h-3 mr-2" />

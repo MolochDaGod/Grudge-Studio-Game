@@ -15,55 +15,62 @@ interface BattleSceneProps {
   animStates: Record<string, AnimState>;
 }
 
-export function BattleScene({ 
-  units, 
-  reachableTiles, 
-  attackableTiles, 
+export function BattleScene({
+  units,
+  reachableTiles,
+  attackableTiles,
   currentUnitId,
   actionMode,
   onTileClick,
-  animStates
+  animStates,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
 
-  const centerX = (GRID_W * TILE_SIZE) / 2;
-  const centerZ = (GRID_H * TILE_SIZE) / 2;
+  const centerX = (GRID_W * TILE_SIZE) / 2;   // 16 * 1.5 / 2 = 12
+  const centerZ = (GRID_H * TILE_SIZE) / 2;   // 12 * 1.5 / 2 = 9
 
   return (
     <Canvas
       style={{ width: '100%', height: '100%' }}
-      camera={{ position: [centerX, 12, centerZ + 10], fov: 50 }}
+      camera={{ position: [centerX, 30, centerZ + 24], fov: 48 }}
       shadows
       gl={{ antialias: true, alpha: false }}
     >
-      <color attach="background" args={['#0a0a14']} />
-      <fog attach="fog" args={['#0a0a14', 20, 40]} />
-      <Stars radius={100} depth={50} count={3000} factor={4} />
+      <color attach="background" args={['#080810']} />
+      <fog attach="fog" args={['#080810', 35, 90]} />
+      <Stars radius={120} depth={60} count={4000} factor={4} />
 
-      <ambientLight intensity={0.3} />
-      <directionalLight 
-        position={[10, 20, 10]} 
-        intensity={1.2} 
-        castShadow 
-        shadow-mapSize-width={2048} 
-        shadow-mapSize-height={2048} 
+      <ambientLight intensity={0.28} />
+      <directionalLight
+        position={[centerX + 8, 28, centerZ - 4]}
+        intensity={1.1}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
       />
-      
-      {/* Atmosphere lights */}
-      <pointLight position={[centerX, 5, 4]} color="#ff6600" intensity={0.8} distance={20} />
-      <pointLight position={[0, 5, 0]} color="#4444ff" intensity={0.5} distance={20} />
 
-      <OrbitControls 
+      {/* Atmosphere point lights spread across the larger board */}
+      <pointLight position={[4,  6, 4]}          color="#ff5500" intensity={0.9} distance={18} />
+      <pointLight position={[20, 6, 4]}          color="#4444ff" intensity={0.6} distance={18} />
+      <pointLight position={[centerX, 8, centerZ]} color="#cc6600" intensity={0.5} distance={22} />
+      <pointLight position={[4,  6, 16]}         color="#2244cc" intensity={0.5} distance={18} />
+      <pointLight position={[20, 6, 16]}         color="#ff3300" intensity={0.6} distance={18} />
+
+      <OrbitControls
         target={[centerX, 0, centerZ]}
         enablePan={false}
-        minPolarAngle={Math.PI / 6}
-        maxPolarAngle={Math.PI / 2.5}
-        minDistance={8}
-        maxDistance={25}
+        minPolarAngle={Math.PI / 7}
+        maxPolarAngle={Math.PI / 2.4}
+        minDistance={14}
+        maxDistance={55}
       />
 
       <group position={[0, 0, 0]}>
-        <TileGrid 
+        <TileGrid
           reachableTiles={reachableTiles}
           attackableTiles={attackableTiles}
           onTileClick={onTileClick}
@@ -72,10 +79,9 @@ export function BattleScene({
         />
 
         {units.map(unit => {
-          // Keep dead units visible but maybe faded (handled in CharacterModel)
           const elevation = getTileElevation(unit.position.x, unit.position.y);
-          const worldPos = tileToWorld(unit.position.x, unit.position.y, elevation);
-          
+          const worldPos  = tileToWorld(unit.position.x, unit.position.y, elevation);
+
           return (
             <CharacterModel
               key={unit.id}
@@ -87,7 +93,6 @@ export function BattleScene({
           );
         })}
       </group>
-
     </Canvas>
   );
 }

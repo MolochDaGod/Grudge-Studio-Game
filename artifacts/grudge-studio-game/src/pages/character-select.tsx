@@ -46,11 +46,19 @@ export default function CharacterSelect() {
 
     const createTacticalUnit = (char: typeof characters[0], isPlayer: boolean, index: number): TacticalUnit => {
       const speed = char.speed;
-      const move = Math.max(2, Math.floor(speed / 10));
-      const range = char.role === 'Ranger' || char.role === 'Warlock' ? 3 : char.role === 'Ambusher' ? 2 : 1;
-      
-      const x = isPlayer ? (index % 2) : 7 - (index % 2);
-      const y = Math.floor(index / 2) * 2 + 1; // spread out
+      // Larger board → more movement
+      const move = Math.max(4, Math.floor(speed / 7));
+      // Ranged characters get meaningful range on 16×12 board
+      const range = char.role === 'Ranger' ? 6
+                  : char.role === 'Warlock' ? 5
+                  : char.role === 'Ambusher' ? 3
+                  : 2;
+
+      // Player starts on the left (x=0,1), enemies on the right (x=14,15)
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = isPlayer ? col : (15 - col);
+      const y = row * 4 + 2; // spread vertically across the 12-tile height
 
       return {
         id: `unit_${unitIdCounter++}`,
@@ -70,12 +78,13 @@ export default function CharacterSelect() {
         specialAbility: char.specialAbility,
         specialAbilityDescription: char.specialAbilityDescription,
         specialAbilityCooldown: 0,
-        ct: Math.floor(Math.random() * 20), // slight random head start
+        ct: Math.floor(Math.random() * 20),
         faction: char.faction,
         rarity: char.rarity,
         statusEffects: [],
+        statusDurations: {},
         hasMoved: false,
-        hasActed: false
+        hasActed: false,
       };
     };
 

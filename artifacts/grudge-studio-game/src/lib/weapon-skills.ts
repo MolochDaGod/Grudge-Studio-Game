@@ -18,6 +18,10 @@ export interface Skill {
   moveBonus?: number;
   aoe?: boolean;
   selfTarget?: boolean;
+  /** Applies a status effect to the target on hit */
+  applyStatus?: 'stunned' | 'poisoned' | 'frozen';
+  /** How many turns the status lasts */
+  statusDuration?: number;
 }
 
 export interface WeaponSkillTree {
@@ -133,11 +137,11 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           },
           {
             id: 'axe_skull_crush', name: 'Skull Crush', icon: '💀',
-            description: 'Devastating crushing blow to the skull. Chance to stun.',
+            description: 'Devastating crushing blow to the skull. Stuns for 1 turn.',
             slot: 4, tier: 'T3', cooldown: 3, range: 1,
             tags: ['attack', 'damage', 'debuff'],
-            stats: ['180% DMG', '30% stun'],
-            dmgMultiplier: 1.8
+            stats: ['180% DMG', 'STUN 1 turn'],
+            dmgMultiplier: 1.8, applyStatus: 'stunned', statusDuration: 1
           },
         ]
       },
@@ -157,10 +161,10 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'axe_frost_giant_wrath', name: "Frost Giant's Wrath", icon: '❄️',
             description: 'Channel the power of frost giants. Frozen shockwave hits all enemies.',
-            slot: 5, tier: 'T3', cooldown: 999, range: 2,
+            slot: 5, tier: 'T3', cooldown: 999, range: 3,
             tags: ['attack', 'damage', 'aoe', 'ultimate'],
-            stats: ['200% DMG', 'AoE 2-tile', 'frost'],
-            dmgMultiplier: 2.0, aoe: true
+            stats: ['200% DMG', 'AoE', 'FREEZE 2 turns'],
+            dmgMultiplier: 2.0, aoe: true, applyStatus: 'frozen', statusDuration: 2
           },
         ]
       },
@@ -181,15 +185,15 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'fire_bolt', name: 'Fire Bolt', icon: '🔥',
             description: 'Launch a bolt of fire at an enemy.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T1', cooldown: 0, range: 5,
             tags: ['attack', 'damage'],
-            stats: ['100% DMG', 'fire'],
+            stats: ['100% DMG', 'fire', 'range 5'],
             dmgMultiplier: 1.0
           },
           {
             id: 'magma_spit', name: 'Magma Spit', icon: '🌋',
             description: 'Spit molten rock. Burns through armor.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T1', cooldown: 0, range: 5,
             tags: ['attack', 'damage'],
             stats: ['85% DMG', '+20% armor pen', 'fire'],
             dmgMultiplier: 0.85, armorPen: 20
@@ -197,9 +201,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'cinder_blast', name: 'Cinder Blast', icon: '💨',
             description: 'Wide cinder spray hitting a larger area.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T1', cooldown: 0, range: 4,
             tags: ['attack', 'damage', 'aoe'],
-            stats: ['80% DMG', 'wide spray'],
+            stats: ['80% DMG', 'wide spray', 'range 4'],
             dmgMultiplier: 0.8
           },
         ]
@@ -313,17 +317,17 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'eldritch_bolt', name: 'Eldritch Bolt', icon: '🌑',
             description: 'Launch a bolt of eldritch energy.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T1', cooldown: 0, range: 5,
             tags: ['attack', 'damage'],
-            stats: ['100% DMG', 'dark'],
+            stats: ['100% DMG', 'dark', 'range 5'],
             dmgMultiplier: 1.0
           },
           {
             id: 'shadow_grasp', name: 'Shadow Grasp', icon: '🖤',
             description: 'Tendrils of shadow squeeze the target.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T1', cooldown: 0, range: 5,
             tags: ['attack', 'damage', 'debuff'],
-            stats: ['90% DMG', 'slows target'],
+            stats: ['90% DMG', 'slows target', 'range 5'],
             dmgMultiplier: 0.9
           },
           {
@@ -389,19 +393,19 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
         skills: [
           {
             id: 'dark_sermon', name: 'Dark Sermon', icon: '📖',
-            description: 'Recite forbidden scripture, dealing AoE psychic damage.',
-            slot: 4, tier: 'T3', cooldown: 4, range: 3,
-            tags: ['attack', 'damage', 'aoe'],
-            stats: ['150% DMG', 'AoE 2-tile', 'dark'],
-            dmgMultiplier: 1.5, aoe: true
+            description: 'Recite forbidden scripture. AoE psychic damage that stuns.',
+            slot: 4, tier: 'T3', cooldown: 4, range: 4,
+            tags: ['attack', 'damage', 'aoe', 'debuff'],
+            stats: ['150% DMG', 'AoE', 'STUN 1 turn'],
+            dmgMultiplier: 1.5, aoe: true, applyStatus: 'stunned', statusDuration: 1
           },
           {
             id: 'void_rift', name: 'Void Rift', icon: '🕳️',
-            description: 'Tear a rift in reality that consumes the target.',
-            slot: 4, tier: 'T3', cooldown: 4, range: 3,
-            tags: ['attack', 'damage'],
-            stats: ['190% DMG', 'void', '+25% armor pen'],
-            dmgMultiplier: 1.9, armorPen: 25
+            description: 'Tear a rift in reality that consumes the target. Freezes in place.',
+            slot: 4, tier: 'T3', cooldown: 4, range: 4,
+            tags: ['attack', 'damage', 'debuff'],
+            stats: ['190% DMG', 'void', 'FREEZE 2 turns'],
+            dmgMultiplier: 1.9, armorPen: 25, applyStatus: 'frozen', statusDuration: 2
           },
         ]
       },
@@ -461,10 +465,10 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'dagger_poison_throw', name: 'Poison Throw', icon: '🧪',
             description: 'Throw a poison-coated dagger from range.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 2,
+            slot: 1, tier: 'T1', cooldown: 0, range: 3,
             tags: ['attack', 'damage', 'debuff'],
-            stats: ['70% DMG', 'range 2', 'poison'],
-            dmgMultiplier: 0.7
+            stats: ['70% DMG', 'range 3', 'POISON 3 turns'],
+            dmgMultiplier: 0.7, applyStatus: 'poisoned', statusDuration: 3
           },
         ]
       },
@@ -1112,11 +1116,11 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           },
           {
             id: 'rs_corroded_thrust', name: 'Corroded Thrust', icon: '☠️',
-            description: 'Drive the rusted blade into the target, applying corrosion.',
+            description: 'Drive the rusted blade into the target, applying poison corrosion.',
             slot: 1, tier: 'T1', cooldown: 0, range: 1,
             tags: ['attack', 'damage', 'debuff'],
-            stats: ['85% DMG', 'corrosion: -DEF', 'rust'],
-            dmgMultiplier: 0.85
+            stats: ['85% DMG', 'corrosion', 'POISON 2 turns'],
+            dmgMultiplier: 0.85, applyStatus: 'poisoned', statusDuration: 2
           },
           {
             id: 'rs_bone_strike', name: 'Bone Strike', icon: '🦴',
