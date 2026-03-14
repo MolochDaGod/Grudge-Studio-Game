@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { FantasyButton } from "@/components/ui/fantasy-button";
-import { HealthBar } from "@/components/ui/health-bar";
+import { HealthBar, StatBar, ActionBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skull, Move, FastForward, RotateCcw, RotateCw, Zap, Target, Clock, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -661,25 +661,45 @@ export default function Battle() {
                     key={u.id + index}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
+                    title={`${u.name} — CT ${Math.round(Math.min(100, u.ct))}% · SPD ${u.speed}`}
                     className={cn(
-                      "flex-shrink-0 w-12 h-12 rounded border overflow-hidden relative",
+                      "flex-shrink-0 w-12 h-14 rounded border overflow-hidden relative flex flex-col",
                       u.isPlayerControlled ? "border-primary" : "border-destructive",
                       currentUnitId === u.id && "ring-2 ring-white scale-110 z-10"
                     )}
                   >
+                    {/* Action bar (CT) at top — amber fill */}
+                    <div className="relative h-1.5 bg-black shrink-0">
+                      <motion.div
+                        className={cn(
+                          "h-full",
+                          Math.min(100, u.ct) >= 100
+                            ? "bg-gradient-to-r from-amber-500 to-yellow-300"
+                            : "bg-amber-700",
+                        )}
+                        initial={{ width: `${Math.min(100, u.ct)}%` }}
+                        animate={{ width: `${Math.min(100, u.ct)}%` }}
+                        transition={{ type: "spring", stiffness: 80, damping: 18 }}
+                      />
+                    </div>
+
+                    {/* Portrait */}
                     <img 
                       src={`${import.meta.env.BASE_URL}images/chars/${u.characterId}.png`} 
                       alt={u.name} 
-                      className="w-full h-full object-cover"
+                      className="flex-1 w-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiNmZmYiPj88L3RleHQ+PC9zdmc+';
                       }}
                     />
-                    {/* HP fraction overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black">
-                      <div 
+
+                    {/* HP bar at bottom — green/red */}
+                    <div className="relative h-1 bg-black shrink-0">
+                      <motion.div
                         className={cn("h-full", u.isPlayerControlled ? "bg-green-500" : "bg-red-500")}
-                        style={{ width: `${(u.hp / u.maxHp) * 100}%` }}
+                        initial={{ width: `${(u.hp / u.maxHp) * 100}%` }}
+                        animate={{ width: `${(u.hp / u.maxHp) * 100}%` }}
+                        transition={{ type: "spring", stiffness: 100, damping: 20 }}
                       />
                     </div>
                   </motion.div>
@@ -709,11 +729,32 @@ export default function Battle() {
                     {activeUnit.name}
                   </h2>
                   <p className="text-xs text-muted-foreground uppercase tracking-widest">{activeUnit.role}</p>
-                  <div className="text-xs font-mono font-bold mt-1">CT: <span className={activeUnit.ct >= 100 ? "text-green-400" : "text-white"}>{Math.min(100, activeUnit.ct)}</span></div>
                 </div>
               </div>
-              
-              <HealthBar current={activeUnit.hp} max={activeUnit.maxHp} />
+
+              {/* ── Stat bars: HP / Mana / Stamina / Action ── */}
+              <div className="space-y-2">
+                <HealthBar current={activeUnit.hp} max={activeUnit.maxHp} />
+                <StatBar
+                  current={activeUnit.mana ?? 0}
+                  max={activeUnit.maxMana ?? 1}
+                  label="Mana"
+                  fillClass="bg-blue-600"
+                  borderClass="border-blue-900/50"
+                />
+                <StatBar
+                  current={activeUnit.stamina ?? 0}
+                  max={activeUnit.maxStamina ?? 1}
+                  label="Stamina"
+                  fillClass="bg-orange-600"
+                  borderClass="border-orange-900/50"
+                />
+                <ActionBar
+                  ct={activeUnit.ct}
+                  speed={activeUnit.speed}
+                  isActive={activeUnit.id === currentUnitId}
+                />
+              </div>
               
               <div className="grid grid-cols-4 gap-2 mt-3 text-xs font-mono text-center">
                 <div className="bg-black/50 p-1 rounded border border-white/5">

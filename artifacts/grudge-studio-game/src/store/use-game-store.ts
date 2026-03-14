@@ -10,6 +10,10 @@ export interface TacticalUnit {
   role: string;
   hp: number;
   maxHp: number;
+  mana: number;
+  maxMana: number;
+  stamina: number;
+  maxStamina: number;
   attack: number;
   defense: number;
   speed: number;
@@ -22,6 +26,7 @@ export interface TacticalUnit {
   specialAbility: string;
   specialAbilityDescription: string;
   specialAbilityCooldown: number;
+  /** Charge time 0–100; hits 100 → unit's turn */
   ct: number;
   faction: string;
   rarity: string;

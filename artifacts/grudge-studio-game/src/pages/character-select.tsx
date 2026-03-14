@@ -60,6 +60,9 @@ export default function CharacterSelect() {
       const x = isPlayer ? col : (15 - col);
       const y = row * 4 + 2; // spread vertically across the 12-tile height
 
+      const maxMana    = Math.round(Math.max(20, 10 + speed * 3));
+      const maxStamina = Math.round(Math.max(40, 30 + speed * 2));
+
       return {
         id: `unit_${unitIdCounter++}`,
         characterId: char.id,
@@ -68,6 +71,10 @@ export default function CharacterSelect() {
         role: char.role,
         hp: char.hp,
         maxHp: char.hp,
+        mana: maxMana,
+        maxMana,
+        stamina: maxStamina,
+        maxStamina,
         attack: char.attack,
         defense: char.defense,
         speed: speed,
