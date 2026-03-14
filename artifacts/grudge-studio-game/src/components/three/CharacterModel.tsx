@@ -1,10 +1,17 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { useGLTF, useAnimations, Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import { TacticalUnit } from '@/store/use-game-store';
+import {
+  getCharacterConfig,
+  getAnimationName,
+  CharacterConfig,
+  AnimState,
+} from '@/lib/character-model-map';
 
-export type AnimState = 'idle' | 'moving' | 'attacking' | 'hurt' | 'dead';
+export type { AnimState };
 
 interface CharacterModelProps {
   unit: TacticalUnit;
@@ -13,136 +20,208 @@ interface CharacterModelProps {
   animState: AnimState;
 }
 
+const BASE = import.meta.env.BASE_URL;
+const C = (id: string) => `${BASE}models/characters/${id}.glb`;
+const W = (id: string) => `${BASE}models/weapons/${id}.glb`;
+
+function applyMaterialOverrides(scene: THREE.Object3D, config: CharacterConfig) {
+  scene.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    const result = mats.map((mat) => {
+      if (!(mat instanceof THREE.MeshStandardMaterial)) return mat;
+      const ov = config.materials[mat.name];
+      if (!ov) return mat.clone();
+      const cloned = mat.clone() as THREE.MeshStandardMaterial;
+      if (ov.color) {
+        const c = new THREE.Color().setStyle(ov.color);
+        c.convertSRGBToLinear();
+        cloned.color.copy(c);
+      }
+      if (ov.emissive) {
+        const e = new THREE.Color().setStyle(ov.emissive);
+        e.convertSRGBToLinear();
+        cloned.emissive.copy(e);
+      }
+      if (ov.emissiveIntensity !== undefined) cloned.emissiveIntensity = ov.emissiveIntensity;
+      if (ov.metalness !== undefined) cloned.metalness = ov.metalness;
+      if (ov.roughness !== undefined) cloned.roughness = ov.roughness;
+      return cloned;
+    });
+    obj.material = Array.isArray(obj.material) ? result : result[0];
+    obj.castShadow = true;
+    obj.receiveShadow = true;
+  });
+}
+
+function attachToBone(
+  charScene: THREE.Object3D,
+  weapScene: THREE.Object3D,
+  boneName: string,
+  pos: [number, number, number],
+  rot: [number, number, number],
+  scale: number,
+) {
+  let bone: THREE.Object3D | null = null;
+  charScene.traverse((o) => { if (o.name === boneName) bone = o; });
+  if (!bone) return;
+  const prev = (bone as THREE.Object3D).children.filter((c) => c.userData.isWeapon);
+  prev.forEach((p) => (bone as THREE.Object3D).remove(p));
+  const clone = SkeletonUtils.clone(weapScene);
+  clone.userData.isWeapon = true;
+  clone.position.set(...pos);
+  clone.rotation.set(...rot);
+  clone.scale.setScalar(scale);
+  clone.traverse((o) => {
+    if (o instanceof THREE.Mesh) {
+      o.castShadow = true;
+      o.material = Array.isArray(o.material)
+        ? o.material.map((m) => m.clone())
+        : (o.material as THREE.Material).clone();
+    }
+  });
+  (bone as THREE.Object3D).add(clone);
+}
+
 export function CharacterModel({ unit, position, isSelected, animState }: CharacterModelProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
-  const startY = position[1] + 0.5; // Offset for character center
-  
-  const factionColor = unit.isPlayerControlled ? '#d4a017' : '#8b0000';
-  const isDead = unit.hp <= 0 || animState === 'dead';
+  const config = useMemo(() => getCharacterConfig(unit.characterId), [unit.characterId]);
 
-  useFrame((state, delta) => {
-    if (!groupRef.current) return;
-    
-    const time = state.clock.getElapsedTime();
-    
-    // Position smoothing
-    groupRef.current.position.lerp(
-      new THREE.Vector3(position[0], startY, position[2]),
-      0.1
-    );
+  const charUrl  = C(config.modelId);
+  const weapUrl  = W(config.primaryWeapon.modelId);
+  // Always call useGLTF — use same weapon if no secondary (React hook rule)
+  const shieldUrl = config.secondaryWeapon ? W(config.secondaryWeapon.modelId) : weapUrl;
 
-    // Animation states
-    if (isDead) {
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI / 2, 0.1);
-      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, position[1] + 0.1, 0.1);
-      if (materialRef.current) {
-        materialRef.current.opacity = THREE.MathUtils.lerp(materialRef.current.opacity, 0.3, 0.05);
-        materialRef.current.transparent = true;
-      }
+  const { scene: rawChar, animations } = useGLTF(charUrl);
+  const { scene: rawWeap }             = useGLTF(weapUrl);
+  const { scene: rawShield }           = useGLTF(shieldUrl);
+
+  const charScene = useMemo(() => {
+    const clone = SkeletonUtils.clone(rawChar);
+    applyMaterialOverrides(clone, config);
+    return clone;
+  }, [rawChar, config]);
+
+  const groupRef = useRef<THREE.Group>(null!);
+  const { actions } = useAnimations(animations, groupRef);
+
+  // Play animation
+  useEffect(() => {
+    if (!actions) return;
+    const name = getAnimationName(animState, config);
+    const action = actions[name];
+    if (!action) return;
+    Object.values(actions).forEach((a) => { if (a && a !== action) a.fadeOut(0.2); });
+    if (animState === 'dead') {
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
     } else {
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.2);
-      
-      switch (animState) {
-        case 'moving':
-          groupRef.current.position.y = startY + Math.sin(time * 15) * 0.15;
-          groupRef.current.rotation.z = Math.sin(time * 10) * 0.1;
-          break;
-        case 'attacking':
-          groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, position[2] - 0.5, 0.3);
-          groupRef.current.rotation.x = 0.2;
-          break;
-        case 'hurt':
-          groupRef.current.position.x = position[0] + Math.sin(time * 50) * 0.1;
-          if (materialRef.current) {
-            materialRef.current.emissive.setHex(0xffffff);
-            materialRef.current.emissiveIntensity = 0.5;
+      action.setLoop(THREE.LoopRepeat, Infinity);
+    }
+    action.reset().fadeIn(0.2).play();
+  }, [animState, actions, config]);
+
+  // Attach primary weapon
+  useEffect(() => {
+    const pw = config.primaryWeapon;
+    attachToBone(charScene, rawWeap, 'Fist.R', pw.position, pw.rotation, pw.scale);
+  }, [charScene, rawWeap, config.primaryWeapon]);
+
+  // Attach secondary weapon (shield)
+  useEffect(() => {
+    if (!config.secondaryWeapon) return;
+    const sw = config.secondaryWeapon;
+    attachToBone(charScene, rawShield, sw.attachBone, sw.position, sw.rotation, sw.scale);
+  }, [charScene, rawShield, config.secondaryWeapon]);
+
+  // Smooth position
+  const targetPos = useRef(new THREE.Vector3(...position));
+  useEffect(() => { targetPos.current.set(...position); }, [position]);
+
+  // Hurt flash
+  const hurtFlash = useRef(0);
+  useEffect(() => {
+    if (animState === 'hurt') hurtFlash.current = 1.0;
+  }, [animState]);
+
+  const isDead = unit.hp <= 0 || animState === 'dead';
+  const hpPct  = unit.hp / unit.maxHp;
+  const hpColor = hpPct > 0.5 ? '#00ff88' : hpPct > 0.2 ? '#ffdd00' : '#ff3300';
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return;
+    groupRef.current.position.lerp(targetPos.current, 0.12);
+
+    // Hurt emissive flash
+    if (hurtFlash.current > 0) {
+      hurtFlash.current = Math.max(0, hurtFlash.current - delta * 5);
+      charScene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          const mat = obj.material as THREE.MeshStandardMaterial;
+          if (mat?.emissive) {
+            mat.emissive.setRGB(hurtFlash.current * 0.8, 0, 0);
+            mat.emissiveIntensity = (config.materials[mat.name]?.emissiveIntensity ?? 0) + hurtFlash.current;
           }
-          break;
-        case 'idle':
-        default:
-          groupRef.current.position.y = startY + Math.sin(time * 3) * 0.05;
-          groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.1);
-          if (materialRef.current) {
-            materialRef.current.emissive.setHex(0x000000);
-            materialRef.current.emissiveIntensity = 0;
-          }
-          break;
-      }
+        }
+      });
+    }
+
+    // Death fall
+    if (isDead) {
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x, -Math.PI / 2, delta * 2
+      );
+    } else {
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(
+        groupRef.current.rotation.x, 0, delta * 8
+      );
     }
   });
 
-  // Role-based sizing/weapons
-  const isHeavy = ['Berserker', 'Warrior', 'Warlord', 'Defender', 'Forge Master'].includes(unit.role);
-  const isRanged = ['Ranger', 'Archer'].includes(unit.role);
-  
-  const torsoRadius = isHeavy ? 0.35 : 0.25;
-  const torsoHeight = 0.7;
-
-  // HP indicator color
-  const hpPercent = unit.hp / unit.maxHp;
-  const hpColor = hpPercent > 0.5 ? '#00ff00' : hpPercent > 0.2 ? '#ffff00' : '#ff0000';
+  const [sx, sy, sz] = config.scale;
+  const labelY   = sy * 2.25;
+  const hpRingY  = sy * 2.05;
+  const ringRad  = Math.max(sx, sz) * 0.58;
 
   return (
-    <group ref={groupRef} position={[position[0], startY, position[2]]}>
-      {/* Torso */}
-      <mesh castShadow receiveShadow position={[0, 0, 0]}>
-        <cylinderGeometry args={[torsoRadius, torsoRadius, torsoHeight, 16]} />
-        <meshStandardMaterial ref={materialRef} color={factionColor} roughness={0.7} metalness={0.3} />
-      </mesh>
+    <group ref={groupRef} position={position}>
+      <group scale={[sx, sy, sz]}>
+        <primitive object={charScene} />
+      </group>
 
-      {/* Head */}
-      <mesh castShadow receiveShadow position={[0, torsoHeight / 2 + 0.2, 0]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
-        <meshStandardMaterial color={factionColor} roughness={0.7} metalness={0.3} />
-      </mesh>
-
-      {/* Weapon Proxy */}
-      {isHeavy && !isDead && (
-        <mesh castShadow position={[0.4, 0, 0.2]} rotation={[Math.PI / 4, 0, 0]}>
-          <boxGeometry args={[0.1, 0.8, 0.2]} />
-          <meshStandardMaterial color="#888888" metalness={0.8} roughness={0.2} />
-        </mesh>
-      )}
-      {isRanged && !isDead && (
-        <mesh castShadow position={[0.3, 0, 0.2]} rotation={[0, 0, Math.PI / 8]}>
-          <cylinderGeometry args={[0.02, 0.02, 1, 8]} />
-          <meshStandardMaterial color="#5c4033" />
-        </mesh>
-      )}
-      {!isHeavy && !isRanged && !isDead && (
-        <mesh castShadow position={[0.35, 0.2, 0.2]}>
-          <cylinderGeometry args={[0.05, 0.05, 0.8, 8]} />
-          <meshStandardMaterial color="#4444ff" emissive="#0000ff" emissiveIntensity={0.2} />
-        </mesh>
-      )}
-
-      {/* Selection Ring */}
+      {/* Selection ring */}
       {isSelected && !isDead && (
-        <mesh position={[0, -0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.45, 0.55, 32]} />
-          <meshBasicMaterial color="#ffffff" transparent opacity={0.8} />
+        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[ringRad * 0.82, ringRad, 48]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.8} depthWrite={false} />
         </mesh>
       )}
 
-      {/* HP Ring */}
+      {/* HP arc */}
       {!isDead && (
-        <mesh position={[0, torsoHeight / 2 + 0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.2, 0.25, 16]} />
-          <meshBasicMaterial color={hpColor} />
+        <mesh position={[0, hpRingY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.17, 0.22, 32, 1, 0, hpPct * Math.PI * 2]} />
+          <meshBasicMaterial color={hpColor} depthWrite={false} />
         </mesh>
       )}
 
-      {/* Name Label */}
+      {/* Faction dot */}
+      {!isDead && (
+        <mesh position={[0, hpRingY + 0.06, 0]}>
+          <sphereGeometry args={[0.04, 8, 8]} />
+          <meshBasicMaterial color={unit.isPlayerControlled ? '#d4a017' : '#cc2222'} />
+        </mesh>
+      )}
+
+      {/* Name label */}
       {!isDead && (
         <Text
-          position={[0, torsoHeight / 2 + 0.8, 0]}
-          fontSize={0.2}
-          color="white"
+          position={[0, labelY, 0]}
+          fontSize={0.18}
+          color={unit.isPlayerControlled ? '#ffd700' : '#ff7777'}
           anchorX="center"
           anchorY="middle"
-          outlineWidth={0.02}
-          outlineColor="black"
+          outlineWidth={0.025}
+          outlineColor="#000000"
         >
           {unit.name}
         </Text>
@@ -150,3 +229,10 @@ export function CharacterModel({ unit, position, isSelected, animState }: Charac
     </group>
   );
 }
+
+// Preload all assets
+const modelIds = ['orc','elf','human','barbarian','undead','dwarf','rogue','mage'];
+const weapIds  = ['greataxe','fire_staff','dark_staff','daggers','greatsword',
+                  'bow','sword','shield','rusted_sword','war_hammer'];
+modelIds.forEach((id) => useGLTF.preload(C(id)));
+weapIds.forEach((id)  => useGLTF.preload(W(id)));

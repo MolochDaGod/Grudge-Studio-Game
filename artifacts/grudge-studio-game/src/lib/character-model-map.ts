@@ -1,0 +1,304 @@
+export interface MaterialOverride {
+  color?: string;
+  emissive?: string;
+  emissiveIntensity?: number;
+  metalness?: number;
+  roughness?: number;
+  opacity?: number;
+  transparent?: boolean;
+}
+
+export interface WeaponConfig {
+  modelId: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: number;
+}
+
+export interface SecondaryWeaponConfig extends WeaponConfig {
+  attachBone: string;
+}
+
+export interface CharacterConfig {
+  modelId: 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage';
+  scale: [number, number, number];
+  materials: Record<string, MaterialOverride>;
+  primaryWeapon: WeaponConfig;
+  secondaryWeapon?: SecondaryWeaponConfig;
+  attackAnim: 'SwordSlash' | 'Punch' | 'Shoot_OneHanded';
+  idleVariant?: 'normal' | 'zombie';
+}
+
+// Weapon natural longest-axis lengths (from actual GLB vertex bounds):
+// greataxe=4.59z, fire_staff=7.63z, dark_staff=5.58z, daggers=0.91z,
+// greatsword=2.41z, bow=5.44z, sword=1.50z, shield=2.56z,
+// rusted_sword=1.50z, war_hammer=4.97z
+// Target: weapon_world_length = scale * 0.72(char) * natural_length ≈ 0.7-1.0
+// Rotation [Math.PI/2, 0, 0] rotates Z-axis → Y-axis (blade points up in fist's local space)
+
+const WEAPON_DEFAULTS: Record<string, WeaponConfig> = {
+  greataxe: {
+    modelId: 'greataxe',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.22,   // 0.22 * 0.72 * 4.59 ≈ 0.73 world units
+  },
+  fire_staff: {
+    modelId: 'fire_staff',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.18,   // 0.18 * 0.72 * 7.63 ≈ 0.99 world units
+  },
+  dark_staff: {
+    modelId: 'dark_staff',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.22,   // 0.22 * 0.72 * 5.58 ≈ 0.88 world units
+  },
+  daggers: {
+    modelId: 'daggers',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, Math.PI / 6],
+    scale: 0.50,   // 0.50 * 0.72 * 0.91 ≈ 0.33 world units (short daggers)
+  },
+  greatsword: {
+    modelId: 'greatsword',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.42,   // 0.42 * 0.72 * 2.41 ≈ 0.73 world units
+  },
+  bow: {
+    modelId: 'bow',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, Math.PI / 2, 0],
+    scale: 0.20,   // 0.20 * 0.72 * 5.44 ≈ 0.78 world units
+  },
+  sword: {
+    modelId: 'sword',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.65,   // 0.65 * 0.72 * 1.50 ≈ 0.70 world units
+  },
+  shield: {
+    modelId: 'shield',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.28,   // 0.28 * 0.72 * 2.56 ≈ 0.52 world units
+  },
+  rusted_sword: {
+    modelId: 'rusted_sword',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, Math.PI / 12],
+    scale: 0.62,   // slightly smaller/worn 0.62 * 0.72 * 1.50 ≈ 0.67 world units
+  },
+  war_hammer: {
+    modelId: 'war_hammer',
+    position: [0, 0, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    scale: 0.22,   // 0.22 * 0.72 * 4.97 ≈ 0.79 world units
+  },
+};
+
+export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
+
+  'frost-orc-berserker': {
+    modelId: 'orc',
+    scale: [0.72 * 1.4, 0.72 * 0.95, 0.72 * 1.4],
+    materials: {
+      Skin:  { color: '#3a7a8a', roughness: 0.6 },
+      Face:  { color: '#3a7a8a' },
+      Pants: { color: '#1e2e40', roughness: 0.8 },
+      Teeth: { color: '#d8c8a0' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    attackAnim: 'SwordSlash',
+  },
+
+  'magma-orc-destroyer': {
+    modelId: 'orc',
+    scale: [0.72 * 1.6, 0.72 * 1.1, 0.72 * 1.4],
+    materials: {
+      Skin:  { color: '#4a1000', emissive: '#ff2200', emissiveIntensity: 0.45, roughness: 0.9 },
+      Face:  { color: '#4a1000', emissive: '#ff1100', emissiveIntensity: 0.3 },
+      Pants: { color: '#150808', roughness: 0.95 },
+      Teeth: { color: '#888888', metalness: 0.5 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    attackAnim: 'Punch',
+  },
+
+  'brother-maltheus': {
+    modelId: 'mage',
+    scale: [0.72 * 0.85, 0.72 * 1.12, 0.72 * 0.85],
+    materials: {
+      Skin:    { color: '#9a7a65', roughness: 0.7 },
+      Face:    { color: '#b08a70' },
+      Clothes: { color: '#1a0a2e', roughness: 0.9 },
+      Belt:    { color: '#0a0a0a', metalness: 0.3 },
+      Gold:    { color: '#5a4800', metalness: 0.7, roughness: 0.4 },
+      Hat:     { color: '#0d0520', roughness: 0.95 },
+      Hair:    { color: '#888888', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.dark_staff,
+    attackAnim: 'Punch',
+  },
+
+  'canal-lurker': {
+    modelId: 'rogue',
+    scale: [0.72 * 0.9, 0.72 * 0.92, 0.72 * 0.9],
+    materials: {
+      Skin:    { color: '#2a4018', roughness: 0.85 },
+      Face:    { color: '#2a4018', emissive: '#806000', emissiveIntensity: 0.4 },
+      Main:    { color: '#1a2a10', roughness: 0.95 },
+      Details: { color: '#1a3000', emissive: '#002200', emissiveIntensity: 0.1 },
+      Grey:    { color: '#1e2018', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.daggers,
+    attackAnim: 'SwordSlash',
+  },
+
+  'warlord-garnok': {
+    modelId: 'barbarian',
+    scale: [0.72 * 1.5, 0.72 * 1.1, 0.72 * 1.3],
+    materials: {
+      Skin:  { color: '#1a3a0a', roughness: 0.75 },
+      Face:  { color: '#1a3a0a' },
+      Light: { color: '#4a2e10', roughness: 0.85 },
+      Main:  { color: '#1a1a1a', metalness: 0.6, roughness: 0.5 },
+      Pants: { color: '#0e2008', roughness: 0.9 },
+      Hair:  { color: '#050505', roughness: 0.95 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    attackAnim: 'SwordSlash',
+  },
+
+  'elven-archer': {
+    modelId: 'elf',
+    scale: [0.72 * 0.85, 0.72 * 1.08, 0.72 * 0.85],
+    materials: {
+      Skin:    { color: '#d0b090', roughness: 0.5 },
+      Face:    { color: '#e0c8a8' },
+      Clothes: { color: '#1e4810', roughness: 0.8 },
+      Belt:    { color: '#3a1e08', roughness: 0.85 },
+      Gold:    { color: '#b09030', metalness: 0.7, roughness: 0.3 },
+      Hat:     { color: '#122808', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.bow,
+    attackAnim: 'Shoot_OneHanded',
+  },
+
+  'orcish-warrior': {
+    modelId: 'orc',
+    scale: [0.72 * 1.2, 0.72 * 1.0, 0.72 * 1.15],
+    materials: {
+      Skin:  { color: '#2e4820', roughness: 0.75 },
+      Face:  { color: '#2e4820' },
+      Pants: { color: '#2a1808', roughness: 0.9 },
+      Teeth: { color: '#c8a050' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    attackAnim: 'SwordSlash',
+  },
+
+  'human-knight': {
+    modelId: 'human',
+    scale: [0.72 * 1.05, 0.72 * 1.05, 0.72 * 1.05],
+    materials: {
+      Skin:       { color: '#c08050', roughness: 0.6 },
+      Face:       { color: '#d09060' },
+      Armor:      { color: '#c8a030', metalness: 0.8, roughness: 0.25, emissive: '#c8a030', emissiveIntensity: 0.08 },
+      Armor_Dark: { color: '#0a1a3a', metalness: 0.6, roughness: 0.4 },
+      Detail:     { color: '#d4a017', metalness: 0.85, roughness: 0.2 },
+      Red:        { color: '#6a0000', roughness: 0.7 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.sword,
+    secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
+    attackAnim: 'SwordSlash',
+  },
+
+  'human-barbarian': {
+    modelId: 'barbarian',
+    scale: [0.72 * 1.2, 0.72 * 1.0, 0.72 * 1.15],
+    materials: {
+      Skin:  { color: '#7a4e28', roughness: 0.7 },
+      Face:  { color: '#8a5e38' },
+      Light: { color: '#5a3a18', roughness: 0.85 },
+      Main:  { color: '#200e04', roughness: 0.9 },
+      Pants: { color: '#2a2010', roughness: 0.9 },
+      Hair:  { color: '#1e0c04', roughness: 0.95 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    attackAnim: 'SwordSlash',
+  },
+
+  'skeleton-undead': {
+    modelId: 'undead',
+    scale: [0.72 * 1.0, 0.72 * 1.05, 0.72 * 1.0],
+    materials: {
+      Skin:        { color: '#c8b898', emissive: '#1a0844', emissiveIntensity: 0.2, roughness: 0.85 },
+      Face:        { color: '#a09070', emissive: '#4400aa', emissiveIntensity: 0.35 },
+      Clothes:     { color: '#0a0a14', roughness: 0.95 },
+      Guts:        { color: '#0a0a0a', roughness: 0.95 },
+      Pants:       { color: '#181008', roughness: 0.95 },
+      DarkClothes: { color: '#050508', roughness: 0.99 },
+      Bones:       { color: '#d8cca0', roughness: 0.8 },
+      Brain:       { color: '#0a0a0a' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.rusted_sword,
+    attackAnim: 'SwordSlash',
+    idleVariant: 'zombie',
+  },
+
+  'dwarven-forge-master': {
+    modelId: 'dwarf',
+    scale: [0.72 * 1.3, 0.72 * 0.72, 0.72 * 1.3],
+    materials: {
+      Skin:       { color: '#8a4428', roughness: 0.65 },
+      Face:       { color: '#9a5438' },
+      Armor:      { color: '#181818', metalness: 0.85, roughness: 0.3 },
+      Armor_Dark: { color: '#080808', metalness: 0.9, roughness: 0.2 },
+      Detail:     { color: '#c44000', emissive: '#c44000', emissiveIntensity: 0.3, metalness: 0.6 },
+      Red:        { color: '#880000', roughness: 0.7 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
+    attackAnim: 'SwordSlash',
+  },
+};
+
+export function getCharacterConfig(characterId: string): CharacterConfig {
+  return CHARACTER_CONFIGS[characterId] ?? CHARACTER_CONFIGS['orcish-warrior'];
+}
+
+export type AnimState = 'idle' | 'moving' | 'attacking' | 'hurt' | 'dead';
+
+export function getAnimationName(state: AnimState, config: CharacterConfig): string {
+  switch (state) {
+    case 'idle':      return config.idleVariant === 'zombie' ? 'Idle' : 'Idle';
+    case 'moving':    return 'Run';
+    case 'attacking': return config.attackAnim;
+    case 'hurt':      return 'RecieveHit';
+    case 'dead':      return 'Death';
+    default:          return 'Idle';
+  }
+}
+
+export const ALL_MODEL_URLS = [
+  '/models/characters/orc.glb',
+  '/models/characters/elf.glb',
+  '/models/characters/human.glb',
+  '/models/characters/barbarian.glb',
+  '/models/characters/undead.glb',
+  '/models/characters/dwarf.glb',
+  '/models/characters/rogue.glb',
+  '/models/characters/mage.glb',
+  '/models/weapons/greataxe.glb',
+  '/models/weapons/fire_staff.glb',
+  '/models/weapons/dark_staff.glb',
+  '/models/weapons/daggers.glb',
+  '/models/weapons/greatsword.glb',
+  '/models/weapons/bow.glb',
+  '/models/weapons/sword.glb',
+  '/models/weapons/shield.glb',
+  '/models/weapons/rusted_sword.glb',
+  '/models/weapons/war_hammer.glb',
+];

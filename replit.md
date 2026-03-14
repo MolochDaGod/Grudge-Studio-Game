@@ -28,9 +28,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Logo:** `public/images/logo-nobg.png` (background removed)
 - **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 11 characters, 3:4 ratio)
 - **Battle terrain:** `public/images/battle-terrain.png`, `public/images/select-bg.png`
-- **Three.js 3D Battle Scene:** `src/components/three/` — BattleScene.tsx (R3F Canvas with camera/lights/stars/fog), TileGrid.tsx (8×6 elevated 3D tile grid with highlight), CharacterModel.tsx (procedural animated character meshes)
+- **Three.js 3D Battle Scene:** `src/components/three/` — BattleScene.tsx (R3F Canvas with camera/lights/stars/fog), TileGrid.tsx (8×6 elevated 3D tile grid with highlight), CharacterModel.tsx (GLTF animated character with weapons via bone attachment)
+- **3D Models:** `public/models/characters/` (orc/elf/human/barbarian/undead/dwarf/rogue/mage .glb from Quaternius packs), `public/models/weapons/` (greataxe/fire_staff/dark_staff/daggers/greatsword/bow/sword/shield/rusted_sword/war_hammer .glb)
+- **Character config map:** `src/lib/character-model-map.ts` — per-character GLB model ID, scale [x,y,z], named material color overrides (sRGB hex), weapon attachment params, attack animation type
+- **CharacterModel.tsx:** Uses `useGLTF` + `useAnimations` + `SkeletonUtils.clone` for independent instances; applies per-character material overrides; attaches weapons to `Fist.R` bone (shields to `Fist.L`); smooth animation transitions; HP arc ring + faction dot + name label
+- **Weapon scales (actual GLB sizes):** greataxe=4.59u, fire_staff=7.63u, dark_staff=5.58u, daggers=0.91u, greatsword=2.41u, bow=5.44u, sword=1.50u, shield=2.56u, rusted_sword=1.50u, war_hammer=4.97u; target ~0.7-1.0 world units; scale = desiredSize / (charScale * nativeLength)
 - **Lore data:** `src/lib/lore.ts` — CHARACTER_LORE with title, quote, backstory for all 11 characters
-- **Animation system:** CharacterModel.tsx supports idle (floating), moving (step bounce), attacking (forward lunge), hurt (shake + flash), dead (fall + fade) via useFrame
+- **Animation names (all models share):** Death, Defeat, Idle, Jump, PickUp, Punch, RecieveHit, Roll, Run, SwordSlash, Victory, Walk (CharacterModel plays these via animation state machine)
+- **Bone names:** `Fist.R` = right-hand weapon attachment, `Fist.L` = shield; `Head`, `Neck`, `Torso`, `Hips`, `CharacterArmature`
 - **Camera:** Perspective, fov=50, isometric-style angle with OrbitControls (limited polar range)
 - **Tile elevation map:** Pre-defined terrain variation in TileGrid.tsx
 - **API endpoints:** `/api/game/characters`, `/api/game/leaderboard`, `POST /api/game/scores`
