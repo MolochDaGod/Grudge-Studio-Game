@@ -17,6 +17,9 @@ import {
 } from "@/lib/weapon-skills";
 import { getLevelWithEdits, LevelDef, hasLineOfSight } from "@/lib/levels";
 
+const BASE = import.meta.env.BASE_URL;
+const UI = (path: string) => `${BASE}images/ui/${path}`;
+
 // ── Effect helpers ────────────────────────────────────────────────────────────
 function getEffectColor(skill: Skill): string {
   const s = (skill.stats.join(' ') + ' ' + (skill.description || '')).toLowerCase();
@@ -644,7 +647,14 @@ export default function Battle() {
       </div>
 
       {/* Right Area: Sidebar */}
-      <div className="relative z-10 w-full md:w-[320px] lg:w-[380px] border-l border-border bg-black/90 flex flex-col h-screen shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+      <div
+        className="relative z-10 w-full md:w-[320px] lg:w-[380px] border-l border-border flex flex-col h-screen shadow-[-10px_0_30px_rgba(0,0,0,0.5)]"
+        style={{
+          backgroundImage: `url('${UI("Windows/Window/Window_Background.png")}')`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "64px 64px",
+        }}
+      >
         
         {/* Turn Order */}
         <div className="p-4 border-b border-white/10 shrink-0">
@@ -702,6 +712,18 @@ export default function Battle() {
                         transition={{ type: "spring", stiffness: 100, damping: 20 }}
                       />
                     </div>
+
+                    {/* Craftpix SmallUnitFrame overlay */}
+                    <div
+                      className="absolute inset-0 pointer-events-none z-20"
+                      style={{
+                        backgroundImage: `url('${UI("Mobile/Unit Frames/SmallUnitFrame_Background.png")}')`,
+                        backgroundSize: "100% 100%",
+                        backgroundRepeat: "no-repeat",
+                        opacity: 0.75,
+                        mixBlendMode: "screen",
+                      }}
+                    />
                   </motion.div>
                 );
               })}
@@ -710,17 +732,41 @@ export default function Battle() {
         </div>
 
         {/* Current Unit Info */}
-        <div className="p-4 border-b border-white/10 shrink-0 bg-gradient-to-b from-white/5 to-transparent relative overflow-hidden">
+        <div className="p-4 border-b border-white/10 shrink-0 relative overflow-hidden">
+          {/* Craftpix UnitFrame_Main_Background as subtle section texture */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `url('${UI("HUD/Unit Frames/Main/UnitFrame_Main_Background.png")}')`,
+              backgroundSize: "100% auto",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "top center",
+              opacity: 0.12,
+              mixBlendMode: "screen",
+            }}
+          />
           {activeUnit ? (
             <div className="animate-in fade-in relative z-10">
               <div className="flex gap-4 mb-3">
-                <div className="w-20 h-20 rounded border border-white/20 overflow-hidden shrink-0 bg-black/50">
+                {/* Portrait with Avatar overlay */}
+                <div className="w-20 h-20 rounded border border-white/20 overflow-hidden shrink-0 bg-black/50 relative">
                   <img 
                     src={`${import.meta.env.BASE_URL}images/chars/${activeUnit.characterId}.png`} 
                     alt={activeUnit.name} 
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiNmZmYiPj88L3RleHQ+PC9zdmc+';
+                    }}
+                  />
+                  {/* Craftpix Avatar Overlay */}
+                  <div
+                    className="absolute inset-0 pointer-events-none z-10"
+                    style={{
+                      backgroundImage: `url('${UI("HUD/Unit Frames/Main/Avatar/UnitFrame_Main_Avatar_Overlay.png")}')`,
+                      backgroundSize: "100% 100%",
+                      backgroundRepeat: "no-repeat",
+                      opacity: 0.8,
+                      mixBlendMode: "screen",
                     }}
                   />
                 </div>
@@ -872,11 +918,21 @@ export default function Battle() {
                           "relative w-full flex flex-col items-center justify-center rounded border transition-all duration-150 py-1.5 px-1",
                           "min-h-[56px] overflow-hidden",
                           isActive
-                            ? "border-primary bg-primary/20 shadow-[0_0_8px_rgba(212,160,23,0.4)]"
+                            ? "border-primary shadow-[0_0_10px_rgba(212,160,23,0.5)]"
                             : isDisabled
-                              ? "border-white/5 bg-black/30 opacity-50 cursor-not-allowed"
-                              : "border-white/15 bg-black/40 hover:border-white/30 hover:bg-white/5 cursor-pointer"
+                              ? "border-white/5 opacity-50 cursor-not-allowed"
+                              : "border-white/15 hover:border-primary/50 cursor-pointer"
                         )}
+                        style={{
+                          backgroundImage: `url('${UI("HUD/Action Bar/Slots/ActionBar_MainSlot_Background.png")}')`,
+                          backgroundSize: "100% 100%",
+                          backgroundRepeat: "no-repeat",
+                          filter: isActive
+                            ? "brightness(1.3) sepia(0.5) hue-rotate(-10deg)"
+                            : isDisabled
+                            ? "brightness(0.5) saturate(0.3)"
+                            : "brightness(0.85)",
+                        }}
                       >
                         {/* Slot Roman numeral */}
                         <div

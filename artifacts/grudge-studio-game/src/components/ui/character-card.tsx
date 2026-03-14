@@ -113,8 +113,34 @@ export function CharacterCard({ character, onClick, selected, className }: Chara
         />
         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
 
+        {/* Craftpix hero frame overlay — adds RPG border texture over portrait */}
+        <div
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{
+            backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Lobby/Hero Select/Hero Frame/HeroSelect_Hero_Frame.png')`,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            opacity: selected ? 0.9 : 0.55,
+            mixBlendMode: "screen",
+          }}
+        />
+
+        {/* Selected glow frame */}
+        {selected && (
+          <div
+            className="absolute inset-0 pointer-events-none z-10"
+            style={{
+              backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Lobby/Hero Select/Hero Frame/HeroSelect_Hero_Selected.png')`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+              opacity: 0.7,
+              mixBlendMode: "screen",
+            }}
+          />
+        )}
+
         {/* Name Overlay */}
-        <div className="absolute bottom-2 left-3 right-3 flex justify-between items-end z-10">
+        <div className="absolute bottom-2 left-3 right-3 flex justify-between items-end z-20">
           <h3 className="font-display font-bold text-lg leading-tight text-glow uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] line-clamp-2">
             {character.name}
           </h3>

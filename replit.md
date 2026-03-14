@@ -1,153 +1,57 @@
-# Workspace
+# Overview
 
-## Overview
+This project is a pnpm workspace monorepo using TypeScript, focused on developing "Grudge Studio: Realm of Grudges," a Final Fantasy Tactics-style tactical grid RPG. The game features a dark fantasy theme with a rich lore, diverse character races and classes, and dynamic, level-driven battle grids. The project aims to deliver a compelling tactical RPG experience with detailed 3D environments, character models, and a robust API backend for game mechanics and leaderboards.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+# User Preferences
 
-## Stack
+I want iterative development. I prefer detailed explanations for complex changes. Please ask before making major architectural changes or introducing new external dependencies.
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+# System Architecture
 
-## Artifacts
+The project is structured as a pnpm workspace monorepo.
 
-### `artifacts/grudge-studio-game` — Grudge Studio: Realm of Grudges (FFT-style Tactical RPG)
-- **React + Vite** web app at path `/`
-- **Theme:** Dark fantasy, gold/amber accents, Cinzel Decorative font
-- **Game type:** Final Fantasy Tactics–style tactical grid RPG
-- **Grid:** Dynamic level-driven grids (80×80 to 140×140) with InstancedMesh tile rendering, BFS obstacle-aware movement, and CT-based turn order
-- **Characters:** 26 total — Full Grudge Warlords roster: 6 races × 4 classes = 24 standard heroes + 2 secret Pirates heroes (Racalvin the Pirate King, Cpt. John Wayne)
-- **Races:** Human, Barbarian, Dwarf, Elf, Orc, Undead — each with distinct racial stats
-- **Classes:** Warrior (melee tank), Worg (shapeshifter), Mage (ranged caster), Ranger (ranged DPS)
-- **Factions:** Crusade (Human+Barbarian), Fabled (Dwarf+Elf), Legion (Orc+Undead), Pirates (secret)
-- **Rarity:** Common, Uncommon, Rare, Epic, Legendary
-- **Hero IDs:** `{race}_{class}` format (e.g. `human_warrior`, `elf_mage`, `orc_worg`)
-- **RPG Pack Characters (6):** Converted from Quaternius RPG Characters Nov 2020 (FBX/glTF → GLB via assimp/gltf-pipeline); models: `warrior_rpg`, `ranger_rpg`, `rogue_rpg`, `wizard_rpg`, `cleric_rpg`, `monk_rpg`; each skinned with material color tints for faction (orc green, undead bone-pale, etc.); each holds different weapons from pack defaults (modular); all unique animation states mapped to pack-specific anim names
-- **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`, `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
-- **Logo:** `public/images/logo-nobg.png` (background removed)
-- **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 17 characters, 3:4 ratio); `-nobg.png` variants with background removed for overlay use (home page side decorations — original 11 only)
-- **Battle terrain:** `public/images/battle-terrain.png`, `public/images/select-bg.png`
-- **RPG Character textures:** `public/models/characters/rpg-textures/{warrior,ranger,rogue,wizard,cleric,monk}.png` — atlas textures for all 6 RPG pack chars. `CharacterConfig.textureUrl` field routes through `CharacterModelTextureLoader` at runtime; `CharacterModel.tsx` no longer has hardcoded texture maps.
-- **In-game Map Editor:** Full 3D editor at `/map-editor/:levelId`
-  - Accessible via "Edit" button on each level card in level-select
-  - **Modes:** Select, Place (asset palette), Terrain paint, Height raise/lower, Erase
-  - **Terrain:** 6 types (grass/sand/lava/water/stone/dirt) painted onto 80×80+ tile grid, persisted in `localStorage`
-  - **Height system:** `HEIGHT_STEP=0.5` world units per level, `MAX_HEIGHT=8` levels; tiles extend vertically in `EditorTileGrid` (InstancedMesh); hover cursor sits on tile top surface; raise (yellow) / lower (blue) cursor colors
-  - **Props:** Place any of 80+ craftpix GLBs from sidebar palette; TransformControls gizmo for translate/rotate/scale; snap to grid toggle
-  - **Save/Load:** Saved to `grudge-editor-{levelId}` in `localStorage`; loaded by battle scene via `loadSavedProps()`
-  - **Key files:** `src/lib/map-editor-store.ts`, `src/lib/asset-catalog.ts`, `src/pages/map-editor.tsx`
-- **Craftpix 3D Map Assets:** 94 GLB files converted from FBX (assimp) in `public/models/maps/`:
-  - `ruins/` — 28 files: `ruin_1.glb` through `ruin_21.glb` (scattered graveyard/tombstone pieces)
-  - `medieval/` — 26 files: fortress_full, 5 tower types, 2 wall types, 2 gate types, barracks, ammourry, stairs, bridge, brazier, fire_bell, firewoods, sentry_hurt, props_full, fense_fyull
-  - `elven/` — 20 files: fortress_full, 5 tower types, watchtoer_1, 2 wall types, 2 gate types, kazarm_1, arsenal_1, stairs, bridge, fense, brazier_1, fire_bell_1, andiron1, props_full
-  - `orc/` — 20 files: fortress_full, 5 tower types, 2 wall types, 2 gate types, barracks, arsenal, shed_01, stairs, bridge, fense_full, brazier_01, alarm_drum, firewoods, props_full
-  - **Scale:** ~0.009–0.012 for all craftpix models (FBX in cm converted 1:1 to GLB; scale applied in game for cm→meters)
-- **Level system:** `src/lib/levels.ts` — 4 LevelDef entries:
-  1. **Graveyard of the Fallen** (80×80): 590+ obstacles, 50 ruin props using all 21 ruin types in graveyard clusters
-  2. **Orc Stronghold** (100×100): 1645+ obstacles, 50+ orc props — 2-ring fortress (outer OW=8, inner IW=28), keep, barracks, arsenal, shed, towers, gates
-  3. **Elven Citadel** (120×120): 1800+ obstacles, 50+ elven props — 2-ring fortress + watchtowers + bridges + kazarm + arsenal
-  4. **Iron Bastion** (140×140): 3000+ obstacles, 60+ medieval props — 3-ring fortress (outer/middle/inner walls) + keeps + barracks + ammourry + stairs
-- **Three.js 3D Battle Scene:** `src/components/three/` — BattleScene.tsx (R3F Canvas with Sky component, ocean plane, island terrain, camera/lights/fog), TileGrid.tsx (InstancedMesh tile grid with highlight), CharacterModel.tsx (GLTF animated character with weapons via bone attachment), CombatEffects.tsx (animated 3D effects layer)
-- **Ocean/Island environment:** Each level renders on a rocky island floating in an animated ocean; IslandEnvironment generates 220 procedural dodecahedron rocks along the border; OceanPlane is a vast animated teal plane at y=-1.5; Sky component configures sun angle/turbidity per theme; orc level has pulsing lava cracks on the island
-- **Sky colors per theme:** ruins=#7a96a8 (overcast coastal), orc=#5a1800 (volcanic haze), elven=#5590c8 (clear tropical), medieval=#6090c0 (bright daylight)
-- **Combat Effects system** (`src/components/three/CombatEffects.tsx`): 12 typed effects spawned on skill use — `fire_projectile` (orange arcing sphere), `dark_projectile` (purple), `ice_projectile` (cyan), `arrow` (thin capsule + cone tip), `physical_slash` (torus arc flash), `impact_flash` (expanding sphere at target), `aoe_ring` (flat expanding ring), `heal_burst` (rising 8-particle green ring), `ultimate_nova` (3-layer nova: sphere + 2 rings + point light), `status_stun/poison/freeze` (6 floating octahedra). All effects timed via `performance.now()`, cleaned up in battle.tsx every 250ms.
-- **Effect → skill tag mapping** (`battle.tsx`): `fire` in stats/desc → fire_projectile, `dark/death` → dark_projectile, `ice/frost` → ice_projectile, bow weapon → arrow, heal tag → heal_burst, ultimate tag → ultimate_nova, applyStatus → status type, short range physical → physical_slash; impact_flash always plays 380ms after hit
-- **Skill tooltips:** Hovering a skill slot in the action bar shows a rich floating panel (`SkillTooltip` component) with: large skill icon, name, tier badge (T1/T2/T3 with themed colors), italic description, stat chips, tag badges (color-coded), range, cooldown, AoE indicator
-- **3D Models:** `public/models/characters/` (orc/elf/human/barbarian/undead/dwarf/rogue/mage .glb from Quaternius packs), `public/models/weapons/` (greataxe/fire_staff/dark_staff/daggers/greatsword/bow/sword/shield/rusted_sword/war_hammer .glb)
-- **RPG pack scale fix:** warrior_rpg/ranger_rpg/rogue_rpg/wizard_rpg/cleric_rpg/monk_rpg exported in centimeter units → base scale 0.0072 (not 0.72); weapon scales compensated ×100 (greatsword→43, bow→19, daggers→115, fire_staff→14, war_hammer→21); CharacterConfig supports `labelHeight`, `hpRingHeight`, `selectionRingRadius` overrides
-- **Character config map:** `src/lib/character-model-map.ts` — per-character GLB model ID, scale [x,y,z], named material color overrides (sRGB hex), weapon attachment params, attack animation type, optional label/ring height overrides
-- **CharacterModel.tsx:** Uses `useGLTF` + `useAnimations` + `SkeletonUtils.clone` for independent instances; applies per-character material overrides; attaches weapons to `Fist.R` bone (shields to `Fist.L`); smooth animation transitions; HP arc ring + faction dot + name label; uses `config.labelHeight/hpRingHeight/selectionRingRadius` when present (RPG pack chars)
-- **CHARACTER_WEAPON_MAP** (`weapon-skills.ts`): All 17 characters mapped including RPG pack (orc-blood-guard→greatsword, saltbone-corsair→bow, grave-shade→daggers, orc-warlock→fire_staff, hollow-zealot→war_hammer, iron-pilgrim→greatsword)
-- **Weapon scales (actual GLB sizes):** greataxe=4.59u, fire_staff=7.63u, dark_staff=5.58u, daggers=0.91u, greatsword=2.41u, bow=5.44u, sword=1.50u, shield=2.56u, rusted_sword=1.50u, war_hammer=4.97u; target ~0.7-1.0 world units; scale = desiredSize / (charScale * nativeLength)
-- **Lore data:** `src/lib/lore.ts` — CHARACTER_LORE with title, quote, backstory for all 11 characters
-- **Animation names (all models share):** Death, Defeat, Idle, Jump, PickUp, Punch, RecieveHit, Roll, Run, SwordSlash, Victory, Walk (CharacterModel plays these via animation state machine)
-- **Bone names:** `Fist.R` = right-hand weapon attachment, `Fist.L` = shield; `Head`, `Neck`, `Torso`, `Hips`, `CharacterArmature`
-- **Camera:** Perspective, fov=50, isometric-style angle with OrbitControls (limited polar range), PCFShadowMap shadows
-- **Tile elevation map:** Pre-defined terrain variation in TileGrid.tsx
-- **API endpoints:** `/api/game/characters`, `/api/game/leaderboard`, `POST /api/game/scores`
+**Core Technologies:**
+- **Monorepo:** pnpm workspaces
+- **Node.js:** v24
+- **TypeScript:** v5.9
+- **API Framework:** Express 5
+- **Database:** PostgreSQL with Drizzle ORM
+- **Validation:** Zod (`zod/v4`), `drizzle-zod`
+- **API Codegen:** Orval (from OpenAPI spec)
+- **Build Tool:** esbuild (CJS bundle)
+- **Frontend:** React + Vite
 
-## Structure
+**UI/UX and Game Design:**
+- **Theme:** Dark fantasy, gold/amber accents, Cinzel Decorative font.
+- **Game Type:** Final Fantasy Tactics–style tactical grid RPG.
+- **Grid System:** Dynamic level-driven grids (80×80 to 140×140) with InstancedMesh tile rendering, BFS obstacle-aware movement, and CT-based turn order.
+- **Characters:** 26 total (24 standard heroes across 6 races × 4 classes, plus 2 secret Pirates heroes). Races (Human, Barbarian, Dwarf, Elf, Orc, Undead) and Classes (Warrior, Worg, Mage, Ranger) have distinct stats and roles. Characters are GLB models with modular weapons and unique animation states.
+- **Factions:** Crusade, Fabled, Legion, Pirates.
+- **Rarity System:** Common, Uncommon, Rare, Epic, Legendary.
+- **3D Battle Scene:** Built with React Three Fiber (`@react-three/fiber`), `@react-three/drei`, and `three`. Features a Sky component, ocean plane, island terrain, camera/lights/fog, InstancedMesh tile grid, animated GLTF characters, and 3D combat effects.
+- **Map Editor:** In-game 3D editor at `/map-editor/:levelId` with modes for selecting, placing assets, terrain painting, height adjustment, and erasing. Supports 6 terrain types, a height system (0.5 units per level, max 8 levels), and 80+ craftpix GLB props with transform controls and grid snapping. Saves to `localStorage`.
+- **Combat Effects:** 12 typed 3D effects (e.g., `fire_projectile`, `physical_slash`, `heal_burst`, `ultimate_nova`) spawned on skill use, timed via `performance.now()`.
+- **Skill Tooltips:** Rich floating panels displaying skill icon, name, tier, description, stats, tags, range, cooldown, and AoE indicator.
+- **Level System:** Four distinct levels (`src/lib/levels.ts`) with unique sizes, obstacle counts, and environmental props (Graveyard, Orc Stronghold, Elven Citadel, Iron Bastion), each with a distinct sky color theme.
+- **Camera:** Perspective, fov=50, isometric-style angle with OrbitControls (limited polar range), PCFShadowMap shadows.
 
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
-```
+**Technical Implementation:**
+- **Monorepo Structure:** `artifacts/` (deployable apps like `api-server`), `lib/` (shared libraries like `api-spec`, `api-client-react`, `api-zod`, `db`), `scripts/` (utility scripts).
+- **TypeScript Configuration:** All packages extend `tsconfig.base.json` with `composite: true`. Root `tsconfig.json` manages project references for correct cross-package type-checking and build order. `emitDeclarationOnly` is used for type-checking, with actual JS bundling handled by esbuild/Vite.
+- **API Server (`artifacts/api-server`):** Express 5 server. Routes in `src/routes/` use `@workspace/api-zod` for request/response validation and `@workspace/db` for persistence.
+- **Database Layer (`lib/db`):** Drizzle ORM with PostgreSQL. Exports a Drizzle client and schema models. Drizzle Kit handles migrations.
+- **API Specification (`lib/api-spec`):** Contains `openapi.yaml` and `orval.config.ts`. Generates React Query hooks (`lib/api-client-react`) and Zod schemas (`lib/api-zod`) for client-side API interaction and validation.
+- **Character Model Configuration:** `src/lib/character-model-map.ts` defines per-character GLB model ID, scale, material overrides, weapon attachments, and animation types. `CharacterModel.tsx` uses `useGLTF`, `useAnimations`, and `SkeletonUtils.clone` for efficient rendering and smooth animation transitions.
 
-## TypeScript & Composite Projects
+# External Dependencies
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
-
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
-
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- **PostgreSQL:** Primary database.
+- **Orval:** API client and Zod schema generation from OpenAPI specification.
+- **Craftpix 3D Assets:** 94 GLB files for map props (ruins, medieval, elven, orc themes).
+- **Craftpix RPG UI Pack:** 316 PNG textures (`public/images/ui/`) used throughout the HUD — UnitFrame bar fills, ActionBar slot backgrounds, Avatar overlays, Window chrome (tiling), HeroSelect frames.
+- **Craftpix Stylized Nature Pack:** 68 glTF models + 20 PNG textures (`public/models/nature/`) — trees (CommonTree_1-5, DeadTree_1-5), bushes, pebbles, mushrooms, grass/clover; placed as environment decoration ringing the battle map border via `NatureDecor.tsx`.
+- **Quaternius RPG Characters:** 3D character models (orc, elf, human, barbarian, undead, dwarf, rogue, mage) and weapon models.
+- **Zustand:** State management for the React frontend.
+- **Framer Motion:** Animation library for the React frontend.
+- **Lucide React:** Icon library for the React frontend.
+- **React Three Fiber (`@react-three/fiber`), Drei (`@react-three/drei`), Three.js:** 3D rendering library and utilities.

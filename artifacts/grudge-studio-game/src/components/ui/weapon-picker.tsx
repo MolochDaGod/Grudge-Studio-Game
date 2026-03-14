@@ -28,11 +28,23 @@ export function WeaponPicker({ heroName, heroPortrait, weapons, onSelect, onCanc
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="w-full max-w-4xl bg-[#0d0d0f] border border-primary/40 rounded-sm shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden"
+          className="w-full max-w-4xl border border-primary/40 rounded-sm shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden relative"
+          style={{
+            backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Windows/Window/Window_Background.png')`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "64px 64px",
+          }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-primary/20 bg-black/40">
+          <div
+            className="flex items-center justify-between px-6 py-4 border-b border-primary/20"
+            style={{
+              backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Windows/Window/Header/Window_Header_Background.png')`,
+              backgroundRepeat: "repeat",
+              backgroundSize: "64px 64px",
+            }}
+          >
             <div className="flex items-center gap-4">
               <img
                 src={heroPortrait}
@@ -62,7 +74,12 @@ export function WeaponPicker({ heroName, heroPortrait, weapons, onSelect, onCanc
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
                 onClick={() => onSelect(weapon.weaponType)}
-                className="group text-left bg-black/60 border border-white/10 hover:border-primary/60 rounded-sm p-5 transition-all duration-200 hover:bg-primary/5 hover:shadow-[0_0_20px_rgba(212,160,23,0.15)] focus:outline-none focus:border-primary"
+                className="group text-left border border-white/15 hover:border-primary/60 rounded-sm p-5 transition-all duration-200 hover:shadow-[0_0_20px_rgba(212,160,23,0.2)] focus:outline-none focus:border-primary"
+                style={{
+                  backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Windows/Inventory/Inventory_Slot_Background.png')`,
+                  backgroundRepeat: "repeat",
+                  backgroundSize: "64px 64px",
+                }}
               >
                 {/* Icon + Name */}
                 <div className="flex items-center gap-3 mb-3">

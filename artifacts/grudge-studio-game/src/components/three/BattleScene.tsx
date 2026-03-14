@@ -6,6 +6,7 @@ import { TileGrid, tileToWorld } from './TileGrid';
 import { CharacterModel, AnimState } from './CharacterModel';
 import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
 import { CombatEffectsLayer, CombatEffectData } from './CombatEffects';
+import { NatureDecor } from './NatureDecor';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
@@ -285,6 +286,9 @@ export function BattleScene({
           />
 
           <ScenePropLayer props={level.props} />
+
+          {/* Craftpix Stylized Nature — trees, rocks, bushes ringing the map border */}
+          <NatureDecor gridW={gridW} gridH={gridH} tileSize={tileSize} />
 
           {units.map(unit => {
             const worldPos = tileToWorld(unit.position.x, unit.position.y, tileSize);
