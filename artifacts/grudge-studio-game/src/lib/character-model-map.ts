@@ -66,6 +66,11 @@ export interface CharacterConfig {
   hpRingHeight?: number;
   /** World-space radius of selection ring */
   selectionRingRadius?: number;
+  /**
+   * URL to an external diffuse texture for RPG FBX→GLB models that have no embedded textures.
+   * When set, CharacterModel loads and applies this texture to all materials in the mesh.
+   */
+  textureUrl?: string;
 }
 
 // Weapon natural longest-axis lengths (from actual GLB vertex bounds):
@@ -310,6 +315,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'orc-blood-guard': {
     modelId: 'warrior_rpg',
     scale: [0.0072 * 1.3, 0.0072 * 1.05, 0.0072 * 1.3],
+    textureUrl: 'models/characters/rpg-textures/warrior.png',
     materials: {
       Warrior_Texture:       { color: '#28500e', roughness: 0.75 },
       Warrior_Sword_Texture: { color: '#b08840', metalness: 0.6, roughness: 0.4 },
@@ -328,6 +334,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'saltbone-corsair': {
     modelId: 'ranger_rpg',
     scale: [0.0072 * 0.95, 0.0072 * 1.05, 0.0072 * 0.95],
+    textureUrl: 'models/characters/rpg-textures/ranger.png',
     materials: {
       Ranger_Texture: { color: '#c8c0a8', emissive: '#220044', emissiveIntensity: 0.25, roughness: 0.85 },
       Bow_Texture:    { color: '#c0b8a0', roughness: 0.9 },
@@ -346,6 +353,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'grave-shade': {
     modelId: 'rogue_rpg',
     scale: [0.0072 * 0.9, 0.0072 * 1.0, 0.0072 * 0.9],
+    textureUrl: 'models/characters/rpg-textures/rogue.png',
     materials: {
       Rogue_Texture:        { color: '#706860', emissive: '#6600aa', emissiveIntensity: 0.4, roughness: 0.9 },
       Rogue_Dagger_Texture: { color: '#909090', metalness: 0.4, roughness: 0.6 },
@@ -364,6 +372,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'orc-warlock': {
     modelId: 'wizard_rpg',
     scale: [0.0072 * 1.2, 0.0072 * 1.08, 0.0072 * 1.2],
+    textureUrl: 'models/characters/rpg-textures/wizard.png',
     materials: {
       Wizard_Texture:       { color: '#1c3806', emissive: '#ff4400', emissiveIntensity: 0.12, roughness: 0.8 },
       Wizard_Staff_Texture: { color: '#a06020', metalness: 0.5, roughness: 0.5 },
@@ -382,6 +391,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'hollow-zealot': {
     modelId: 'cleric_rpg',
     scale: [0.0072 * 1.0, 0.0072 * 1.05, 0.0072 * 1.0],
+    textureUrl: 'models/characters/rpg-textures/cleric.png',
     materials: {
       Cleric_Texture:       { color: '#cbb870', emissive: '#aa8800', emissiveIntensity: 0.18, roughness: 0.85 },
       Cleric_Staff_Texture: { color: '#a8a070', roughness: 0.9 },
@@ -400,6 +410,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'iron-pilgrim': {
     modelId: 'monk_rpg',
     scale: [0.0072 * 1.05, 0.0072 * 1.05, 0.0072 * 1.05],
+    textureUrl: 'models/characters/rpg-textures/monk.png',
     materials: {
       Monk_Texture: { color: '#8a6040', roughness: 0.7 },
     },

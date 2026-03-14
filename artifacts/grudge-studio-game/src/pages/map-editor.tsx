@@ -11,6 +11,8 @@ import {
   TERRAIN_LABELS,
   TerrainType,
   EditorProp,
+  HEIGHT_STEP,
+  MAX_HEIGHT,
 } from '@/lib/map-editor-store';
 import {
   ASSET_CATALOG,
@@ -19,7 +21,7 @@ import {
   AssetPack,
 } from '@/lib/asset-catalog';
 import { FantasyButton } from '@/components/ui/fantasy-button';
-import { ArrowLeft, Save, Trash2, Move, RotateCcw, Maximize2, Grid3x3, Paintbrush, MousePointer, Eraser, Layers } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Move, RotateCcw, Maximize2, Grid3x3, Paintbrush, MousePointer, Eraser, Layers, Mountain, ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const BASE = import.meta.env.BASE_URL;
@@ -140,12 +142,12 @@ function StaticProp({ prop }: { prop: EditorProp }) {
 }
 
 // ─── Terrain tile grid ───────────────────────────────────────────────────────
-const TILE_H = 0.14;
-const DARK = new THREE.Color(0x2a2a35);
+const TILE_BASE_H = 0.14;
+const DARK  = new THREE.Color(0x2a2a35);
 const LIGHT = new THREE.Color(0x3a3a45);
 
 function EditorTileGrid() {
-  const { gridW, gridH, tileSize, terrain } = useEditorStore();
+  const { gridW, gridH, tileSize, terrain, heights } = useEditorStore();
   const instRef = useRef<THREE.InstancedMesh>(null!);
   const dummy   = useMemo(() => new THREE.Object3D(), []);
   const total   = gridW * gridH;
@@ -156,22 +158,27 @@ function EditorTileGrid() {
     let idx = 0;
     for (let x = 0; x < gridW; x++) {
       for (let z = 0; z < gridH; z++) {
-        dummy.position.set(x * tileSize + tileSize / 2, TILE_H / 2, z * tileSize + tileSize / 2);
-        dummy.scale.set(tileSize * 0.97, TILE_H, tileSize * 0.97);
+        const lvl    = heights[`${x},${z}`] ?? 0;
+        const tileH  = TILE_BASE_H + lvl * HEIGHT_STEP;
+        const centerY = tileH / 2;
+        dummy.position.set(x * tileSize + tileSize / 2, centerY, z * tileSize + tileSize / 2);
+        dummy.scale.set(tileSize * 0.97, tileH, tileSize * 0.97);
         dummy.updateMatrix();
         mesh.setMatrixAt(idx, dummy.matrix);
 
         const t = terrain[`${x},${z}`];
-        const col = t
+        const baseCol = t
           ? new THREE.Color(TERRAIN_COLORS[t])
-          : (x + z) % 2 === 0 ? DARK : LIGHT;
-        mesh.setColorAt(idx, col);
+          : (x + z) % 2 === 0 ? DARK.clone() : LIGHT.clone();
+        // Darken sides slightly based on height for a subtle elevation cue
+        const brightened = baseCol.clone().multiplyScalar(lvl > 0 ? 1 + lvl * 0.03 : 1);
+        mesh.setColorAt(idx, brightened);
         idx++;
       }
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [gridW, gridH, tileSize, terrain, dummy]);
+  }, [gridW, gridH, tileSize, terrain, heights, dummy]);
 
   return (
     <instancedMesh ref={instRef} args={[undefined, undefined, total]} receiveShadow>
@@ -183,7 +190,10 @@ function EditorTileGrid() {
 
 // ─── Terrain painting + prop placement plane ─────────────────────────────────
 function ClickPlane() {
-  const { gridW, gridH, tileSize, mode, selectedAsset, selectedTerrain, addProp, setTerrain, selectProp } = useEditorStore();
+  const {
+    gridW, gridH, tileSize, mode, selectedAsset, selectedTerrain,
+    addProp, setTerrain, selectProp, adjustHeight, heightBrush, heights,
+  } = useEditorStore();
   const w = gridW * tileSize;
   const h = gridH * tileSize;
   const [hoverTile, setHoverTile] = useState<[number, number] | null>(null);
@@ -205,15 +215,29 @@ function ClickPlane() {
     } else if (mode === 'terrain') {
       const [tx, tz] = tileOf(pt);
       setTerrain(tx, tz, selectedTerrain);
+    } else if (mode === 'height') {
+      const [tx, tz] = tileOf(pt);
+      adjustHeight(tx, tz);
     } else if (mode === 'select') {
       selectProp(null);
     }
-  }, [mode, selectedAsset, selectedTerrain, addProp, setTerrain, selectProp, tileSize]);
+  }, [mode, selectedAsset, selectedTerrain, addProp, setTerrain, selectProp, adjustHeight, tileSize]);
 
   const handleMove = useCallback((e: any) => {
     const pt: THREE.Vector3 = e.point;
     setHoverTile(tileOf(pt));
   }, [tileSize]);
+
+  // Hover highlight elevation – sit on top of actual tile top surface
+  const hoverY = hoverTile
+    ? (heights[`${hoverTile[0]},${hoverTile[1]}`] ?? 0) * HEIGHT_STEP + TILE_BASE_H + 0.01
+    : 0;
+
+  const hoverColor =
+    mode === 'erase'  ? '#ff4444' :
+    mode === 'place'  ? '#44ffaa' :
+    mode === 'height' ? (heightBrush === 1 ? '#ffe066' : '#66aaff') :
+    TERRAIN_COLORS[selectedTerrain];
 
   return (
     <>
@@ -229,14 +253,14 @@ function ClickPlane() {
       </mesh>
 
       {/* Hover tile highlight */}
-      {hoverTile && (mode === 'place' || mode === 'terrain' || mode === 'erase') && (
+      {hoverTile && (mode === 'place' || mode === 'terrain' || mode === 'erase' || mode === 'height') && (
         <mesh
-          position={[hoverTile[0] * tileSize + tileSize / 2, 0.02, hoverTile[1] * tileSize + tileSize / 2]}
+          position={[hoverTile[0] * tileSize + tileSize / 2, hoverY, hoverTile[1] * tileSize + tileSize / 2]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
           <planeGeometry args={[tileSize * 0.95, tileSize * 0.95]} />
           <meshBasicMaterial
-            color={mode === 'erase' ? '#ff4444' : mode === 'place' ? '#44ffaa' : TERRAIN_COLORS[selectedTerrain]}
+            color={hoverColor}
             transparent
             opacity={0.45}
             depthWrite={false}
@@ -451,6 +475,7 @@ export default function MapEditor() {
     mode, transformMode, snapEnabled, isDirty, selectedPropId,
     deleteProp, clearEdits,
     selectedTerrain, setSelectedTerrain,
+    heightBrush, setHeightBrush,
   } = useEditorStore();
 
   const level = useMemo(() => LEVELS.find(l => l.id === levelId) ?? LEVELS[0], [levelId]);
@@ -507,6 +532,7 @@ export default function MapEditor() {
           ['select',  'Select',  <MousePointer className="w-3.5 h-3.5" />],
           ['place',   'Place',   <Layers className="w-3.5 h-3.5" />],
           ['terrain', 'Terrain', <Paintbrush className="w-3.5 h-3.5" />],
+          ['height',  'Height',  <Mountain className="w-3.5 h-3.5" />],
           ['erase',   'Erase',   <Eraser className="w-3.5 h-3.5" />],
         ] as const).map(([m, label, icon]) => (
           <button
@@ -570,6 +596,35 @@ export default function MapEditor() {
                 onClick={() => setSelectedTerrain(t)}
               />
             ))}
+          </>
+        )}
+
+        {/* Height raise/lower controls */}
+        {mode === 'height' && (
+          <>
+            <div className="w-px h-6 bg-white/20 mx-1" />
+            <span className="text-xs text-white/50">Brush:</span>
+            <button
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                heightBrush === 1 ? 'bg-amber-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20',
+              )}
+              onClick={() => setHeightBrush(1)}
+            >
+              <ChevronUp className="w-3.5 h-3.5" /> Raise
+            </button>
+            <button
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold transition-colors',
+                heightBrush === -1 ? 'bg-sky-700 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20',
+              )}
+              onClick={() => setHeightBrush(-1)}
+            >
+              <ChevronDown className="w-3.5 h-3.5" /> Lower
+            </button>
+            <span className="text-xs text-white/40 ml-1">
+              max {MAX_HEIGHT} levels · {HEIGHT_STEP}u/step
+            </span>
           </>
         )}
 

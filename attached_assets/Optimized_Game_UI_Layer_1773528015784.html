@@ -1,0 +1,446 @@
+
+	      <!DOCTYPE html>
+<html>
+  <head>
+    <title>CodeSandbox</title>
+
+    <script type="importmap">
+      {"imports":{"react":"https://esm.sh/react@18.3.1","lucide-react":"https://esm.sh/lucide-react?external=react,react-dom","react-dom":"https://esm.sh/react-dom@18.3.1","react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime","react-dom/client":"https://esm.sh/react-dom@18.3.1/client","tailwindcss/defaultTheme":"https://esm.sh/tailwindcss/defaultTheme","tailwindcss-animate":"https://esm.sh/tailwindcss-animate"}}
+    </script>
+
+    <script>
+      window.addEventListener("error", function (event) {
+        const errorObj = {
+          message: event.message,
+          source: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          stack: event.error ? event.error.stack : null
+        };
+        window.parent.postMessage(
+          { action: "error", error: JSON.stringify(errorObj) },
+          "*"
+        );
+        event.preventDefault();
+      });
+
+  function handleImportError(error) {
+    throw new Error('Import module failed: ' + error.target.src);
+  }
+
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      mutation.addedNodes.forEach(node => {
+        if (node.tagName === 'SCRIPT' && node.type === 'module') {
+          node.onerror = handleImportError;
+        }
+      });
+    });
+  });
+
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  document.querySelectorAll('script[type="module"]').forEach(script => {
+    script.onerror = handleImportError;
+  });
+
+  
+window.console = new Proxy(console, {
+  get(target, prop) {
+    if (['log', 'warn', 'error'].includes(prop)) {
+      return new Proxy(target[prop], {
+        apply(fn, thisArg, args) {
+          fn.apply(thisArg, args);
+          window.parent.postMessage({ action: 'console', 
+            type: prop, 
+            args: args.map((arg) => {
+              try {
+                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
+              } catch (e) {
+                return arg;
+              }
+            }) 
+          }, '*');
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+
+
+    </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
+    <style type="text/tailwindcss">
+      @layer base {
+        :root {
+          --background: 0 0% 100%;
+          --foreground: 222.2 47.4% 11.2%;
+
+          --muted: 210 40% 96.1%;
+          --muted-foreground: 215.4 16.3% 46.9%;
+
+          --popover: 0 0% 100%;
+          --popover-foreground: 222.2 47.4% 11.2%;
+
+          --border: 214.3 31.8% 91.4%;
+          --input: 214.3 31.8% 91.4%;
+
+          --card: 0 0% 100%;
+          --card-foreground: 222.2 47.4% 11.2%;
+
+          --primary: 222.2 47.4% 11.2%;
+          --primary-foreground: 210 40% 98%;
+
+          --secondary: 210 40% 96.1%;
+          --secondary-foreground: 222.2 47.4% 11.2%;
+
+          --accent: 210 40% 96.1%;
+          --accent-foreground: 222.2 47.4% 11.2%;
+
+          --destructive: 0 100% 50%;
+          --destructive-foreground: 210 40% 98%;
+
+          --ring: 215 20.2% 65.1%;
+
+          --radius: 0.5rem;
+        }
+
+        .dark {
+          --background: 224 71% 4%;
+          --foreground: 213 31% 91%;
+
+          --muted: 223 47% 11%;
+          --muted-foreground: 215.4 16.3% 56.9%;
+
+          --accent: 216 34% 17%;
+          --accent-foreground: 210 40% 98%;
+
+          --popover: 224 71% 4%;
+          --popover-foreground: 215 20.2% 65.1%;
+
+          --border: 216 34% 17%;
+          --input: 216 34% 17%;
+
+          --card: 224 71% 4%;
+          --card-foreground: 213 31% 91%;
+
+          --primary: 210 40% 98%;
+          --primary-foreground: 222.2 47.4% 1.2%;
+
+          --secondary: 222.2 47.4% 11.2%;
+          --secondary-foreground: 210 40% 98%;
+
+          --destructive: 0 63% 31%;
+          --destructive-foreground: 210 40% 98%;
+
+          --ring: 216 34% 17%;
+
+          --radius: 0.5rem;
+        }
+      }
+    </style>
+    <script type="module">
+          import defaultTheme from "tailwindcss/defaultTheme"
+          import tailwindcssAnimate from "tailwindcss-animate"
+
+          const fontFamily = defaultTheme.fontFamily;
+
+          tailwind.config = {
+            darkMode: ["class"],
+        content: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+        theme: {
+          container: {
+            center: true,
+            padding: "2rem",
+            screens: {
+              "2xl": "1400px",
+            },
+          },
+          extend: {
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+            },
+            borderRadius: {
+              lg: `var(--radius)`,
+              md: `calc(var(--radius) - 2px)`,
+              sm: "calc(var(--radius) - 4px)",
+            },
+            fontFamily: {
+              sans: [...fontFamily.sans],
+            },
+
+            keyframes: {
+              "accordion-down": {
+                from: { height: "0" },
+                to: { height: "var(--radix-accordion-content-height)" },
+              },
+              "accordion-up": {
+                from: { height: "var(--radix-accordion-content-height)" },
+                to: { height: "0" },
+              },
+            },
+            animation: {
+              "accordion-down": "accordion-down 0.2s ease-out",
+              "accordion-up": "accordion-up 0.2s ease-out",
+            },
+          },
+        },
+        plugins: [tailwindcssAnimate]
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.27.0/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel" data-type="module">
+      		  import {createRoot} from "react-dom/client";
+            
+      		  
+import React, { useState } from 'react';
+import { 
+  Coins, 
+  Users, 
+  Flag, 
+  Swords, 
+  Shield, 
+  Crosshair, 
+  RotateCcw, 
+  Hammer, 
+  TowerControl as Tower, 
+  Settings, 
+  Wallet,
+  Zap,
+  ChevronUp,
+  Map as MapIcon
+} from 'lucide-react';
+
+const GameUILayer = () => {
+  const [activeTab, setActiveTab] = useState('build');
+  const [selectedEntity, setSelectedEntity] = useState({
+    name: "Alpha Outpost",
+    type: "Command Center",
+    hp: 850,
+    maxHp: 1000,
+    status: "Defending"
+  });
+
+  return (
+    <div className="relative w-full h-[600px] bg-slate-900 overflow-hidden font-sans text-slate-100 select-none">
+      {/* Mock Game World Background */}
+      <div className="absolute inset-0 bg-[#1e4b8a] opacity-40">
+        <div className="absolute top-20 left-40 w-32 h-24 bg-green-700 rounded-full blur-xl opacity-50" />
+        <div className="absolute bottom-40 right-60 w-48 h-32 bg-green-800 rounded-full blur-2xl opacity-50" />
+      </div>
+
+      {/* TOP HUD: Resources & Status */}
+      <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-slate-900/90 to-transparent flex items-center justify-between px-6">
+        <div className="flex items-center gap-6">
+          {/* Gold / Currency */}
+          <div className="flex items-center gap-2 bg-slate-800/80 border border-yellow-500/30 px-3 py-1.5 rounded-md shadow-lg shadow-yellow-500/5">
+            <Coins className="w-5 h-5 text-yellow-500" />
+            <span className="text-xl font-bold text-yellow-400">586</span>
+            <div className="text-[10px] text-yellow-500/50 ml-1">+12/s</div>
+          </div>
+
+          {/* Units / Pop */}
+          <div className="flex items-center gap-2 bg-slate-800/80 border border-blue-500/30 px-3 py-1.5 rounded-md">
+            <Users className="w-5 h-5 text-blue-400" />
+            <span className="text-lg font-semibold">15 <span className="text-slate-500 text-sm">/ 50</span></span>
+          </div>
+
+          {/* Faction Score */}
+          <div className="flex items-center gap-4 ml-4">
+            <div className="flex items-center gap-1.5">
+              <Flag className="w-4 h-4 text-blue-500 fill-blue-500" />
+              <span className="text-sm font-bold uppercase tracking-wider">01</span>
+            </div>
+            <div className="w-px h-4 bg-slate-700" />
+            <div className="flex items-center gap-1.5 opacity-60">
+              <Flag className="w-4 h-4 text-red-500 fill-red-500" />
+              <span className="text-sm font-bold uppercase tracking-wider">01</span>
+            </div>
+          </div>
+        </div>
+
+        {/* System & Web3 Branding */}
+        <div className="flex items-center gap-4">
+           <div className="flex flex-col items-end mr-2">
+            <span className="text-[10px] text-slate-500 font-mono tracking-tighter uppercase">Chain: Solana Mainnet</span>
+            <div className="flex items-center gap-2 text-cyan-400">
+                <Wallet className="w-4 h-4" />
+                <span className="text-xs font-mono">0x71C...3e9B</span>
+            </div>
+          </div>
+          <button className="p-2 hover:bg-slate-700/50 rounded-full transition-colors text-slate-400">
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* BOTTOM LEFT: Selection Details */}
+      <div className="absolute bottom-6 left-6 w-64 bg-slate-800/90 border border-slate-700 rounded-xl p-4 shadow-2xl backdrop-blur-md">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <h3 className="text-sm font-bold text-blue-400 uppercase tracking-tight">{selectedEntity.name}</h3>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest">{selectedEntity.type}</p>
+          </div>
+          <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase border border-blue-500/30">
+            {selectedEntity.status}
+          </span>
+        </div>
+        
+        {/* HP Bar */}
+        <div className="space-y-1 mb-4">
+          <div className="flex justify-between text-[10px] font-bold">
+            <span>HEALTH</span>
+            <span>{selectedEntity.hp} / {selectedEntity.maxHp}</span>
+          </div>
+          <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-500" 
+              style={{ width: `${(selectedEntity.hp / selectedEntity.maxHp) * 100}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[1,2,3].map(i => (
+            <div key={i} className="aspect-square bg-slate-900/50 border border-slate-700 rounded-md flex items-center justify-center hover:bg-slate-700/50 cursor-pointer transition-colors group">
+                <Zap className="w-4 h-4 text-slate-600 group-hover:text-cyan-400" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* BOTTOM CENTER: Action Deck */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-end gap-3 px-6 py-4 bg-slate-800/80 border border-slate-700/50 rounded-2xl shadow-2xl backdrop-blur-sm">
+        <button className="group flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-red-500/20 transition-all border border-transparent hover:border-red-500/30">
+          <Swords className="w-6 h-6 text-red-500" />
+          <span className="text-[10px] font-bold text-slate-400 group-hover:text-red-400">ATTACK</span>
+        </button>
+        <button className="group flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-blue-500/20 transition-all border border-transparent hover:border-blue-500/30">
+          <Shield className="w-6 h-6 text-blue-500" />
+          <span className="text-[10px] font-bold text-slate-400 group-hover:text-blue-400">DEFEND</span>
+        </button>
+        <button className="group flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-cyan-500/20 transition-all border border-transparent hover:border-cyan-500/30">
+          <Crosshair className="w-6 h-6 text-cyan-500" />
+          <span className="text-[10px] font-bold text-slate-400 group-hover:text-cyan-400">PATROL</span>
+        </button>
+        <div className="w-px h-10 bg-slate-700 mx-2" />
+        <button className="group flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-slate-700/50 transition-all">
+          <RotateCcw className="w-6 h-6 text-slate-400" />
+          <span className="text-[10px] font-bold text-slate-400">RECALL</span>
+        </button>
+      </div>
+
+      {/* BOTTOM RIGHT: Minimap & Build Menu */}
+      <div className="absolute bottom-6 right-6 flex flex-col items-end gap-4">
+        
+        {/* Build Selector */}
+        <div className="bg-slate-800/90 border border-slate-700 rounded-xl overflow-hidden shadow-xl w-64">
+          <div className="flex border-b border-slate-700">
+            <button 
+              onClick={() => setActiveTab('build')}
+              className={`flex-1 py-2 text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'build' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
+            >
+              Buildings [B]
+            </button>
+            <button 
+              onClick={() => setActiveTab('towers')}
+              className={`flex-1 py-2 text-[10px] font-bold tracking-widest uppercase transition-colors ${activeTab === 'towers' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}
+            >
+              Towers [T]
+            </button>
+          </div>
+          <div className="p-3 grid grid-cols-4 gap-2">
+            {[1,2,3,4,5,6,7,8].map(i => (
+              <div key={i} className="aspect-square bg-slate-900 border border-slate-700 rounded flex items-center justify-center cursor-pointer hover:border-blue-500 transition-all group relative">
+                {activeTab === 'build' ? <Hammer className="w-4 h-4 text-slate-500 group-hover:text-blue-400" /> : <Tower className="w-4 h-4 text-slate-500 group-hover:text-blue-400" />}
+                <span className="absolute bottom-0 right-0 text-[8px] bg-slate-800 px-0.5 text-slate-500">{i}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Enhanced Minimap Overlay */}
+        <div className="w-48 h-48 bg-slate-900/80 border-2 border-slate-700 rounded-lg relative overflow-hidden group shadow-2xl">
+          <div className="absolute inset-0 bg-blue-500/5" />
+          {/* Mock Island Dots */}
+          <div className="absolute top-1/4 left-1/3 w-3 h-3 bg-green-600/50 rounded-full" />
+          <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-green-600/50 rounded-full" />
+          <div className="absolute bottom-1/4 right-1/4 w-3 h-3 bg-red-600/50 rounded-full animate-pulse" />
+          
+          {/* Player Indicator */}
+          <div className="absolute top-1/3 left-1/4 w-2 h-2 bg-blue-400 rounded-sm shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
+          
+          {/* Scanline Effect */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-cyan-400/20 animate-scan pointer-events-none" />
+          
+          <div className="absolute top-2 right-2 flex gap-1">
+             <MapIcon className="w-3 h-3 text-slate-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* FPS Overlay - Tucked away top right */}
+      <div className="absolute top-16 right-6 text-[10px] font-mono text-green-500/50 flex gap-3">
+        <span>FPS: 75</span>
+        <span>LAT: 24ms</span>
+      </div>
+
+      <style jsx>{`
+        @keyframes scan {
+          from { top: 0%; }
+          to { top: 100%; }
+        }
+        .animate-scan {
+          animation: scan 3s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+
+      		  createRoot(document.getElementById("root")).render(
+             <>
+      		    <GameUILayer />
+              </>
+      		    );
+              window.parent.postMessage({ action: "ready" }, "*");
+    </script>
+  </body>
+</html>

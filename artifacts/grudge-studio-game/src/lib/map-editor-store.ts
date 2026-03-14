@@ -1,8 +1,12 @@
 import { create } from 'zustand';
 
 export type TerrainType = 'grass' | 'sand' | 'lava' | 'water' | 'stone' | 'dirt';
-export type EditorMode   = 'select' | 'place' | 'terrain' | 'erase';
+export type EditorMode   = 'select' | 'place' | 'terrain' | 'height' | 'erase';
 export type TransformMode = 'translate' | 'rotate' | 'scale';
+
+/** Height step in world units per level (0–8 levels supported) */
+export const HEIGHT_STEP = 0.5;
+export const MAX_HEIGHT   = 8;
 
 export const TERRAIN_COLORS: Record<TerrainType, string> = {
   grass: '#3e7a28',
@@ -39,6 +43,8 @@ interface EditorState {
   tileSize: number;
 
   terrain: Record<string, TerrainType>;
+  /** Per-tile elevation level (integer 0–MAX_HEIGHT). Key = "x,z". */
+  heights: Record<string, number>;
   props: EditorProp[];
 
   selectedPropId: string | null;
@@ -46,6 +52,8 @@ interface EditorState {
   transformMode: TransformMode;
   selectedAsset: string | null;
   selectedTerrain: TerrainType;
+  /** +1 to raise, -1 to lower when in height mode */
+  heightBrush: 1 | -1;
   snapEnabled: boolean;
 
   isDirty: boolean;
@@ -65,6 +73,8 @@ interface EditorState {
   toggleSnap:       ()                     => void;
   setTerrain:       (x: number, z: number, type: TerrainType) => void;
   setSelectedTerrain:(t: TerrainType)      => void;
+  setHeightBrush:   (v: 1 | -1)           => void;
+  adjustHeight:     (x: number, z: number) => void;
 
   addProp: (x: number, z: number) => void;
   updatePropTransform: (
@@ -86,12 +96,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   gridH:          80,
   tileSize:       1,
   terrain:        {},
+  heights:        {},
   props:          [],
   selectedPropId: null,
   mode:           'select',
   transformMode:  'translate',
   selectedAsset:  null,
   selectedTerrain:'grass',
+  heightBrush:    1,
   snapEnabled:    true,
   isDirty:        false,
 
@@ -104,6 +116,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({
           levelId, gridW, gridH, tileSize,
           terrain: data.terrain ?? {},
+          heights: data.heights ?? {},
           props:   (data.props ?? []).map((p: EditorProp) => ({ ...p, id: `prop_${_propCounter++}` })),
           selectedPropId: null,
           mode: 'select',
@@ -115,6 +128,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       levelId, gridW, gridH, tileSize,
       terrain: {},
+      heights: {},
       props: initialProps.map(p => ({ ...p, id: `prop_${_propCounter++}` })),
       selectedPropId: null,
       mode: 'select',
@@ -128,11 +142,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectProp:        (id)    => set({ selectedPropId: id }),
   toggleSnap:        ()      => set(s => ({ snapEnabled: !s.snapEnabled })),
   setSelectedTerrain:(t)     => set({ selectedTerrain: t }),
+  setHeightBrush:    (v)     => set({ heightBrush: v }),
 
   setTerrain: (x, z, type) => set(s => ({
     terrain: { ...s.terrain, [`${x},${z}`]: type },
     isDirty: true,
   })),
+
+  adjustHeight: (x, z) => set(s => {
+    const key = `${x},${z}`;
+    const cur = s.heights[key] ?? 0;
+    const next = Math.max(0, Math.min(MAX_HEIGHT, cur + s.heightBrush));
+    return { heights: { ...s.heights, [key]: next }, isDirty: true };
+  }),
 
   addProp: (x, z) => {
     const { selectedAsset, snapEnabled, tileSize } = get();
@@ -168,9 +190,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   })),
 
   saveMap: () => {
-    const { levelId, terrain, props } = get();
+    const { levelId, terrain, heights, props } = get();
     const data = {
       terrain,
+      heights,
       props: props.map(({ id: _id, ...rest }) => rest),
     };
     localStorage.setItem(`grudge-editor-${levelId}`, JSON.stringify(data));
@@ -184,6 +207,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const data = JSON.parse(raw);
       set(s => ({
         terrain: data.terrain ?? {},
+        heights: data.heights ?? {},
         props: (data.props ?? []).map((p: EditorProp) => ({ ...p, id: `prop_${_propCounter++}` })),
         isDirty: false,
       }));

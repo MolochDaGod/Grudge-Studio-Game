@@ -29,6 +29,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Logo:** `public/images/logo-nobg.png` (background removed)
 - **Character portraits:** `public/images/chars/{character-id}.png` (AI-generated for all 17 characters, 3:4 ratio); `-nobg.png` variants with background removed for overlay use (home page side decorations — original 11 only)
 - **Battle terrain:** `public/images/battle-terrain.png`, `public/images/select-bg.png`
+- **RPG Character textures:** `public/models/characters/rpg-textures/{warrior,ranger,rogue,wizard,cleric,monk}.png` — atlas textures for all 6 RPG pack chars. `CharacterConfig.textureUrl` field routes through `CharacterModelTextureLoader` at runtime; `CharacterModel.tsx` no longer has hardcoded texture maps.
+- **In-game Map Editor:** Full 3D editor at `/map-editor/:levelId`
+  - Accessible via "Edit" button on each level card in level-select
+  - **Modes:** Select, Place (asset palette), Terrain paint, Height raise/lower, Erase
+  - **Terrain:** 6 types (grass/sand/lava/water/stone/dirt) painted onto 80×80+ tile grid, persisted in `localStorage`
+  - **Height system:** `HEIGHT_STEP=0.5` world units per level, `MAX_HEIGHT=8` levels; tiles extend vertically in `EditorTileGrid` (InstancedMesh); hover cursor sits on tile top surface; raise (yellow) / lower (blue) cursor colors
+  - **Props:** Place any of 80+ craftpix GLBs from sidebar palette; TransformControls gizmo for translate/rotate/scale; snap to grid toggle
+  - **Save/Load:** Saved to `grudge-editor-{levelId}` in `localStorage`; loaded by battle scene via `loadSavedProps()`
+  - **Key files:** `src/lib/map-editor-store.ts`, `src/lib/asset-catalog.ts`, `src/pages/map-editor.tsx`
 - **Craftpix 3D Map Assets:** 94 GLB files converted from FBX (assimp) in `public/models/maps/`:
   - `ruins/` — 28 files: `ruin_1.glb` through `ruin_21.glb` (scattered graveyard/tombstone pieces)
   - `medieval/` — 26 files: fortress_full, 5 tower types, 2 wall types, 2 gate types, barracks, ammourry, stairs, bridge, brazier, fire_bell, firewoods, sentry_hurt, props_full, fense_fyull

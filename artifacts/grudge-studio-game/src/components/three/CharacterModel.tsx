@@ -30,13 +30,6 @@ const BASE = import.meta.env.BASE_URL;
 const C = (id: string) => `${BASE}models/characters/${id}.glb`;
 const W = (id: string) => `${BASE}models/weapons/${id}.glb`;
 
-// RPG pack models that need external texture loading (no embedded textures)
-const RPG_TEX_URLS: Partial<Record<string, string>> = {
-  ranger_rpg: `${BASE}models/characters/rpg-textures/ranger.png`,
-  wizard_rpg:  `${BASE}models/characters/rpg-textures/wizard.png`,
-  cleric_rpg:  `${BASE}models/characters/rpg-textures/cleric.png`,
-  monk_rpg:    `${BASE}models/characters/rpg-textures/monk.png`,
-};
 
 // States that play once
 const LOOP_ONCE_STATES = new Set<AnimState>([
@@ -387,7 +380,7 @@ function CharacterModelTextureLoader(props: CharacterModelInnerProps & { texture
 
 export function CharacterModel(props: CharacterModelProps) {
   const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
-  const texUrl = RPG_TEX_URLS[config.modelId];
+  const texUrl = config.textureUrl ? `${BASE}${config.textureUrl}` : null;
   if (texUrl) {
     return (
       <Suspense fallback={null}>
