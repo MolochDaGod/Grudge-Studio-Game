@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRUDGE Warlords - Hero Codex</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Jost:wght@300;400;500;600;700&display=swap');
+:root{
+  --bg:#0a0e1a;--surface:#111827;--card:#1a2236;--border:#2a3a5c;
+  --gold:#ffd700;--gold-dim:#b8960f;--text:#e2e8f0;--text-sec:#94a3b8;
+  --blue:#3b82f6;--purple:#a855f7;--red:#ef4444;--green:#22c55e;--orange:#f97316;
+  --common:#9ca3af;--uncommon:#22c55e;--rare:#3b82f6;--epic:#a855f7;--legendary:#f59e0b;
+}
+body{background:var(--bg);color:var(--text);font-family:'Jost',sans-serif;min-height:100vh;overflow-x:hidden}
+h1,h2,h3,h4{font-family:'Cinzel',serif}
+a{color:var(--gold);text-decoration:none}
+
+.page-header{text-align:center;padding:40px 20px 30px;background:linear-gradient(180deg,rgba(255,215,0,.08)0%,transparent 100%);border-bottom:1px solid var(--border)}
+.page-header h1{font-size:clamp(1.8rem,4vw,3rem);color:var(--gold);text-shadow:0 0 30px rgba(255,215,0,.3);letter-spacing:2px}
+.page-header p{color:var(--text-sec);margin-top:8px;font-size:1.05rem;max-width:700px;margin-left:auto;margin-right:auto}
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--gold-dim);font-size:.9rem;margin-bottom:12px;transition:color .2s}
+.back-link:hover{color:var(--gold)}
+
+.guide-section{max-width:1100px;margin:30px auto;padding:0 20px}
+.guide-section h2{color:var(--gold);font-size:1.4rem;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:30px}
+.guide-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+.guide-card h3{color:var(--gold);font-size:1rem;margin-bottom:8px}
+.guide-card p,.guide-card li{color:var(--text-sec);font-size:.88rem;line-height:1.5}
+.guide-card ul{list-style:none;padding-left:0}
+.guide-card li{padding:3px 0}
+.guide-card li::before{content:">";color:var(--gold-dim);margin-right:6px}
+
+.stat-explain{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:10px}
+.stat-chip{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;text-align:center}
+.stat-chip .label{font-size:.75rem;color:var(--text-sec);text-transform:uppercase;letter-spacing:1px}
+.stat-chip .val{font-size:.9rem;color:var(--gold);margin-top:2px}
+
+.race-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.race-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.race-name{font-weight:600;min-width:80px}
+.race-mods{color:var(--text-sec);font-size:.82rem}
+
+.filter-bar{max-width:1100px;margin:0 auto 20px;padding:0 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filter-bar label{color:var(--text-sec);font-size:.85rem;margin-right:4px}
+.filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-sec);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'Jost',sans-serif;font-size:.85rem;transition:all .2s}
+.filter-btn:hover{border-color:var(--gold-dim);color:var(--text)}
+.filter-btn.active{background:var(--gold);color:var(--bg);border-color:var(--gold);font-weight:600}
+
+.hero-grid{max-width:1100px;margin:0 auto;padding:0 20px 60px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+
+.hero-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .2s}
+.hero-card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,215,0,.1)}
+.hero-card-top{display:flex;gap:14px;padding:16px 16px 12px;align-items:flex-start}
+.hero-portrait{width:72px;height:72px;border-radius:8px;object-fit:cover;border:2px solid var(--border);flex-shrink:0;image-rendering:pixelated;background:var(--surface)}
+.hero-info{flex:1;min-width:0}
+.hero-name{font-family:'Cinzel',serif;font-size:.95rem;color:var(--gold);line-height:1.2}
+.hero-title{font-size:.78rem;color:var(--text-sec);font-style:italic;margin-top:2px}
+.hero-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{font-size:.7rem;padding:2px 8px;border-radius:4px;font-weight:500}
+.tag-race{background:rgba(255,215,0,.12);color:var(--gold)}
+.tag-class{background:rgba(59,130,246,.15);color:var(--blue)}
+.tag-faction-crusade{background:rgba(59,130,246,.12);color:var(--blue)}
+.tag-faction-fabled{background:rgba(168,85,247,.12);color:var(--purple)}
+.tag-faction-legion{background:rgba(239,68,68,.12);color:var(--red)}
+.rarity-border-Common{border-color:var(--common)}
+.rarity-border-Uncommon{border-color:var(--uncommon)}
+.rarity-border-Rare{border-color:var(--rare)}
+.rarity-border-Epic{border-color:var(--epic)}
+.rarity-border-Legendary{border-color:var(--legendary)}
+.rarity-text-Common{color:var(--common)}
+.rarity-text-Uncommon{color:var(--uncommon)}
+.rarity-text-Rare{color:var(--rare)}
+.rarity-text-Epic{color:var(--epic)}
+.rarity-text-Legendary{color:var(--legendary)}
+.hero-stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:0 16px 12px}
+.mini-stat{text-align:center;background:var(--surface);border-radius:4px;padding:4px 2px}
+.mini-stat .ms-label{font-size:.6rem;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px}
+.mini-stat .ms-val{font-size:.85rem;font-weight:600;color:var(--text)}
+.hero-quote{padding:0 16px 14px;font-size:.8rem;color:var(--text-sec);font-style:italic;line-height:1.4;border-top:1px solid var(--border);padding-top:10px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:1000;display:none;justify-content:center;align-items:flex-start;padding:20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:12px;max-width:700px;width:100%;margin:40px auto;position:relative;max-height:calc(100vh - 80px);overflow-y:auto}
+.modal-close{position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border);color:var(--text-sec);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;z-index:10;transition:all .2s}
+.modal-close:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.modal-header{display:flex;gap:16px;padding:24px;border-bottom:1px solid var(--border);align-items:flex-start}
+.modal-portrait{width:96px;height:96px;border-radius:10px;object-fit:cover;border:3px solid;image-rendering:pixelated;background:var(--surface)}
+.modal-hero-info{flex:1}
+.modal-hero-name{font-family:'Cinzel',serif;font-size:1.3rem;color:var(--gold)}
+.modal-hero-title{font-size:.9rem;color:var(--text-sec);font-style:italic;margin-top:2px}
+.modal-hero-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+
+.modal-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 24px}
+.modal-tab{padding:10px 16px;font-size:.85rem;color:var(--text-sec);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;font-family:'Jost',sans-serif;background:none;border-top:none;border-left:none;border-right:none}
+.modal-tab:hover{color:var(--text)}
+.modal-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.modal-panel{padding:24px;display:none}
+.modal-panel.active{display:block}
+
+.lore-text{color:var(--text-sec);line-height:1.7;font-size:.9rem;margin-bottom:14px}
+.lore-quote{color:var(--gold-dim);font-style:italic;font-size:.95rem;padding:12px;background:rgba(255,215,0,.05);border-left:3px solid var(--gold-dim);border-radius:0 6px 6px 0;margin-top:12px}
+
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-box .sb-label{font-size:.7rem;color:var(--text-sec);text-transform:uppercase;letter-spacing:1px}
+.stat-box .sb-val{font-size:1.4rem;font-weight:700;color:var(--gold);margin-top:4px}
+.stat-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.stat-bar-label{width:60px;font-size:.78rem;color:var(--text-sec);text-align:right}
+.stat-bar-track{flex:1;height:8px;background:var(--surface);border-radius:4px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+
+.ability-list{display:flex;flex-direction:column;gap:10px}
+.ability-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;gap:12px;align-items:flex-start}
+.ability-icon-wrap{width:36px;height:36px;background:var(--card);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem}
+.ability-name{font-weight:600;font-size:.9rem;color:var(--text)}
+.ability-desc{font-size:.8rem;color:var(--text-sec);margin-top:2px}
+.ability-mana{font-size:.72rem;color:var(--blue);margin-top:4px}
+
+.traits-section h4{color:var(--gold);font-size:.95rem;margin:16px 0 8px}
+.trait-item{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.trait-name{font-weight:600;font-size:.85rem;color:var(--text)}
+.trait-effect{font-size:.8rem;color:var(--green)}
+.sw-list{margin-top:6px}
+.sw-item{font-size:.82rem;color:var(--text-sec);padding:3px 0;display:flex;align-items:flex-start;gap:6px}
+.sw-item .dot-g{color:var(--green)}
+.sw-item .dot-r{color:var(--red)}
+
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.meta-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.meta-label{font-size:.7rem;color:var(--text-sec);text-transform:uppercase;letter-spacing:1px}
+.meta-val{font-size:.88rem;color:var(--text);margin-top:2px}
+
+.footer{text-align:center;padding:30px 20px;border-top:1px solid var(--border);color:var(--text-sec);font-size:.82rem}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="/" class="back-link">&#8592; Back to Game</a>
+  <h1>GRUDGE WARLORDS - HERO CODEX</h1>
+  <p>Complete visual reference for all 25 playable heroes. Browse stats, abilities, lore, and learn how the hero system works.</p>
+</div>
+
+<div class="guide-section">
+  <h2>How Heroes Work</h2>
+  <div class="guide-grid">
+    <div class="guide-card">
+      <h3>Hero Creation</h3>
+      <p>When starting the game, you choose a <strong>Race</strong> and <strong>Class</strong>. Each combination produces a unique hero with different stats, abilities, and racial traits. There are 6 races and 4 classes, giving 24 standard heroes plus 1 secret unlock.</p>
+    </div>
+    <div class="guide-card">
+      <h3>Stats System</h3>
+      <p>Each hero's stats are derived from a <strong>base template</strong> modified by both <strong>race</strong> and <strong>class</strong> bonuses. This means two warriors of different races will play quite differently.</p>
+      <div class="stat-explain">
+        <div class="stat-chip"><div class="label">HP</div><div class="val">Health</div></div>
+        <div class="stat-chip"><div class="label">ATK</div><div class="val">Attack</div></div>
+        <div class="stat-chip"><div class="label">DEF</div><div class="val">Defense</div></div>
+        <div class="stat-chip"><div class="label">SPD</div><div class="val">Speed</div></div>
+        <div class="stat-chip"><div class="label">RNG</div><div class="val">Range</div></div>
+        <div class="stat-chip"><div class="label">MP</div><div class="val">Mana</div></div>
+      </div>
+    </div>
+    <div class="guide-card">
+      <h3>Abilities</h3>
+      <p>Each class has <strong>4 abilities</strong> shared across all races of that class. Abilities cost mana and range from passive bonuses to devastating ultimates. Class determines your playstyle.</p>
+      <ul>
+        <li>Warrior: Tank / melee DPS with Avatar ultimate</li>
+        <li>Worg: Shapeshifter with multiple combat forms</li>
+        <li>Mage: Ranged caster with AoE and healing</li>
+        <li>Ranger: Ranged physical DPS with stealth</li>
+      </ul>
+    </div>
+    <div class="guide-card">
+      <h3>Racial Traits</h3>
+      <p>Each race provides <strong>2 passive traits</strong> that apply at all times. These stack with class abilities and can create powerful synergies (e.g., Orc Bloodrage + Worg Feral Rage).</p>
+    </div>
+    <div class="guide-card">
+      <h3>Factions</h3>
+      <p>Heroes belong to one of <strong>3 factions</strong> which determines their visual theme and story alignment:</p>
+      <ul>
+        <li><span style="color:var(--blue)">Crusade</span> - Human, Barbarian (+ Pirate King)</li>
+        <li><span style="color:var(--purple)">Fabled</span> - Dwarf, Elf</li>
+        <li><span style="color:var(--red)">Legion</span> - Orc, Undead</li>
+      </ul>
+    </div>
+    <div class="guide-card">
+      <h3>Rarity &amp; Difficulty</h3>
+      <p>Rarity reflects how unique the hero's playstyle is. Difficulty rates how hard the hero is to master:</p>
+      <ul>
+        <li><span style="color:var(--common)">Common</span> / <span style="color:var(--uncommon)">Uncommon</span> - Standard heroes</li>
+        <li><span style="color:var(--rare)">Rare</span> / <span style="color:var(--epic)">Epic</span> - Unique mechanics</li>
+        <li><span style="color:var(--legendary)">Legendary</span> - Top-tier complexity</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Race Stat Modifiers</h2>
+  <div class="guide-card" style="margin-bottom:30px">
+    <p style="margin-bottom:10px">Each race applies these bonus modifiers on top of the class base stats:</p>
+    <div class="race-row"><div class="race-dot" style="background:var(--blue)"></div><span class="race-name">Human</span><span class="race-mods">HP+5, ATK+1, DEF+1, SPD+2, MP+5</span></div>
+    <div class="race-row"><div class="race-dot" style="background:var(--orange)"></div><span class="race-name">Barbarian</span><span class="race-mods">HP+15, ATK+4, DEF-1, SPD+3, MP-5</span></div>
+    <div class="race-row"><div class="race-dot" style="background:#a0522d"></div><span class="race-name">Dwarf</span><span class="race-mods">HP+20, ATK+2, DEF+5, SPD-8, MP+0</span></div>
+    <div class="race-row"><div class="race-dot" style="background:var(--green)"></div><span class="race-name">Elf</span><span class="race-mods">HP-10, ATK+0, DEF-2, SPD+5, MP+20</span></div>
+    <div class="race-row"><div class="race-dot" style="background:var(--red)"></div><span class="race-name">Orc</span><span class="race-mods">HP+10, ATK+5, DEF+1, SPD+2, MP-10</span></div>
+    <div class="race-row"><div class="race-dot" style="background:var(--purple)"></div><span class="race-name">Undead</span><span class="race-mods">HP+25, ATK+1, DEF+2, SPD-3, MP+5</span></div>
+  </div>
+
+  <h2>Secret Hero</h2>
+  <div class="guide-card" style="margin-bottom:30px">
+    <p>Creating a <strong>Barbarian Ranger</strong> named exactly <em>"Racalvin the Pirate King"</em> unlocks a secret Legendary hero with boosted stats (+30 HP, +5 ATK, +5 SPD) and a unique ultimate ability: <strong>Storm of Arrows</strong>.</p>
+  </div>
+</div>
+
+<div class="filter-bar" id="filters">
+  <label>Race:</label>
+  <button class="filter-btn active" data-filter="race" data-value="all">All</button>
+  <button class="filter-btn" data-filter="race" data-value="Human">Human</button>
+  <button class="filter-btn" data-filter="race" data-value="Barbarian">Barbarian</button>
+  <button class="filter-btn" data-filter="race" data-value="Dwarf">Dwarf</button>
+  <button class="filter-btn" data-filter="race" data-value="Elf">Elf</button>
+  <button class="filter-btn" data-filter="race" data-value="Orc">Orc</button>
+  <button class="filter-btn" data-filter="race" data-value="Undead">Undead</button>
+  <span style="width:16px"></span>
+  <label>Class:</label>
+  <button class="filter-btn active" data-filter="class" data-value="all">All</button>
+  <button class="filter-btn" data-filter="class" data-value="Warrior">Warrior</button>
+  <button class="filter-btn" data-filter="class" data-value="Worg">Worg</button>
+  <button class="filter-btn" data-filter="class" data-value="Mage">Mage</button>
+  <button class="filter-btn" data-filter="class" data-value="Ranger">Ranger</button>
+</div>
+
+<div class="hero-grid" id="heroGrid"></div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal" id="modalContent">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="footer">GRUDGE Warlords Hero Codex - 25 Heroes across 6 Races, 4 Classes, 3 Factions</div>
+
+<script>
+const HEROES = [
+  {id:"human_warrior",name:"Sir Aldric Valorheart",title:"The Iron Bastion",race:"Human",cls:"Warrior",faction:"Crusade",factionColor:"#3b82f6",rarity:"Rare",portrait:"/hero-portraits/human_warrior.png",lore:"Born in the fortified city of Valorheim, Aldric rose through the ranks of the Crusade militia to become its most decorated champion. His unbreakable will and mastery of sword and shield have turned the tide of countless battles against the Legion.",backstory:"Orphaned during the First Grudge War, young Aldric was raised by the Temple Knights. He forged his first blade at age twelve and took his oath at sixteen. Now he leads the vanguard of every Crusade offensive, his golden armor a beacon of hope.",quote:"The shield breaks before the will does.",attr:"STR",stats:{hp:245,atk:23,def:19,spd:57,rng:1.5,mp:95},abilities:[{n:"Invincibility",i:"\u{1F6E1}",d:"Become immune to all damage for a short duration",mc:40},{n:"Damage Surge",i:"\u26A1",d:"+25% attack power temporary boost",mc:25},{n:"Guardian's Aura",i:"\u{1F6E1}",d:"+15% defense to all nearby allies",mc:30},{n:"Avatar Form",i:"\u{1F451}",d:"+40% all stats, increased size",mc:80}],traits:[{n:"Adaptable",e:"+5% XP gain"},{n:"Diplomatic",e:"+10% gold from quests"}],strengths:["Highest armor and block chance","Invincibility ultimate","Flexible tank or DPS builds"],weaknesses:["No ranged attacks","No magic or healing","Slow movement speed"],style:"Melee Physical Combat",weapons:"Swords, Axes, Shields, Heavy Armor",alignment:"Lawful Good",difficulty:"Beginner",flavor:"Where Aldric stands, the line holds."},
+  {id:"human_worg",name:"Gareth Moonshadow",title:"The Twilight Stalker",race:"Human",cls:"Worg",faction:"Crusade",factionColor:"#3b82f6",rarity:"Rare",portrait:"/hero-portraits/human_worg.png",lore:"Gareth was a simple huntsman until a dire wolf spirit bonded with his soul during a blood moon ritual. Now he walks between the worlds of man and beast, his primal fury tempered by human discipline.",backstory:"Once captain of the Crusade rangers, Gareth ventured too deep into the Darkwood seeking a cure for a plague. There, the ancient Wolf Spirit Fenrath chose him as vessel. He returned changed, his eyes gleaming amber in the dark.",quote:"The beast within is not my curse. It is my salvation.",attr:"STR",stats:{hp:235,atk:22,def:16,spd:67,rng:1.5,mp:100},abilities:[{n:"Bear Form",i:"\u{1F43B}",d:"+50% defense, +30% max HP, reduced speed",mc:30},{n:"Feral Rage",i:"\u{1F525}",d:"+30% attack speed and damage",mc:25},{n:"Raptor Form",i:"\u26A1",d:"+20% attack, +40% speed, +15% crit",mc:30},{n:"Worg Lord",i:"\u{1F451}",d:"+40% all stats, +50% max HP, summon pack",mc:80}],traits:[{n:"Adaptable",e:"+5% XP gain"},{n:"Diplomatic",e:"+10% gold from quests"}],strengths:["Multiple combat forms","Pack summons for numbers advantage","Strong self-buffs and frenzy"],weaknesses:["No ranged attacks","No healing spells","Form-dependent abilities"],style:"Melee Shapeshifting Combat",weapons:"Claws, Fangs, Natural Weapons",alignment:"Chaotic Neutral",difficulty:"Advanced",flavor:"In the space between howl and silence, death waits."},
+  {id:"human_mage",name:"Archmage Elara Brightspire",title:"The Storm Caller",race:"Human",cls:"Mage",faction:"Crusade",factionColor:"#3b82f6",rarity:"Epic",portrait:"/hero-portraits/human_mage.png",lore:"Elara was the youngest scholar ever admitted to the Arcane Consortium. Her mastery of elemental magic and divine healing makes her invaluable on the battlefield, though her fragile form demands protection.",backstory:"Raised in the Brightspire Academy, Elara discovered she could channel both arcane destruction and divine healing, a gift unseen in centuries. The Consortium fears her power; the Crusade depends on it.",quote:"Knowledge is the flame. I am merely the torch.",attr:"INT",stats:{hp:175,atk:21,def:9,spd:62,rng:5.5,mp:155},abilities:[{n:"Mana Shield",i:"\u{1F6E1}",d:"Passive shield based on remaining mana percentage",mc:0},{n:"Fireball",i:"\u{1F525}",d:"AoE fire damage to enemies in target area",mc:30},{n:"Heal",i:"\u2764",d:"Restore HP to target ally",mc:20},{n:"Lightning Chain",i:"\u26A1",d:"Chain lightning hitting up to 5 targets",mc:35}],traits:[{n:"Adaptable",e:"+5% XP gain"},{n:"Diplomatic",e:"+10% gold from quests"}],strengths:["Powerful AoE damage spells","Only class with healing","Blink teleport for mobility"],weaknesses:["Very fragile in melee","Mana dependent","Low physical defense"],style:"Ranged Magic & Healing",weapons:"Staves, Wands, Orbs, Robes",alignment:"Neutral Good",difficulty:"Intermediate",flavor:"The sky splits at her command."},
+  {id:"human_ranger",name:"Kael Shadowblade",title:"The Shadow Blade",race:"Human",cls:"Ranger",faction:"Crusade",factionColor:"#3b82f6",rarity:"Rare",portrait:"/hero-portraits/human_ranger.png",lore:"A ghost who moves through shadows, Kael is the Crusade's deadliest operative. His arrows find their mark before the enemy even knows war has begun. He answers to no one but the cause.",backstory:"Kael grew up in the slums of Port Grimaldi, learning to survive through cunning and speed. Recruited by the Crusade's covert division, he became their finest scout and assassin.",quote:"You never see the arrow that kills you.",attr:"DEX",stats:{hp:185,atk:22,def:11,spd:72,rng:6.5,mp:115},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Passive accuracy and critical hit bonus",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"High damage ranged attack at 2x damage",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"Fire 5 arrows in a spread pattern",mc:25},{n:"Rain of Arrows",i:"\u{1F327}",d:"Massive AoE ranged barrage",mc:40}],traits:[{n:"Adaptable",e:"+5% XP gain"},{n:"Diplomatic",e:"+10% gold from quests"}],strengths:["Longest attack range","High critical hit chance","Stealth and evasion"],weaknesses:["Low armor and HP","Weak in prolonged melee","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"Bows, Crossbows, Daggers, Light Armor",alignment:"Chaotic Good",difficulty:"Intermediate",flavor:"Shadows are just arrows waiting to be loosed."},
+  {id:"barbarian_warrior",name:"Ulfgar Bonecrusher",title:"The Mountain Breaker",race:"Barbarian",cls:"Warrior",faction:"Crusade",factionColor:"#3b82f6",rarity:"Rare",portrait:"/hero-portraits/barbarian_warrior.png",lore:"From the frozen peaks of the Northlands, Ulfgar descends like an avalanche upon his foes. His massive frame and berserker fury make him a force of nature that no shield wall can withstand.",backstory:"Ulfgar earned his title by literally shattering a mountain pass to prevent a Legion invasion, burying an entire army beneath tons of stone. The act cost him his left eye but saved his entire tribe.",quote:"I do not fight to survive. I fight because the mountain told me to.",attr:"STR",stats:{hp:255,atk:26,def:17,spd:58,rng:1.5,mp:85},abilities:[{n:"Invincibility",i:"\u{1F6E1}",d:"Become immune to all damage",mc:40},{n:"Damage Surge",i:"\u26A1",d:"+25% attack power boost",mc:25},{n:"Guardian's Aura",i:"\u{1F6E1}",d:"+15% defense to nearby allies",mc:30},{n:"Avatar Form",i:"\u{1F451}",d:"+40% all stats, increased size",mc:80}],traits:[{n:"Rage",e:"+20% damage below 50% HP"},{n:"Frost Resistance",e:"+15% cold defense"}],strengths:["Highest armor and block chance","Rage damage bonus when wounded","Flexible tank or DPS builds"],weaknesses:["No ranged attacks","No magic or healing","Slow movement speed"],style:"Melee Physical Combat",weapons:"Great Axes, War Hammers, Fur Armor",alignment:"Chaotic Neutral",difficulty:"Beginner",flavor:"The earth trembles when Ulfgar charges."},
+  {id:"barbarian_worg",name:"Hrothgar Fangborn",title:"The Beast of the North",race:"Barbarian",cls:"Worg",faction:"Crusade",factionColor:"#3b82f6",rarity:"Epic",portrait:"/hero-portraits/barbarian_worg.png",lore:"In the deepest winter, when wolves howl for blood, Hrothgar answers. Half-man, half-beast, he leads a pack of dire wolves across the frozen wastes, hunting Legion scouts with savage precision.",backstory:"Born during an eclipse, Hrothgar was left in the woods as an omen of doom. Raised by a great wolf mother, he returned to his tribe as a teenager who could speak with beasts and shift his form at will.",quote:"The pack does not forgive. The pack does not forget.",attr:"STR",stats:{hp:245,atk:25,def:14,spd:68,rng:1.5,mp:90},abilities:[{n:"Bear Form",i:"\u{1F43B}",d:"+50% defense, +30% max HP",mc:30},{n:"Feral Rage",i:"\u{1F525}",d:"+30% attack speed and damage",mc:25},{n:"Raptor Form",i:"\u26A1",d:"Stealth DPS with +15% crit",mc:30},{n:"Worg Lord",i:"\u{1F451}",d:"Ultimate tank form with pack summon",mc:80}],traits:[{n:"Rage",e:"+20% damage below 50% HP"},{n:"Frost Resistance",e:"+15% cold defense"}],strengths:["Multiple combat forms","Rage synergy with beast forms","Strong self-buffs"],weaknesses:["No ranged attacks","No healing spells","Form-dependent abilities"],style:"Melee Shapeshifting Combat",weapons:"Claws, Fangs, Natural Weapons",alignment:"Chaotic Neutral",difficulty:"Expert",flavor:"When the north wind howls, it speaks his name."},
+  {id:"barbarian_mage",name:"Volka Stormborn",title:"The Frost Witch",race:"Barbarian",cls:"Mage",faction:"Crusade",factionColor:"#3b82f6",rarity:"Epic",portrait:"/hero-portraits/barbarian_mage.png",lore:"The northern shamans channel magic through primal fury rather than scholarly study. Volka commands blizzards and lightning, her spells fueled by the raw rage of the frozen north.",backstory:"During a deadly blizzard that buried her village, young Volka discovered she could command the storm itself. The tribal elders named her Stormborn and sent her south to aid the Crusade with her elemental fury.",quote:"Winter does not come. I bring it.",attr:"INT",stats:{hp:185,atk:24,def:7,spd:63,rng:5.5,mp:145},abilities:[{n:"Mana Shield",i:"\u{1F6E1}",d:"Passive shield from mana",mc:0},{n:"Fireball",i:"\u{1F525}",d:"AoE elemental damage",mc:30},{n:"Heal",i:"\u2764",d:"Restore HP to target ally",mc:20},{n:"Lightning Chain",i:"\u26A1",d:"Chain lightning hitting 5 targets",mc:35}],traits:[{n:"Rage",e:"+20% damage below 50% HP"},{n:"Frost Resistance",e:"+15% cold defense"}],strengths:["Powerful AoE damage","Rage bonus applies to spells","Frost resistance"],weaknesses:["Very fragile in melee","Mana dependent","Low physical defense"],style:"Ranged Magic & Healing",weapons:"Totems, Bone Staves, Runic Armor",alignment:"Chaotic Neutral",difficulty:"Advanced",flavor:"Her anger is the storm. Her mercy is the calm."},
+  {id:"barbarian_ranger",name:"Svala Windrider",title:"The Silent Huntress",race:"Barbarian",cls:"Ranger",faction:"Crusade",factionColor:"#3b82f6",rarity:"Rare",portrait:"/hero-portraits/barbarian_ranger.png",lore:"No prey escapes Svala. She tracks across frozen tundra, through blinding snowstorms, reading the land like an open book. Her arrows are tipped with the venom of ice serpents.",backstory:"Svala was the youngest hunter to ever complete the Trial of the Winter Hunt, tracking and slaying a frost drake alone at age fourteen. Now she serves as the Crusade's premier wilderness scout.",quote:"The wind tells me where you hide.",attr:"DEX",stats:{hp:195,atk:25,def:9,spd:73,rng:6.5,mp:105},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Passive accuracy and crit bonus",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"High damage ranged attack",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"5 arrow spread pattern",mc:25},{n:"Rain of Arrows",i:"\u{1F327}",d:"Massive AoE ranged barrage",mc:40}],traits:[{n:"Rage",e:"+20% damage below 50% HP"},{n:"Frost Resistance",e:"+15% cold defense"}],strengths:["Longest attack range","Rage bonus when wounded","Stealth and evasion"],weaknesses:["Low armor and HP","Weak in prolonged melee","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"Longbows, Ice Javelins, Leather Armor",alignment:"True Neutral",difficulty:"Intermediate",flavor:"She does not miss. She does not warn."},
+  {id:"dwarf_warrior",name:"Thane Ironshield",title:"The Mountain Guardian",race:"Dwarf",cls:"Warrior",faction:"Fabled",factionColor:"#a855f7",rarity:"Epic",portrait:"/hero-portraits/dwarf_warrior.png",lore:"The Thane of Ironhold has defended the mountain passes for over a century. His enchanted shield, Aegis of Ancestors, was forged from the heart of the mountain itself and has never been pierced.",backstory:"Thane Ironshield is the 47th guardian of the Deep Gate, an unbroken lineage stretching back to the founding of Stonehold. When the Grudge Wars began, he sealed the lower mines and marched to war.",quote:"Deeper than stone. Harder than iron. We endure.",attr:"STR",stats:{hp:260,atk:24,def:23,spd:52,rng:1.5,mp:90},abilities:[{n:"Invincibility",i:"\u{1F6E1}",d:"Complete damage immunity",mc:40},{n:"Damage Surge",i:"\u26A1",d:"+25% attack power boost",mc:25},{n:"Guardian's Aura",i:"\u{1F6E1}",d:"+15% defense to allies",mc:30},{n:"Avatar Form",i:"\u{1F451}",d:"+40% all stats",mc:80}],traits:[{n:"Stoneborn",e:"+20% Defense"},{n:"Master Craftsman",e:"+1 crafting tier"}],strengths:["Highest defense in game","Stoneborn defense bonus stacks","Impenetrable tank"],weaknesses:["Very slow movement","No ranged attacks","No healing"],style:"Melee Physical Combat",weapons:"War Hammers, Tower Shields, Runic Plate",alignment:"Lawful Good",difficulty:"Beginner",flavor:"The mountain does not move. Neither does he."},
+  {id:"dwarf_worg",name:"Bromm Earthshaker",title:"The Cavern Beast",race:"Dwarf",cls:"Worg",faction:"Fabled",factionColor:"#a855f7",rarity:"Legendary",portrait:"/hero-portraits/dwarf_worg.png",lore:"Deep beneath the mountains, Bromm discovered an ancient bear spirit imprisoned in crystal. By freeing it, the spirit merged with his dwarven soul, creating something unprecedented: a shapeshifter of living stone.",backstory:"Bromm was a miner who broke through into a sealed cavern containing a primordial earth spirit. The merging nearly killed him but left him able to transform into a creature of rock and fury.",quote:"The mountain has teeth. I am its bite.",attr:"STR",stats:{hp:250,atk:23,def:20,spd:57,rng:1.5,mp:95},abilities:[{n:"Bear Form",i:"\u{1F43B}",d:"+50% defense, +30% max HP",mc:30},{n:"Feral Rage",i:"\u{1F525}",d:"+30% attack speed",mc:25},{n:"Raptor Form",i:"\u26A1",d:"Stealth DPS mode",mc:30},{n:"Worg Lord",i:"\u{1F451}",d:"Ultimate stone form",mc:80}],traits:[{n:"Stoneborn",e:"+20% Defense"},{n:"Master Craftsman",e:"+1 crafting tier"}],strengths:["Bear Form + Stoneborn = unstoppable tank","Multiple combat forms","High base defense"],weaknesses:["Extremely slow in all forms","No ranged attacks","No healing spells"],style:"Melee Shapeshifting Combat",weapons:"Stone Claws, Earth Fangs, Crystal Armor",alignment:"Neutral Good",difficulty:"Expert",flavor:"The deep places remember. Bromm makes them forget."},
+  {id:"dwarf_mage",name:"Runa Forgekeeper",title:"The Runesmith",race:"Dwarf",cls:"Mage",faction:"Fabled",factionColor:"#a855f7",rarity:"Epic",portrait:"/hero-portraits/dwarf_mage.png",lore:"Dwarven magic is not the flashy arcana of elves or humans. It is the deep magic of rune and forge, of fire shaped by will and hammer. Runa channels this ancient craft in battle.",backstory:"Last of the Forgekeeper bloodline, Runa carries the knowledge of runic magic that predates the Grudge Wars. Her forge-spells burn hotter than dragonfire and her rune-shields are nigh unbreakable.",quote:"Every rune tells a story. Mine tells of fire.",attr:"INT",stats:{hp:190,atk:22,def:13,spd:52,rng:5.5,mp:150},abilities:[{n:"Mana Shield",i:"\u{1F6E1}",d:"Passive runic barrier",mc:0},{n:"Fireball",i:"\u{1F525}",d:"Forge-fire AoE blast",mc:30},{n:"Heal",i:"\u2764",d:"Runic restoration",mc:20},{n:"Lightning Chain",i:"\u26A1",d:"Arc lightning through runes",mc:35}],traits:[{n:"Stoneborn",e:"+20% Defense"},{n:"Master Craftsman",e:"+1 crafting tier"}],strengths:["Stoneborn makes her tankier than other mages","Powerful forge spells","Runic healing"],weaknesses:["Slow movement","Mana dependent","Short range compared to elves"],style:"Ranged Magic & Healing",weapons:"Runic Hammers, Forge Staves, Rune Armor",alignment:"Lawful Neutral",difficulty:"Intermediate",flavor:"The forge burns eternal. So does she."},
+  {id:"dwarf_ranger",name:"Durin Tunnelwatcher",title:"The Deep Scout",race:"Dwarf",cls:"Ranger",faction:"Fabled",factionColor:"#a855f7",rarity:"Rare",portrait:"/hero-portraits/dwarf_ranger.png",lore:"Not all dwarves fight on the front line. Durin patrols the endless tunnels beneath the mountains, his crossbow picking off threats in the dark long before they reach the surface.",backstory:"Durin lost his squad to a cave-in during a tunnel patrol. Alone in the dark for thirty days, he learned to navigate by echo and smell. He emerged transformed, able to fight in total darkness.",quote:"In the deep, every sound is a target.",attr:"DEX",stats:{hp:200,atk:23,def:15,spd:62,rng:6.5,mp:110},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Enhanced accuracy in darkness",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"Armor-piercing crossbow bolt",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"5 bolt spread pattern",mc:25},{n:"Rain of Arrows",i:"\u{1F327}",d:"Bolt barrage from the heights",mc:40}],traits:[{n:"Stoneborn",e:"+20% Defense"},{n:"Master Craftsman",e:"+1 crafting tier"}],strengths:["Stoneborn gives extra survivability","Armor-piercing bolts","Dark vision"],weaknesses:["Slow movement","Less range than elf rangers","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"Heavy Crossbows, Throwing Axes, Chain Mail",alignment:"Lawful Neutral",difficulty:"Intermediate",flavor:"He sees in the dark. You do not see him."},
+  {id:"elf_warrior",name:"Thalion Bladedancer",title:"The Graceful Death",race:"Elf",cls:"Warrior",faction:"Fabled",factionColor:"#a855f7",rarity:"Rare",portrait:"/hero-portraits/elf_warrior.png",lore:"Elven warriors do not rely on brute force. Thalion's blade moves like water, each stroke a masterwork of precision. He has dueled and defeated opponents twice his size through technique alone.",backstory:"Trained in the Moonblade Academy for three centuries, Thalion mastered every weapon form before settling on the twin curved blades that earned him his title.",quote:"A blade is a brush. Combat is art.",attr:"STR",stats:{hp:230,atk:22,def:16,spd:65,rng:1.5,mp:120},abilities:[{n:"Invincibility",i:"\u{1F6E1}",d:"Perfect dodge state",mc:40},{n:"Damage Surge",i:"\u26A1",d:"Blade dance combo +25% ATK",mc:25},{n:"Guardian's Aura",i:"\u{1F6E1}",d:"Moonshadow protection aura",mc:30},{n:"Avatar Form",i:"\u{1F451}",d:"Ascended blade master form",mc:80}],traits:[{n:"Keen Senses",e:"+15% Accuracy"},{n:"Arcane Affinity",e:"+10% Mana"}],strengths:["Highest accuracy of all warriors","Fast attack speed","Arcane mana bonus"],weaknesses:["Lower HP than other warriors","No ranged attacks","Fragile for a tank"],style:"Melee Physical Combat",weapons:"Curved Blades, Mithril Armor, Elven Shields",alignment:"Neutral Good",difficulty:"Intermediate",flavor:"His enemies never see the second strike."},
+  {id:"elf_worg",name:"Sylara Wildheart",title:"The Forest Spirit",race:"Elf",cls:"Worg",faction:"Fabled",factionColor:"#a855f7",rarity:"Legendary",portrait:"/hero-portraits/elf_worg.png",lore:"Sylara is the last of the Wildheart druids who once protected the great forests. She channels the spirits of ancient beasts through elven magic, her transformations enhanced by centuries of arcane study.",backstory:"When the Darkwood began to wither from Legion corruption, Sylara performed the ancient Rite of Binding, merging her soul with the forest's guardian spirit. Now she IS the forest's wrath.",quote:"The forest breathes through me. And it is angry.",attr:"STR",stats:{hp:220,atk:21,def:13,spd:70,rng:1.5,mp:115},abilities:[{n:"Bear Form",i:"\u{1F43B}",d:"Ancient treant defense form",mc:30},{n:"Feral Rage",i:"\u{1F525}",d:"Nature's fury +30% ATK",mc:25},{n:"Raptor Form",i:"\u26A1",d:"Swift predator stealth",mc:30},{n:"Worg Lord",i:"\u{1F451}",d:"Ancient forest guardian form",mc:80}],traits:[{n:"Keen Senses",e:"+15% Accuracy"},{n:"Arcane Affinity",e:"+10% Mana"}],strengths:["Extra mana for more transformations","Keen senses boost form accuracy","Ancient spirit power"],weaknesses:["Fragile base form","No ranged attacks","Form-dependent abilities"],style:"Melee Shapeshifting Combat",weapons:"Nature Claws, Spirit Fangs, Living Armor",alignment:"Neutral Good",difficulty:"Expert",flavor:"She wears the shapes of forgotten gods."},
+  {id:"elf_mage",name:"Lyra Stormweaver",title:"The Storm Weaver",race:"Elf",cls:"Mage",faction:"Fabled",factionColor:"#a855f7",rarity:"Legendary",portrait:"/hero-portraits/elf_mage.png",lore:"Elven mages are the most powerful spellcasters in all the realms. Lyra channels the raw essence of the ley lines, her magic amplified by centuries of study and an innate arcane connection.",backstory:"Lyra spent four hundred years studying in the Crystal Spire before the Grudge Wars forced her into battle. Her mastery of all eight schools of magic makes her the most versatile caster alive.",quote:"Magic is not power. It is understanding. I understand everything.",attr:"INT",stats:{hp:160,atk:20,def:6,spd:65,rng:5.5,mp:170},abilities:[{n:"Mana Shield",i:"\u{1F6E1}",d:"Arcane barrier from mana pool",mc:0},{n:"Fireball",i:"\u{1F525}",d:"Pure arcane fire explosion",mc:30},{n:"Heal",i:"\u2764",d:"Ley line healing",mc:20},{n:"Lightning Chain",i:"\u26A1",d:"Storm magic chaining 5 targets",mc:35}],traits:[{n:"Keen Senses",e:"+15% Accuracy"},{n:"Arcane Affinity",e:"+10% Mana"}],strengths:["Highest spell power in game","Extra mana from Arcane Affinity","Spell accuracy from Keen Senses"],weaknesses:["Extremely fragile","Mana dependent","Virtually no melee capability"],style:"Ranged Magic & Healing",weapons:"Crystal Staves, Moonstone Orbs, Silk Robes",alignment:"True Neutral",difficulty:"Advanced",flavor:"The stars whisper their secrets to her alone."},
+  {id:"elf_ranger",name:"Aelindra Swiftbow",title:"The Wind Walker",race:"Elf",cls:"Ranger",faction:"Fabled",factionColor:"#a855f7",rarity:"Epic",portrait:"/hero-portraits/elf_ranger.png",lore:"The greatest archer to ever live, Aelindra can split an arrow at three hundred paces while riding at full gallop. Her elven eyes miss nothing, and her enchanted bow never runs dry.",backstory:"Captain of the Silverglade Sentinels for two centuries, Aelindra has defended the borders of the Fabled lands against every threat.",quote:"I loosed the arrow yesterday. It arrives tomorrow. You die today.",attr:"DEX",stats:{hp:170,atk:21,def:8,spd:75,rng:6.5,mp:130},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Elven sight perfect accuracy",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"Arcane-infused arrow",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"5 enchanted arrows",mc:25},{n:"Rain of Arrows",i:"\u{1F327}",d:"Arcane arrow storm",mc:40}],traits:[{n:"Keen Senses",e:"+15% Accuracy"},{n:"Arcane Affinity",e:"+10% Mana"}],strengths:["Unmatched accuracy","Arcane-enhanced arrows","Fastest ranger"],weaknesses:["Very fragile","Poor melee defense","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"Enchanted Longbows, Mithril Arrows, Leaf Armor",alignment:"Chaotic Good",difficulty:"Advanced",flavor:"Her arrows sing the songs of extinction."},
+  {id:"orc_warrior",name:"Grommash Ironjaw",title:"The Warchief",race:"Orc",cls:"Warrior",faction:"Legion",factionColor:"#ef4444",rarity:"Epic",portrait:"/hero-portraits/orc_warrior.png",lore:"The mightiest warrior the Legion has ever produced, Grommash earned his chieftainship by defeating every challenger in the Pit of Blood. His massive cleaver has carved a path of destruction across three continents.",backstory:"Born during a blood eclipse, Grommash was destined for war. At age six he killed his first opponent in the fighting pits. By twenty he had united the warring orc clans under a single banner through sheer force.",quote:"BLOOD AND THUNDER!",attr:"STR",stats:{hp:250,atk:27,def:19,spd:57,rng:1.5,mp:80},abilities:[{n:"Invincibility",i:"\u{1F6E1}",d:"Blood rage immunity",mc:40},{n:"Damage Surge",i:"\u26A1",d:"Berserker fury +25% ATK",mc:25},{n:"Guardian's Aura",i:"\u{1F6E1}",d:"Warcry defense boost",mc:30},{n:"Avatar Form",i:"\u{1F451}",d:"Warchief ascension form",mc:80}],traits:[{n:"Bloodrage",e:"+25% damage below 50% HP"},{n:"Warborn",e:"+10% Critical"}],strengths:["Highest raw damage","Bloodrage + crit combo devastating","Best warrior for pure DPS"],weaknesses:["No ranged attacks","No healing","Reckless combat style"],style:"Melee Physical Combat",weapons:"Massive Cleavers, Spiked Armor, War Totems",alignment:"Chaotic Evil",difficulty:"Beginner",flavor:"He does not ask for surrender."},
+  {id:"orc_worg",name:"Fenris Bloodfang",title:"The Alpha",race:"Orc",cls:"Worg",faction:"Legion",factionColor:"#ef4444",rarity:"Legendary",portrait:"/hero-portraits/orc_worg.png",lore:"Fenris challenged the great dire wolf Shadowmaw to single combat and won, absorbing the beast's spirit. Now he commands the Legion's beast packs, his howl freezing enemies in terror.",backstory:"Exiled from his clan for refusing to kill prisoners, Fenris wandered the Ashlands alone until Shadowmaw found him. Their battle lasted three days. When it ended, they were one being.",quote:"I am the alpha. There is no omega.",attr:"STR",stats:{hp:240,atk:26,def:16,spd:67,rng:1.5,mp:85},abilities:[{n:"Bear Form",i:"\u{1F43B}",d:"War bear destruction form",mc:30},{n:"Feral Rage",i:"\u{1F525}",d:"Blood frenzy +30% ATK",mc:25},{n:"Raptor Form",i:"\u26A1",d:"Shadow hunter stealth",mc:30},{n:"Worg Lord",i:"\u{1F451}",d:"Alpha predator ascension",mc:80}],traits:[{n:"Bloodrage",e:"+25% damage below 50% HP"},{n:"Warborn",e:"+10% Critical"}],strengths:["Bloodrage synergizes with feral forms","Crit bonus in all forms","Most aggressive worg"],weaknesses:["No ranged attacks","No healing","Berserker tendencies"],style:"Melee Shapeshifting Combat",weapons:"Blood Claws, Shadow Fangs, Bone Armor",alignment:"Chaotic Neutral",difficulty:"Expert",flavor:"His shadow has teeth."},
+  {id:"orc_mage",name:"Zul'jin the Hexmaster",title:"The Blood Shaman",race:"Orc",cls:"Mage",faction:"Legion",factionColor:"#ef4444",rarity:"Epic",portrait:"/hero-portraits/orc_mage.png",lore:"Orc magic is blood magic, raw and dangerous. Zul'jin channels the life force of fallen enemies into devastating hexes and dark healing, growing stronger with every kill.",backstory:"Born with the gift of blood-sight, Zul'jin was taken by the Legion's war shamans at birth. He learned to weaponize pain itself, turning enemy suffering into fuel for his dark arts.",quote:"Your blood screams louder than you do.",attr:"INT",stats:{hp:180,atk:25,def:9,spd:62,rng:5.5,mp:140},abilities:[{n:"Mana Shield",i:"\u{1F6E1}",d:"Blood ward barrier",mc:0},{n:"Fireball",i:"\u{1F525}",d:"Blood fire explosion",mc:30},{n:"Heal",i:"\u2764",d:"Blood sacrifice healing",mc:20},{n:"Lightning Chain",i:"\u26A1",d:"Chain hex through blood",mc:35}],traits:[{n:"Bloodrage",e:"+25% damage below 50% HP"},{n:"Warborn",e:"+10% Critical"}],strengths:["Bloodrage boosts spell damage when wounded","Critical hit spells","Dark healing"],weaknesses:["Fragile in melee","Blood magic is unstable","Mana dependent"],style:"Ranged Magic & Healing",weapons:"Skull Staves, Blood Orbs, Hex Totems",alignment:"Neutral Evil",difficulty:"Advanced",flavor:"He paints with the colors of agony."},
+  {id:"orc_ranger",name:"Razak Deadeye",title:"The Trophy Hunter",race:"Orc",cls:"Ranger",faction:"Legion",factionColor:"#ef4444",rarity:"Rare",portrait:"/hero-portraits/orc_ranger.png",lore:"Razak hunts for glory, not survival. His trophy rack holds the heads of legendary beasts, and his poison-tipped bolts bring down prey that should be impossible to kill.",backstory:"A disgraced warrior who lost his sword arm in battle, Razak reinvented himself as a marksman. His custom war-crossbow fires bolts that can penetrate dragon scale at fifty paces.",quote:"Every head on my wall was once the strongest in its land.",attr:"DEX",stats:{hp:190,atk:26,def:11,spd:72,rng:6.5,mp:100},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Predator instinct accuracy",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"Armor-crushing bolt",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"Spread of poison bolts",mc:25},{n:"Rain of Arrows",i:"\u{1F327}",d:"Bolt storm barrage",mc:40}],traits:[{n:"Bloodrage",e:"+25% damage below 50% HP"},{n:"Warborn",e:"+10% Critical"}],strengths:["Crit bonus stacks with Precision","Bloodrage makes him lethal when wounded","Armor-piercing"],weaknesses:["Low armor","Reckless positioning","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"War Crossbows, Poison Bolts, Spiked Leather",alignment:"Chaotic Evil",difficulty:"Intermediate",flavor:"His trophies whisper of things that should not die."},
+  {id:"undead_warrior",name:"Lord Malachar",title:"The Deathless Knight",race:"Undead",cls:"Warrior",faction:"Legion",factionColor:"#ef4444",rarity:"Epic",portrait:"/hero-portraits/undead_warrior.png",lore:"Once a noble paladin, Malachar was slain and raised by dark necromancy. Now he fights with the skill of his former life but the relentless endurance of undeath, unable to feel pain or fear.",backstory:"Sir Malachar the Pure was the greatest knight of his age until he fell defending a temple. The necromancer who raised him twisted his devotion into dark loyalty.",quote:"I cannot die. I have tried.",attr:"STR",stats:{hp:265,atk:23,def:20,spd:52,rng:1.5,mp:95},abilities:[{n:"Invincibility",i:"\u{1F6E1}",d:"Deathless ward immunity",mc:40},{n:"Damage Surge",i:"\u26A1",d:"Unholy strength +25% ATK",mc:25},{n:"Guardian's Aura",i:"\u{1F6E1}",d:"Dread aura defense",mc:30},{n:"Avatar Form",i:"\u{1F451}",d:"Death Knight ascension",mc:80}],traits:[{n:"Undying",e:"+20% HP"},{n:"Fear Aura",e:"-10% enemy accuracy"}],strengths:["Highest effective HP from Undying bonus","Fear Aura weakens enemies","Cannot be feared"],weaknesses:["Slow","Vulnerable to holy magic","No healing synergies"],style:"Melee Physical Combat",weapons:"Cursed Blades, Bone Shields, Death Plate",alignment:"Lawful Evil",difficulty:"Intermediate",flavor:"Death was just the beginning of his war."},
+  {id:"undead_worg",name:"The Ghoulfather",title:"The Abomination",race:"Undead",cls:"Worg",faction:"Legion",factionColor:"#ef4444",rarity:"Legendary",portrait:"/hero-portraits/undead_worg.png",lore:"A failed necromantic experiment that merged a warrior's corpse with several beast spirits. The result is an abomination that shifts between grotesque forms, each more terrifying than the last.",backstory:"The Ghoulfather was created when a desperate necromancer tried to bind multiple animal spirits to a single corpse. The spirits fought for dominance, creating an entity that shifts between forms uncontrollably.",quote:"We... are... HUNGRY.",attr:"STR",stats:{hp:255,atk:22,def:17,spd:62,rng:1.5,mp:100},abilities:[{n:"Bear Form",i:"\u{1F43B}",d:"Corpse bear horror form",mc:30},{n:"Feral Rage",i:"\u{1F525}",d:"Undying frenzy +30% ATK",mc:25},{n:"Raptor Form",i:"\u26A1",d:"Ghoul stalker stealth",mc:30},{n:"Worg Lord",i:"\u{1F451}",d:"Full abomination form",mc:80}],traits:[{n:"Undying",e:"+20% HP"},{n:"Fear Aura",e:"-10% enemy accuracy"}],strengths:["Undying + Bear Form = massive HP pool","Fear Aura in all forms","Terrifying presence"],weaknesses:["Uncontrollable","Vulnerable to holy","No healing"],style:"Melee Shapeshifting Combat",weapons:"Bone Claws, Corpse Fangs, Stitched Armor",alignment:"Chaotic Evil",difficulty:"Expert",flavor:"It remembers being three different things. None of them were kind."},
+  {id:"undead_mage",name:"Necromancer Vexis",title:"The Soul Harvester",race:"Undead",cls:"Mage",faction:"Legion",factionColor:"#ef4444",rarity:"Epic",portrait:"/hero-portraits/undead_mage.png",lore:"Vexis died as a scholar of the arcane arts and was raised specifically for her magical knowledge. In undeath, her power has grown beyond mortal limits, fueled by harvested souls.",backstory:"In life, Vexis was a renowned healer. The irony is not lost on her: she now commands the very forces of death she once fought against.",quote:"Death is not the end. It is the door to real power.",attr:"INT",stats:{hp:195,atk:21,def:10,spd:57,rng:5.5,mp:155},abilities:[{n:"Mana Shield",i:"\u{1F6E1}",d:"Soul ward barrier",mc:0},{n:"Fireball",i:"\u{1F525}",d:"Soulfire explosion",mc:30},{n:"Heal",i:"\u2764",d:"Life drain healing",mc:20},{n:"Lightning Chain",i:"\u26A1",d:"Soul chain through enemies",mc:35}],traits:[{n:"Undying",e:"+20% HP"},{n:"Fear Aura",e:"-10% enemy accuracy"}],strengths:["Undying makes her surprisingly durable for a mage","Fear Aura helps survival","Soul magic amplification"],weaknesses:["Still fragile to burst damage","Holy magic weakness","Mana dependent"],style:"Ranged Magic & Healing",weapons:"Bone Staves, Soul Gems, Shadow Robes",alignment:"Neutral Evil",difficulty:"Advanced",flavor:"She weaves spells from the screams of the fallen."},
+  {id:"undead_ranger",name:"Shade Whisper",title:"The Phantom Archer",race:"Undead",cls:"Ranger",faction:"Legion",factionColor:"#ef4444",rarity:"Rare",portrait:"/hero-portraits/undead_ranger.png",lore:"Once the finest scout in the Crusade, Shade Whisper was killed and raised to serve the very forces she once hunted. Her spectral arrows pass through armor as if it were mist.",backstory:"In life she was named Elena Brightarrow, and she was beloved by her comrades. Now she hunts them with the same skill, her phantom arrows guided by the memories of a life she can no longer feel.",quote:"I remember your face. I remember all their faces.",attr:"DEX",stats:{hp:205,atk:22,def:12,spd:67,rng:6.5,mp:115},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Spectral sight perfect aim",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"Phase arrow through armor",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"Spectral arrow volley",mc:25},{n:"Rain of Arrows",i:"\u{1F327}",d:"Ghost arrow storm",mc:40}],traits:[{n:"Undying",e:"+20% HP"},{n:"Fear Aura",e:"-10% enemy accuracy"}],strengths:["Phase arrows ignore some defense","Fear Aura provides safety","Undying survivability"],weaknesses:["Holy magic weakness","Haunted by past","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"Phantom Bow, Spirit Arrows, Shadow Cloak",alignment:"Neutral Evil",difficulty:"Intermediate",flavor:"Her arrows carry the weight of a life she can never reclaim."},
+  {id:"pirate_king",name:"Racalvin the Pirate King",title:"The Scourge of the Seven Seas",race:"Barbarian",cls:"Ranger",faction:"Crusade",factionColor:"#c9a030",rarity:"Legendary",portrait:"/hero-portraits/pirate_king.png",lore:"Legend speaks of a pirate so ruthless that even the sea feared him. Racalvin conquered the Seven Grudge Seas with nothing but a stolen ship and a crew of outcasts, building an empire of plunder and freedom.",backstory:"Born as the bastard son of a barbarian chieftain and a merchant's daughter, Racalvin was cast out at birth. He stowed away on a merchant vessel at age eight, mutinied at twelve, and by twenty commanded a fleet of thirty ships.",quote:"The sea does not bow. Neither do I.",attr:"DEX",stats:{hp:225,atk:30,def:9,spd:78,rng:6.5,mp:105},abilities:[{n:"Precision",i:"\u{1F3AF}",d:"Sea-born accuracy",mc:0},{n:"Power Shot",i:"\u{1F3AF}",d:"Cannon-force shot",mc:20},{n:"Multi Shot",i:"\u{1F4A5}",d:"Broadside volley",mc:25},{n:"Storm of Arrows",i:"\u{1F451}",d:"Ultimate sea storm devastation",mc:50}],traits:[{n:"Rage",e:"+20% damage below 50% HP"},{n:"Frost Resistance",e:"+15% cold defense"},{n:"Pirate King",e:"+10% HP, +25% ATK, +15% SPD"}],strengths:["Highest base stats of any hero","Pirate King bonus on top of racial traits","Fastest hero in the game"],weaknesses:["Secret unlock required","Glass cannon build","No healing abilities"],style:"Ranged Physical & Stealth",weapons:"Flintlock Pistols, Cutlass, Captain's Coat",alignment:"Chaotic Neutral",difficulty:"Expert",flavor:"Crowns are taken. Thrones are stolen. The sea is earned."}
+];
+
+const ICON_MAP = {"\u{1F6E1}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>","\u26A1":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><polygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/></svg>","\u{1F525}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z'/></svg>","\u{1F451}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14'/></svg>","\u{1F43B}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><circle cx='9' cy='10' r='1.5' fill='currentColor'/><circle cx='15' cy='10' r='1.5' fill='currentColor'/><path d='M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5'/></svg>","\u{1F3AF}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><circle cx='12' cy='12' r='10'/><circle cx='12' cy='12' r='6'/><circle cx='12' cy='12' r='2'/></svg>","\u{1F4A5}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 2L9 7H4l4 5-2 6 6-3 6 3-2-6 4-5h-5z'/></svg>","\u{1F327}":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20 16.58A5 5 0 0018 7h-1.26A8 8 0 104 15.25'/><line x1='8' y1='19' x2='8' y2='21'/><line x1='12' y1='19' x2='12' y2='21'/><line x1='16' y1='19' x2='16' y2='21'/></svg>","\u2764":"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'/></svg>"};
+
+let raceFilter = "all";
+let classFilter = "all";
+
+function getStatMax(key) {
+  const vals = HEROES.map(h => h.stats[key]);
+  return Math.max(...vals);
+}
+const STAT_MAXES = {hp:getStatMax("hp"),atk:getStatMax("atk"),def:getStatMax("def"),spd:getStatMax("spd"),rng:getStatMax("rng"),mp:getStatMax("mp")};
+const STAT_COLORS = {hp:"#ef4444",atk:"#f97316",def:"#3b82f6",spd:"#22c55e",rng:"#a855f7",mp:"#06b6d4"};
+
+function renderCards() {
+  const grid = document.getElementById("heroGrid");
+  const filtered = HEROES.filter(h => {
+    if (raceFilter !== "all" && h.race !== raceFilter) return false;
+    if (classFilter !== "all" && h.cls !== classFilter) return false;
+    return true;
+  });
+  grid.innerHTML = filtered.map(h => `
+    <div class="hero-card" onclick="openModal('${h.id}')" data-testid="card-hero-${h.id}">
+      <div class="hero-card-top">
+        <img class="hero-portrait rarity-border-${h.rarity}" src="${h.portrait}" alt="${h.name}" loading="lazy" onerror="this.style.background='#1a2236'">
+        <div class="hero-info">
+          <div class="hero-name">${h.name}</div>
+          <div class="hero-title">${h.title}</div>
+          <div class="hero-tags">
+            <span class="tag tag-race">${h.race}</span>
+            <span class="tag tag-class">${h.cls}</span>
+            <span class="tag tag-faction-${h.faction.toLowerCase()}">${h.faction}</span>
+            <span class="tag rarity-text-${h.rarity}" style="background:rgba(255,255,255,.05)">${h.rarity}</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-stats-row">
+        <div class="mini-stat"><div class="ms-label">HP</div><div class="ms-val">${h.stats.hp}</div></div>
+        <div class="mini-stat"><div class="ms-label">ATK</div><div class="ms-val">${h.stats.atk}</div></div>
+        <div class="mini-stat"><div class="ms-label">DEF</div><div class="ms-val">${h.stats.def}</div></div>
+        <div class="mini-stat"><div class="ms-label">SPD</div><div class="ms-val">${h.stats.spd}</div></div>
+        <div class="mini-stat"><div class="ms-label">RNG</div><div class="ms-val">${h.stats.rng}</div></div>
+        <div class="mini-stat"><div class="ms-label">MP</div><div class="ms-val">${h.stats.mp}</div></div>
+      </div>
+      <div class="hero-quote">"${h.quote}"</div>
+    </div>
+  `).join("");
+}
+
+function openModal(id) {
+  const h = HEROES.find(x => x.id === id);
+  if (!h) return;
+  const modal = document.getElementById("modal");
+  const body = document.getElementById("modalBody");
+  body.innerHTML = `
+    <div class="modal-header">
+      <img class="modal-portrait rarity-border-${h.rarity}" src="${h.portrait}" alt="${h.name}" onerror="this.style.background='#1a2236'">
+      <div class="modal-hero-info">
+        <div class="modal-hero-name">${h.name}</div>
+        <div class="modal-hero-title">${h.title}</div>
+        <div class="modal-hero-tags">
+          <span class="tag tag-race">${h.race}</span>
+          <span class="tag tag-class">${h.cls}</span>
+          <span class="tag tag-faction-${h.faction.toLowerCase()}">${h.faction}</span>
+          <span class="tag rarity-text-${h.rarity}" style="background:rgba(255,255,255,.05)">${h.rarity}</span>
+          <span class="tag" style="background:rgba(255,215,0,.1);color:var(--gold)">${h.difficulty}</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchTab(this,'lore')">Lore</button>
+      <button class="modal-tab" onclick="switchTab(this,'stats')">Stats</button>
+      <button class="modal-tab" onclick="switchTab(this,'skills')">Skills</button>
+    </div>
+    <div class="modal-panel active" id="panel-lore">
+      <p class="lore-text">${h.lore}</p>
+      <p class="lore-text">${h.backstory}</p>
+      <div class="lore-quote">"${h.quote}"</div>
+      <div class="meta-grid">
+        <div class="meta-box"><div class="meta-label">Combat Style</div><div class="meta-val">${h.style}</div></div>
+        <div class="meta-box"><div class="meta-label">Weapons</div><div class="meta-val">${h.weapons}</div></div>
+        <div class="meta-box"><div class="meta-label">Alignment</div><div class="meta-val">${h.alignment}</div></div>
+        <div class="meta-box"><div class="meta-label">Primary Attr</div><div class="meta-val">${h.attr}</div></div>
+      </div>
+      <p style="margin-top:16px;color:var(--text-sec);font-style:italic;font-size:.85rem">${h.flavor}</p>
+    </div>
+    <div class="modal-panel" id="panel-stats">
+      <div class="stats-grid">
+        <div class="stat-box"><div class="sb-label">Health</div><div class="sb-val">${h.stats.hp}</div></div>
+        <div class="stat-box"><div class="sb-label">Attack</div><div class="sb-val">${h.stats.atk}</div></div>
+        <div class="stat-box"><div class="sb-label">Defense</div><div class="sb-val">${h.stats.def}</div></div>
+        <div class="stat-box"><div class="sb-label">Speed</div><div class="sb-val">${h.stats.spd}</div></div>
+        <div class="stat-box"><div class="sb-label">Range</div><div class="sb-val">${h.stats.rng}</div></div>
+        <div class="stat-box"><div class="sb-label">Mana</div><div class="sb-val">${h.stats.mp}</div></div>
+      </div>
+      ${Object.entries({hp:"Health",atk:"Attack",def:"Defense",spd:"Speed",rng:"Range",mp:"Mana"}).map(([k,label]) => `
+        <div class="stat-bar-row">
+          <div class="stat-bar-label">${label}</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(h.stats[k]/STAT_MAXES[k])*100}%;background:${STAT_COLORS[k]}"></div></div>
+        </div>
+      `).join("")}
+      <div class="traits-section">
+        <h4>Racial Traits</h4>
+        ${h.traits.map(t => `<div class="trait-item"><span class="trait-name">${t.n}</span><span class="trait-effect">${t.e}</span></div>`).join("")}
+        <h4>Strengths</h4>
+        <div class="sw-list">${h.strengths.map(s => `<div class="sw-item"><span class="dot-g">+</span>${s}</div>`).join("")}</div>
+        <h4>Weaknesses</h4>
+        <div class="sw-list">${h.weaknesses.map(w => `<div class="sw-item"><span class="dot-r">-</span>${w}</div>`).join("")}</div>
+      </div>
+    </div>
+    <div class="modal-panel" id="panel-skills">
+      <div class="ability-list">
+        ${h.abilities.map(a => `
+          <div class="ability-item">
+            <div class="ability-icon-wrap">${ICON_MAP[a.i]||a.i}</div>
+            <div>
+              <div class="ability-name">${a.n}</div>
+              <div class="ability-desc">${a.d}</div>
+              <div class="ability-mana">${a.mc > 0 ? a.mc + ' Mana' : 'Passive'}</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+  modal.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function switchTab(btn, panel) {
+  btn.parentElement.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll(".modal-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("panel-" + panel).classList.add("active");
+}
+
+document.getElementById("modalClose").onclick = () => {
+  document.getElementById("modal").classList.remove("open");
+  document.body.style.overflow = "";
+};
+document.getElementById("modal").onclick = (e) => {
+  if (e.target === document.getElementById("modal")) {
+    document.getElementById("modal").classList.remove("open");
+    document.body.style.overflow = "";
+  }
+};
+
+document.getElementById("filters").addEventListener("click", (e) => {
+  const btn = e.target.closest(".filter-btn");
+  if (!btn) return;
+  const filterType = btn.dataset.filter;
+  const val = btn.dataset.value;
+  if (filterType === "race") raceFilter = val;
+  else classFilter = val;
+  document.querySelectorAll(`.filter-btn[data-filter="${filterType}"]`).forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  renderCards();
+});
+
+renderCards();
+</script>
+</body>
+</html>

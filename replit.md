@@ -23,7 +23,12 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Theme:** Dark fantasy, gold/amber accents, Cinzel Decorative font
 - **Game type:** Final Fantasy Tactics–style tactical grid RPG
 - **Grid:** Dynamic level-driven grids (80×80 to 140×140) with InstancedMesh tile rendering, BFS obstacle-aware movement, and CT-based turn order
-- **Characters:** 17 total — 11 original Grudge Studio characters + 6 from RPG Characters Nov 2020 pack (Orc Blood Guard, Saltbone Corsair, Grave Shade, Orc Warlock, Hollow Zealot, Iron Pilgrim)
+- **Characters:** 26 total — Full Grudge Warlords roster: 6 races × 4 classes = 24 standard heroes + 2 secret Pirates heroes (Racalvin the Pirate King, Cpt. John Wayne)
+- **Races:** Human, Barbarian, Dwarf, Elf, Orc, Undead — each with distinct racial stats
+- **Classes:** Warrior (melee tank), Worg (shapeshifter), Mage (ranged caster), Ranger (ranged DPS)
+- **Factions:** Crusade (Human+Barbarian), Fabled (Dwarf+Elf), Legion (Orc+Undead), Pirates (secret)
+- **Rarity:** Common, Uncommon, Rare, Epic, Legendary
+- **Hero IDs:** `{race}_{class}` format (e.g. `human_warrior`, `elf_mage`, `orc_worg`)
 - **RPG Pack Characters (6):** Converted from Quaternius RPG Characters Nov 2020 (FBX/glTF → GLB via assimp/gltf-pipeline); models: `warrior_rpg`, `ranger_rpg`, `rogue_rpg`, `wizard_rpg`, `cleric_rpg`, `monk_rpg`; each skinned with material color tints for faction (orc green, undead bone-pale, etc.); each holds different weapons from pack defaults (modular); all unique animation states mapped to pack-specific anim names
 - **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`, `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
 - **Logo:** `public/images/logo-nobg.png` (background removed)

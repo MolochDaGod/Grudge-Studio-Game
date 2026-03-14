@@ -1,87 +1,139 @@
 export const CHARACTER_LORE: Record<string, { title: string; quote: string; backstory: string }> = {
-  'frost-orc-berserker': {
-    title: 'Born of Ice and Rage',
-    quote: '"Where I walk, winter follows. Where I fight, winter stays."',
-    backstory: 'Deep in the arctic wastes, few survive the Trial of Frost Giant Blood. Those who do emerge as something no longer fully orc — their higher mind shattered, replaced by an endless, howling hunger. They roam frozen tundras as unstoppable engines of destruction, their blood so cold it crystallizes in open wounds.'
+  // ===== CRUSADE — HUMAN =====
+  'human_warrior': {
+    title: 'The Iron Bastion',
+    quote: '"The shield breaks before the will does."',
+    backstory: 'Orphaned during the First Grudge War, young Aldric was raised by the Temple Knights of Valorheim. He forged his first blade at age twelve and took his oath at sixteen. Now he leads the vanguard of every Crusade offensive, his golden armor a beacon of hope in the darkest battles. Where Aldric stands, the line holds.'
   },
-  'magma-orc-destroyer': {
-    title: 'Tempered by the Volcano\'s Heart',
-    quote: '"The fire didn\'t burn me. It taught me."',
-    backstory: 'To seek the blessing of Korgath, the ancient fire demon, an orc must submerge themselves in sacred lava pools at the peak of the Ember Throne volcano. Nine in ten die screaming. The survivors emerge reborn as living weapons, their bodies channels for volcanic fury, their touch hot enough to melt steel.'
+  'human_worg': {
+    title: 'The Twilight Stalker',
+    quote: '"The beast within is not my curse. It is my salvation."',
+    backstory: 'Once captain of the Crusade rangers, Gareth ventured too deep into the Darkwood seeking a cure for a plague that ravaged his regiment. There, the ancient Wolf Spirit Fenrath chose him as vessel. He returned changed — his eyes gleaming amber in the dark, his instincts sharper than any blade. In the space between howl and silence, death waits.'
   },
-  'brother-maltheus': {
-    title: 'The Scholar Who Fell to Shadow',
-    quote: '"Truth is not found in approved texts. It screams from the forbidden ones."',
-    backstory: 'Once the most respected librarian in the Sacred Archive, Maltheus\'s hunger for knowledge drove him to the sealed vaults — texts pre-dating the current age, written in languages that shouldn\'t exist. The demon found him there, already broken by what he\'d read. Now he wears a holy man\'s face while feeding scholars to eldritch things in the deep catacombs.'
+  'human_mage': {
+    title: 'The Storm Caller',
+    quote: '"Knowledge is the flame. I am merely the torch."',
+    backstory: 'Raised in the Brightspire Academy, Elara discovered at age ten that she could channel both arcane destruction and divine healing simultaneously — a gift unseen in centuries. The Consortium fears her power; the Crusade depends on it. She became the youngest Archmage in recorded history at twenty-six. The sky splits at her command.'
   },
-  'canal-lurker': {
-    title: 'Heir of the Sunken Bargain',
-    quote: '"We remember the sea. We remember what was promised."',
-    backstory: 'Their great-great-grandparents were merchant sailors who struck a deal with something beneath the waves for safe passage through the Demon Straits. The price was paid across generations — each child born more amphibious, more predatory, less human. Now they haunt the flooded districts of port cities, wearing barnacle-crusted relics of ancestral naval uniforms.'
+  'human_ranger': {
+    title: 'The Shadow Blade',
+    quote: '"You never see the arrow that kills you."',
+    backstory: 'Kael grew up in the slums of Port Grimaldi, learning to survive through cunning and speed. Recruited by the Crusade\'s covert division at fifteen, he became their finest scout and assassin — a ghost who moves through shadows and answers to no one but the cause. Shadows are just arrows waiting to be loosed.'
   },
-  'warlord-garnok': {
-    title: 'The Betrayer of Blood',
-    quote: '"Clan is a cage. Power is the only freedom."',
-    backstory: 'Garnok was a promising warchief\'s son, destined for honor. He chose differently. One moonless night, he opened the clan\'s gates to human slaver caravans and watched his kin led away in chains, counting coins in his fist. He now commands a vast trafficking network, decorated with the tusks of those who tried to stop him. Every orc clan has his name on a kill-list.'
+  // ===== CRUSADE — BARBARIAN =====
+  'barbarian_warrior': {
+    title: 'The Mountain Breaker',
+    quote: '"I do not fight to survive. I fight because the mountain told me to."',
+    backstory: 'Ulfgar earned his title by literally shattering a mountain pass to prevent a Legion invasion, burying an entire army beneath tons of stone. The act cost him his left eye but saved his entire tribe. From the frozen peaks of the Northlands, he descends like an avalanche upon his foes. The earth trembles when Ulfgar charges.'
   },
-  'elven-archer': {
-    title: 'Sentinel of the Ancient Groves',
-    quote: '"Centuries pass. I remain. This bow never misses."',
-    backstory: 'She witnessed the burning of the First Forest four hundred years ago and has spent every year since ensuring it never happens again. Her bow is carved from a tree that no longer exists. Her aim is not practice — it is memory. Every arrow she looses is a debt paid to something lost.'
+  'barbarian_worg': {
+    title: 'The Beast of the North',
+    quote: '"The pack does not forgive. The pack does not forget."',
+    backstory: 'Born during a blood eclipse, Hrothgar was left in the woods as an omen of doom by his own tribe. Raised by a great wolf mother, he returned years later as a teenager who could speak with beasts and shift his form at will. He brought the pack with him. When the north wind howls, it speaks his name.'
   },
-  'orcish-warrior': {
-    title: 'Pride of the Ironmaw Clan',
-    quote: '"My clan\'s name is my armor. My axe is my argument."',
-    backstory: 'He earned his clan tattoos at fourteen, his first tusk-necklace at seventeen. He is not cruel — he is precise. The Ironmaw Clan does not raid for sport; they raid to prove that strength and principle can coexist. He dreams of the day orcs and humans sit at the same council table. Until then, he fights.'
+  'barbarian_mage': {
+    title: 'The Frost Witch',
+    quote: '"Winter does not come. I bring it."',
+    backstory: 'During a deadly blizzard that buried her village, young Volka discovered she could command the storm itself. The tribal elders named her Stormborn and sent her south to aid the Crusade. Her spells are fueled by the raw rage of the frozen north — when wounded, her magic grows stronger. Her anger is the storm. Her mercy is the calm.'
   },
-  'human-knight': {
-    title: 'Shield of the Realm',
-    quote: '"I did not choose to be born to this duty. I choose to fulfill it, every day."',
-    backstory: 'Third son of a minor lord, he had nothing to inherit but a name and a sword. He earned his knighthood in the border wars, not for glory but for the men he brought home alive. His armor bears thirty-seven battle dents, each one a story he tells to recruits. He is the kind of knight songs are actually written about.'
+  'barbarian_ranger': {
+    title: 'The Silent Huntress',
+    quote: '"The wind tells me where you hide."',
+    backstory: 'Svala was the youngest hunter to ever complete the Trial of the Winter Hunt, tracking and slaying a frost drake alone at age fourteen. Now she serves as the Crusade\'s premier wilderness scout, her arrows tipped with ice-serpent venom. She does not miss. She does not warn.'
   },
-  'human-barbarian': {
-    title: 'Wild Child of the Frozen Steppe',
-    quote: '"You built walls. I learned to make walls unnecessary."',
-    backstory: 'She has never slept indoors willingly. Her tribe ranges the northern steppes, following the thunderherds and reading weather like text. When city-folk call her a savage, she considers it a compliment — she has survived things that would kill anyone who relied on walls and guards. Her great sword was taken from a frost giant. She won that fight alone.'
+  // ===== FABLED — DWARF =====
+  'dwarf_warrior': {
+    title: 'The Mountain Guardian',
+    quote: '"Deeper than stone. Harder than iron. We endure."',
+    backstory: 'Thane Ironshield is the 47th guardian of the Deep Gate, an unbroken lineage stretching back to the founding of Stonehold. His enchanted shield, Aegis of Ancestors, was forged from the heart of the mountain itself and has never been pierced. When the Grudge Wars began, he sealed the lower mines and marched to war. The mountain does not move. Neither does he.'
   },
-  'skeleton-undead': {
-    title: 'Soldier Without an Ending',
-    quote: '"I fought for a kingdom that no longer exists. I fight still."',
-    backstory: 'The battle that took his life was so catastrophically evil that the land itself refused to let those who fell there rest. He remembers fragments — a wife\'s face, a child\'s laugh, a king\'s banner. The lich who rules this cursed field tried to conscript him. He refused. He wanders instead, fighting, unable to stop, unable to die again.'
+  'dwarf_worg': {
+    title: 'The Cavern Beast',
+    quote: '"The mountain has teeth. I am its bite."',
+    backstory: 'Bromm was a miner who broke through into a sealed cavern containing a primordial earth spirit imprisoned in crystal. By freeing it, the spirit merged with his dwarven soul — creating something unprecedented: a shapeshifter of living stone. The merging nearly killed him. Now nothing can. The deep places remember. Bromm makes them forget.'
   },
-  'dwarven-forge-master': {
-    title: 'Master of Mountain Iron',
-    quote: '"Every dent in my armor is a reminder that whatever made that dent is now dead."',
-    backstory: 'He has spent ninety years at the forge and still considers himself a journeyman. His masterwork — the armor he wears — took eleven years, three failed attempts, and one extremely angry fire elemental. He entered the surface wars not for politics but because a client needed protecting and the debt of craft is sacred. He will finish his invoice when the fighting stops.'
+  'dwarf_mage': {
+    title: 'The Runesmith',
+    quote: '"Every rune tells a story. Mine tells of fire."',
+    backstory: 'Last of the Forgekeeper bloodline, Runa carries the knowledge of runic magic that predates the Grudge Wars by a thousand years. Her forge-spells burn hotter than dragonfire and her rune-shields are nigh unbreakable. Most dwarves forge metal. Runa forges reality. The forge burns eternal. So does she.'
   },
-  'orc-blood-guard': {
-    title: 'Hammer of the Bloodtusk',
-    quote: '"You see a wall. I see something to walk through."',
-    backstory: 'He survived the Bloodtusk Warband\'s initiation rites at age sixteen — three days in a pit, no weapons, four other candidates. He was the only one who came out. For twenty years since, he has been the first orc through every door, the last one standing in every rout. His war hammer was custom-forged from the bones of a stone giant\'s knuckle. He swings it like an afterthought.'
+  'dwarf_ranger': {
+    title: 'The Deep Scout',
+    quote: '"In the deep, every sound is a target."',
+    backstory: 'Durin lost his entire squad to a cave-in during a tunnel patrol. Alone in the dark for thirty days, he learned to navigate by echo, vibration, and smell. He emerged transformed — able to fight in total darkness with uncanny precision. His crossbow bolts pierce armor as easily as stone splits under a pickaxe. He sees in the dark. You do not see him.'
   },
-  'saltbone-corsair': {
-    title: 'The Pirate Who Wouldn\'t Sink',
-    quote: '"The sea owed me. It couldn\'t collect."',
-    backstory: 'His ship went down in the Demon Straits during a squall that shouldn\'t have existed. His crew drowned. He drowned too — but the blade he\'d stolen from a sea witch\'s wreck refused to go under. He woke on a reef three weeks later, bleached clean to the bone, still clutching the knife. He has no memory of who he was, only what he was — a corsair, still sailing, still sharp.'
+  // ===== FABLED — ELF =====
+  'elf_warrior': {
+    title: 'The Graceful Death',
+    quote: '"A blade is a brush. Combat is art."',
+    backstory: 'Trained in the Moonblade Academy for three centuries, Thalion mastered every weapon form before settling on the twin curved blades that earned him his title. He has dueled and defeated opponents twice his size through technique alone. His enemies never see the second strike.'
   },
-  'grave-shade': {
-    title: 'Grief Wearing Blades',
-    quote: '"I remember the verdict. I remember the hood. I remember that it was wrong."',
-    backstory: 'She was the kingdom\'s finest spy, serving faithfully for fifteen years. When the king needed a scapegoat for his own treason, she was the obvious choice — too skilled to defend herself without proving her methods, too loyal to flee. They buried her in a sealed vault with no name on the stone. Whatever came back through the cracks in that vault was done with loyalty entirely.'
+  'elf_worg': {
+    title: 'The Forest Spirit',
+    quote: '"The forest breathes through me. And it is angry."',
+    backstory: 'When the Darkwood began to wither from Legion corruption, Sylara performed the ancient Rite of Binding — merging her soul with the forest\'s guardian spirit. She IS the forest\'s wrath now, a druid who wears the shapes of forgotten gods. Centuries of elven magic amplify every transformation beyond what any other Worg can achieve. She wears the shapes of forgotten gods.'
   },
-  'orc-warlock': {
-    title: 'The Spell-Thief in Iron',
-    quote: '"Your wizards spent thirty years learning that. I learned it in thirty minutes, at knifepoint."',
-    backstory: 'Most orcs who want power take it with their hands. He took it from a human archmage\'s library after the battle of Ashford Ridge, spending three months sleeping in the ruined tower, reading by firelight, breaking the spells\' locks one by one. He could have stayed a scholar. He strapped on his greatsword instead. The combination is, by most accounts, catastrophically unfair.'
+  'elf_mage': {
+    title: 'The Storm Weaver',
+    quote: '"Magic is not power. It is understanding. I understand everything."',
+    backstory: 'Lyra spent four hundred years studying in the Crystal Spire before the Grudge Wars forced her into battle. Her mastery of all eight schools of magic makes her the most versatile caster alive. Elven ley line channels make her spells strike with 40% more force than any human mage could achieve. The stars whisper their secrets to her alone.'
   },
-  'hollow-zealot': {
-    title: 'The God-Abandoned',
-    quote: '"My prayers were answered. Just not the way I expected."',
-    backstory: 'For one hundred years he served without doubt. Then the silence began — first the minor miracles stopped, then the warmth in the prayers, then his own heartbeat. He did not fall to darkness; darkness filled the space that faith had evacuated. He still wears the robes, still speaks the liturgy, but what flows through him now corrodes anything holy it touches. He considers this a theological development.'
+  'elf_ranger': {
+    title: 'The Wind Walker',
+    quote: '"I loosed the arrow yesterday. It arrives tomorrow. You die today."',
+    backstory: 'Captain of the Silverglade Sentinels for two centuries, Aelindra has defended the borders of the Fabled lands against every threat. The greatest archer to ever live — she can split an arrow at three hundred paces while riding at full gallop. Her enchanted bow never runs dry, and her elven eyes miss nothing. Her arrows sing the songs of extinction.'
   },
-  'iron-pilgrim': {
-    title: 'The Monastery\'s Last Export',
-    quote: '"I left because the walls were too small. The world turned out to be the right size."',
-    backstory: 'He was a novice who kept breaking things he wasn\'t supposed to break — first equipment, then opponents, then the patience of every senior monk who tried to teach him restraint. They gave him traveling clothes and their blessing and strongly suggested the door. He has since wandered through four kingdoms, seven wars, and approximately two hundred fights he didn\'t start. He carries a greataxe now because it was either that or stop winning.'
-  }
+  // ===== LEGION — ORC =====
+  'orc_warrior': {
+    title: 'The Warchief',
+    quote: '"BLOOD AND THUNDER!"',
+    backstory: 'Born during a blood eclipse, Grommash was destined for war. At age six he killed his first opponent in the fighting pits. By twenty he had united every warring orc clan under The Legion banner through sheer force of will and the edge of his cleaver. His massive weapon has carved a path of destruction across three continents. None have stopped him yet.'
+  },
+  'orc_worg': {
+    title: 'The Alpha',
+    quote: '"I am the alpha. There is no omega."',
+    backstory: 'Fenris earned dominance of every wolf pack in the northern reaches before the Legion even recruited him. His Bloodrage synergy with beast forms is legendary — when wounded, every transformation becomes more powerful, more savage. He challenged the previous Legion worg champion and ended the fight in under three seconds. Nothing in the Legion questions his rank.'
+  },
+  'orc_mage': {
+    title: 'The Blood Shaman',
+    quote: '"Your blood screams louder than you do."',
+    backstory: 'Zul\'jin pried the secrets of blood sorcery from a dying shaman at spearpoint and spent twenty years perfecting them in the wilds. He carries a war-totem for enemies too close to hex and blood-spells for everyone else. His magic is fueled by the life force of those he fights — the more they bleed, the more power he channels. Your blood screams louder than you do.'
+  },
+  'orc_ranger': {
+    title: 'The Trophy Hunter',
+    quote: '"Every head on my wall was once the strongest in its land."',
+    backstory: 'Razak tracked and killed a Crusade general through hostile territory for three weeks straight before taking his trophy. Every kill is documented, mounted, and catalogued. His patience is supernatural, his aim is absolute, and his Bloodrage means that when he is cornered, he becomes more lethal than ever. He has never failed to collect his quarry.'
+  },
+  // ===== LEGION — UNDEAD =====
+  'undead_warrior': {
+    title: 'The Deathless Knight',
+    quote: '"I cannot die. I have tried."',
+    backstory: 'Lord Malachar once ruled a kingdom that no longer exists. When his city fell, he refused to accept death — binding his soul to his ancient plate armor through a forbidden void pact that cost him everything but his will. Now he marches for the Legion, unchanged by centuries, carrying the memory of a kingdom\'s fall as both wound and weapon. He has outlasted every war he ever fought in.'
+  },
+  'undead_worg': {
+    title: 'The Abomination',
+    quote: '"We... are... HUNGRY."',
+    backstory: 'No one remembers what The Ghoulfather was in life. In undeath, it became something vast and formless — absorbing the essence of every creature it consumes, shifting shape with each kill. The Legion uses it like a siege weapon: aim, release, and collect whatever remains. Its voice is a chorus of the things it has eaten. It has been eating for a very long time.'
+  },
+  'undead_mage': {
+    title: 'The Soul Harvester',
+    quote: '"Death is not the end. It is the door to real power."',
+    backstory: 'Once a court physician who discovered the secret of soul-binding, Vexis was executed for heresy and rose three days later with full mastery of the dark arts. He harvests souls on the battlefield to fuel spells that make the living envy the dead. His research continues. He considers his own undeath to be his most successful experiment.'
+  },
+  'undead_ranger': {
+    title: 'The Phantom Archer',
+    quote: '"I remember your face. I remember all their faces."',
+    backstory: 'Shade Whisper was an assassin in life who was betrayed by the very people she served and buried in an unmarked grave. She returned as something that remembers every face that has ever crossed her path. Her spectral arrows bypass conventional armor. She moves through shadow like she was born in it — and in death, she was. She remembers all their faces. She visits all of them, eventually.'
+  },
+  // ===== PIRATES — SECRET HEROES =====
+  'pirate_king': {
+    title: 'The Scourge of the Seven Seas',
+    quote: '"The sea does not bow. Neither do I."',
+    backstory: 'Racalvin commands The Grudge — the most feared warship ever built — and answers to no god, no king, and no grudge he hasn\'t collected on. Unlocked by forging a Barbarian Ranger named "Racalvin the Pirate King." His Storm of Arrows is a hurricane barrage of enchanted bolts that has sunk more ships than any storm the ocean ever made. He is the sea\'s wrath made flesh.'
+  },
+  'sky_captain': {
+    title: 'The Sky Captain',
+    quote: '"The ground is for those who\'ve given up dreaming."',
+    backstory: 'The first captain of Racalvin\'s pirate crew and the first man in history to pilot a flying machine. John Wayne traded his medals for a compass and never looked back. His ironclad nerve and unshakeable loyalty earned him command of the skies. Unlocked by naming a Human Warrior "Cpt John Wayne." They say he once flew through a god-storm and came out the other side laughing.'
+  },
 };

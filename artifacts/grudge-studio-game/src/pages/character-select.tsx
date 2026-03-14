@@ -46,13 +46,13 @@ export default function CharacterSelect() {
 
     const createTacticalUnit = (char: typeof characters[0], isPlayer: boolean, index: number): TacticalUnit => {
       const speed = char.speed;
-      // Larger board → more movement
+      // Larger board → more movement (speed 52–78 → move 7–11)
       const move = Math.max(4, Math.floor(speed / 7));
-      // Ranged characters get meaningful range on 16×12 board
+      // Class determines attack range
       const range = char.role === 'Ranger' ? 6
-                  : char.role === 'Warlock' ? 5
-                  : char.role === 'Ambusher' ? 3
-                  : 2;
+                  : char.role === 'Mage'   ? 5
+                  : char.role === 'Worg'   ? 2
+                  : 1.5;
 
       // Player starts on the left (x=0,1), enemies on the right (x=14,15)
       const col = index % 2;

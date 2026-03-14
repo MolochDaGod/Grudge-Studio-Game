@@ -45,7 +45,7 @@ export default function Home() {
            transition={{ delay: 0.8, duration: 1 }}
            className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 opacity-70 mix-blend-screen pointer-events-none"
         >
-           <img src={`${import.meta.env.BASE_URL}images/chars/magma-orc-destroyer-nobg.png`} alt="Magma Orc Destroyer" className="h-[80vh] object-contain brightness-200 contrast-125 drop-shadow-[0_0_80px_rgba(255,80,0,0.9)]" />
+           <img src={`${import.meta.env.BASE_URL}images/chars/orc_warrior.png`} alt="Grommash Ironjaw" className="h-[80vh] object-contain brightness-150 contrast-110 drop-shadow-[0_0_80px_rgba(255,80,0,0.9)]" />
         </motion.div>
 
         <motion.div
@@ -54,7 +54,7 @@ export default function Home() {
            transition={{ delay: 0.8, duration: 1 }}
            className="hidden lg:block absolute left-0 top-1/2 -translate-y-1/2 opacity-70 mix-blend-screen pointer-events-none"
         >
-           <img src={`${import.meta.env.BASE_URL}images/chars/elven-archer-nobg.png`} alt="Elven Archer" className="h-[80vh] object-contain brightness-200 contrast-125 drop-shadow-[0_0_80px_rgba(80,255,120,0.9)]" />
+           <img src={`${import.meta.env.BASE_URL}images/chars/elf_ranger.png`} alt="Aelindra Swiftbow" className="h-[80vh] object-contain brightness-150 contrast-110 drop-shadow-[0_0_80px_rgba(80,255,120,0.9)]" />
         </motion.div>
 
         {/* Action Buttons */}
@@ -89,7 +89,7 @@ export default function Home() {
           <div className="bg-glass p-6 rounded-sm">
             <ShieldQuestion className="w-8 h-8 text-primary mb-4" />
             <h3 className="font-display text-lg font-bold mb-2">Rich Lore</h3>
-            <p className="text-muted-foreground text-sm">Play as terrifying villains like the Magma Orc Destroyer, or noble heroes like the Elven Archer.</p>
+            <p className="text-muted-foreground text-sm">Command 26 unique heroes across 3 factions — Crusade, Fabled, and Legion — plus secret Pirates. Each hero carries deep lore and a legendary purpose.</p>
           </div>
           <div className="bg-glass p-6 rounded-sm">
             <Sword className="w-8 h-8 text-destructive mb-4" />

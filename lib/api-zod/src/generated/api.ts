@@ -32,8 +32,8 @@ export const GetCharactersResponseItem = zod.object({
   specialAbility: zod.string(),
   specialAbilityDescription: zod.string(),
   weakness: zod.string(),
-  faction: zod.enum(["hero", "villain", "neutral"]),
-  rarity: zod.enum(["common", "uncommon", "rare", "legendary"]),
+  faction: zod.enum(["hero", "villain", "neutral", "Crusade", "Fabled", "Legion", "Pirates"]),
+  rarity: zod.enum(["common", "uncommon", "rare", "epic", "legendary"]),
 });
 export const GetCharactersResponse = zod.array(GetCharactersResponseItem);
 
