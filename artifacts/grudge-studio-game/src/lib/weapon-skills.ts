@@ -1231,17 +1231,24 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
 
 // Map character ID to weapon type
 export const CHARACTER_WEAPON_MAP: Record<string, string> = {
-  'frost-orc-berserker': 'greataxe',
-  'magma-orc-destroyer': 'fire_staff',
-  'brother-maltheus': 'dark_staff',
-  'canal-lurker': 'daggers',
-  'warlord-garnok': 'greatsword',
-  'elven-archer': 'bow',
-  'orcish-warrior': 'greataxe',
-  'human-knight': 'sword_shield',
-  'human-barbarian': 'greatsword',
-  'skeleton-undead': 'rusted_sword',
+  'frost-orc-berserker':  'greataxe',
+  'magma-orc-destroyer':  'fire_staff',
+  'brother-maltheus':     'dark_staff',
+  'canal-lurker':         'daggers',
+  'warlord-garnok':       'greatsword',
+  'elven-archer':         'bow',
+  'orcish-warrior':       'greataxe',
+  'human-knight':         'sword_shield',
+  'human-barbarian':      'greatsword',
+  'skeleton-undead':      'rusted_sword',
   'dwarven-forge-master': 'war_hammer',
+  // RPG Characters Nov 2020 — weapon matches their animation set
+  'orc-blood-guard':  'greatsword',   // Sword_Attack / Sword_Attack2
+  'saltbone-corsair': 'bow',          // Bow_Shoot / Bow_Draw
+  'grave-shade':      'daggers',      // Dagger_Attack / Dagger_Attack2
+  'orc-warlock':      'fire_staff',   // Staff_Attack / Spell1 / Spell2
+  'hollow-zealot':    'war_hammer',   // Staff_Attack / Spell1 (divine zealot)
+  'iron-pilgrim':     'greatsword',   // Attack / Attack2 (warrior-monk)
 };
 
 // Get the weapon skill tree for a character

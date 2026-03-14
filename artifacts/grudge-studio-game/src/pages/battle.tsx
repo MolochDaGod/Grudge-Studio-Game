@@ -4,16 +4,101 @@ import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { HealthBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Skull, Move, FastForward, RotateCcw, RotateCw } from "lucide-react";
+import { Skull, Move, FastForward, RotateCcw, RotateCw, Zap, Target, Clock, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BattleScene } from "@/components/three/BattleScene";
 import { AnimState } from "@/components/three/CharacterModel";
+import { CombatEffectData, EffectType } from "@/components/three/CombatEffects";
+import { tileToWorld } from "@/components/three/TileGrid";
 import { CHARACTER_LORE } from "@/lib/lore";
 import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
-  SkillSlot, Skill
+  SkillSlot, Skill, CHARACTER_WEAPON_MAP,
 } from "@/lib/weapon-skills";
 import { getLevelWithEdits, LevelDef, hasLineOfSight } from "@/lib/levels";
+
+// ── Effect helpers ────────────────────────────────────────────────────────────
+function getEffectColor(skill: Skill): string {
+  const s = (skill.stats.join(' ') + ' ' + (skill.description || '')).toLowerCase();
+  if (s.includes('fire'))  return '#ff6030';
+  if (s.includes('dark') || s.includes('death') || s.includes('void')) return '#9030ff';
+  if (s.includes('ice') || s.includes('frost') || s.includes('frozen')) return '#40d0ff';
+  if (skill.tags.includes('heal'))    return '#00ff88';
+  if (skill.tags.includes('ultimate')) return '#ffd700';
+  return '#ffa040';
+}
+
+function getEffectType(skill: Skill, weaponType?: string): EffectType {
+  if (skill.tags.includes('ultimate'))  return 'ultimate_nova';
+  if (skill.tags.includes('heal'))      return 'heal_burst';
+  const s = (skill.stats.join(' ') + ' ' + (skill.description || '')).toLowerCase();
+  if (s.includes('fire'))  return 'fire_projectile';
+  if (s.includes('dark') || s.includes('death')) return 'dark_projectile';
+  if (s.includes('ice') || s.includes('frost'))  return 'ice_projectile';
+  if (weaponType === 'bow') return 'arrow';
+  if (skill.applyStatus === 'stunned')  return 'status_stun';
+  if (skill.applyStatus === 'poisoned') return 'status_poison';
+  if (skill.applyStatus === 'frozen')   return 'status_freeze';
+  if (skill.range !== undefined && skill.range <= 1) return 'physical_slash';
+  return 'impact_flash';
+}
+
+// ── Rich skill tooltip popup ──────────────────────────────────────────────────
+function SkillTooltip({ skill, tierLabel, tierColor }: { skill: Skill; tierLabel: string; tierColor: string }) {
+  const tagColors: Record<string, string> = {
+    damage: 'text-orange-400', heal: 'text-green-400', buff: 'text-blue-400',
+    debuff: 'text-purple-400', aoe: 'text-yellow-300', ultimate: 'text-yellow-400',
+    attack: 'text-red-400', utility: 'text-cyan-400', move: 'text-sky-400',
+  };
+  return (
+    <div className="absolute bottom-full left-0 right-0 mb-2 z-50 pointer-events-none">
+      <div className="bg-[#0d0d14] border border-primary/60 rounded-lg shadow-2xl p-3 text-left">
+        {/* Header */}
+        <div className="flex items-start gap-2 mb-1.5">
+          <span className="text-2xl leading-none shrink-0">{skill.icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-display text-sm font-bold text-white uppercase tracking-wide leading-tight">{skill.name}</span>
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest shrink-0"
+                style={{ backgroundColor: tierColor + '33', color: tierColor, border: `1px solid ${tierColor}55` }}
+              >{tierLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-[11px] text-white/70 italic leading-snug mb-2">{skill.description}</p>
+
+        {/* Stats chips */}
+        {skill.stats.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {skill.stats.map((s, i) => (
+              <span key={i} className="text-[10px] bg-white/8 border border-white/15 rounded px-1.5 py-0.5 text-white/80 font-mono">{s}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Tags + meta */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]">
+          <span className="flex items-center gap-1 text-white/50"><Target className="w-2.5 h-2.5" />Range {skill.range ?? 1}</span>
+          {skill.cooldown > 0 && skill.cooldown < 999 && (
+            <span className="flex items-center gap-1 text-orange-400/80"><Clock className="w-2.5 h-2.5" />CD {skill.cooldown}</span>
+          )}
+          {skill.cooldown === 999 && (
+            <span className="flex items-center gap-1 text-yellow-400"><Star className="w-2.5 h-2.5" />Once per battle</span>
+          )}
+          {skill.aoe && <span className="flex items-center gap-1 text-yellow-300"><Zap className="w-2.5 h-2.5" />AoE</span>}
+          <div className="flex gap-1 flex-wrap">
+            {skill.tags.map(t => (
+              <span key={t} className={cn('capitalize font-bold', tagColors[t] ?? 'text-white/50')}>{t}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Determine best anim state for a given skill
 function getSkillAnimState(skill: Skill): AnimState {
@@ -42,6 +127,28 @@ export default function Battle() {
   const GRID_H = level.gridH;
 
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
+  const [combatEffects, setCombatEffects] = useState<CombatEffectData[]>([]);
+  const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
+
+  // Expire old effects every 250ms
+  useEffect(() => {
+    const iv = setInterval(() => {
+      const now = performance.now();
+      setCombatEffects(prev => prev.filter(e => now - e.createdAt < e.duration + 400));
+    }, 250);
+    return () => clearInterval(iv);
+  }, []);
+
+  const spawnEffect = useCallback((
+    type: EffectType,
+    from: [number, number, number],
+    to: [number, number, number],
+    color: string,
+    duration = 700,
+  ) => {
+    const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setCombatEffects(prev => [...prev, { id, type, from, to, color, createdAt: performance.now(), duration }]);
+  }, []);
 
   // Route protection
   useEffect(() => {
@@ -305,6 +412,21 @@ export default function Battle() {
       setSkillCooldown(attacker.id, skill.id, 999);
     }
 
+    // Spawn 3D combat effects
+    const fromPos = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
+    const toPos   = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
+    const weaponType = CHARACTER_WEAPON_MAP[attacker.characterId];
+    const effectType  = getEffectType(skill, weaponType);
+    const effectColor = getEffectColor(skill);
+    const travelDur   = skill.tags.includes('ultimate') ? 900 : 650;
+    spawnEffect(effectType, fromPos, toPos, effectColor, travelDur);
+    if (skill.aoe) {
+      spawnEffect('aoe_ring', fromPos, toPos, effectColor, 900);
+    }
+    if (finalDmg > 0 && effectType !== 'impact_flash' && effectType !== 'heal_burst') {
+      setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, effectColor, 400), 380);
+    }
+
     // Pick appropriate attack animation
     const atkAnim = getSkillAnimState(skill);
     setAnimStates(prev => ({...prev, [attacker.id]: atkAnim}));
@@ -348,6 +470,14 @@ export default function Battle() {
     setActionMode('idle');
     setAttackableTiles([]);
     addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}`, 'damage');
+
+    // Physical attack effects
+    const fromPos = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
+    const toPos   = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
+    const wt = CHARACTER_WEAPON_MAP[attacker.characterId];
+    const slashColor = isCrit ? '#ffd700' : '#ffa040';
+    spawnEffect(wt === 'bow' ? 'arrow' : 'physical_slash', fromPos, toPos, slashColor, 450);
+    setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, slashColor, 380), 320);
     
     setAnimStates(prev => ({...prev, [attacker.id]: 'attack1'}));
     setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 700);
@@ -509,6 +639,7 @@ export default function Battle() {
           actionMode={actionMode}
           onTileClick={handleTileClick}
           animStates={animStates}
+          combatEffects={combatEffects}
         />
       </div>
 
@@ -660,7 +791,7 @@ export default function Battle() {
               </div>
 
               {/* 5-Slot Skill Action Bar */}
-              <div className="flex gap-1 mb-2">
+              <div className="flex gap-1 mb-2 relative">
                 {([1, 2, 3, 4, 5] as SkillSlot[]).map(slot => {
                   const slotKey = `skill_${slot}` as const;
                   const loadout = equippedSkills[activeUnit.id] || getDefaultSkillLoadout(activeUnit.characterId);
@@ -673,66 +804,73 @@ export default function Battle() {
                   const isActive = actionMode === slotKey;
                   const slotStyle = SLOT_LABELS[slot];
                   const isDisabled = activeUnit.hasActed || isOnCooldown || isUltimateUsed;
+                  const tierStyle = skill ? (TIER_STYLES[skill.tier] ?? TIER_STYLES.T1) : null;
 
                   return (
-                    <button
-                      key={slot}
-                      disabled={isDisabled}
-                      onClick={() => {
-                        if (isDisabled) return;
-                        if (isActive) {
-                          setActionMode('idle');
-                          setAttackableTiles([]);
-                        } else {
-                          setActionMode(slotKey);
-                          setReachableTiles([]);
-                          setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range));
-                        }
-                      }}
-                      title={skill ? `${skill.name}\n${skill.description}\n${skill.stats.join(' · ')}` : `Slot ${slot}`}
-                      className={cn(
-                        "relative flex-1 flex flex-col items-center justify-center rounded border transition-all duration-150 py-1.5 px-1",
-                        "min-h-[56px] overflow-hidden",
-                        isActive
-                          ? "border-primary bg-primary/20 shadow-[0_0_8px_rgba(212,160,23,0.4)]"
-                          : isDisabled
-                            ? "border-white/5 bg-black/30 opacity-50 cursor-not-allowed"
-                            : "border-white/15 bg-black/40 hover:border-white/30 hover:bg-white/5 cursor-pointer"
+                    <div key={slot} className="relative flex-1">
+                      {/* Rich tooltip shown on hover */}
+                      {hoveredSlot === slot && skill && tierStyle && (
+                        <SkillTooltip skill={skill} tierLabel={tierStyle.label} tierColor={tierStyle.color} />
                       )}
-                    >
-                      {/* Slot Roman numeral */}
-                      <div
-                        className="absolute top-0.5 left-1 text-[8px] font-display font-bold"
-                        style={{ color: slotStyle.color }}
+                      <button
+                        disabled={isDisabled}
+                        onMouseEnter={() => setHoveredSlot(slot)}
+                        onMouseLeave={() => setHoveredSlot(null)}
+                        onClick={() => {
+                          if (isDisabled) return;
+                          if (isActive) {
+                            setActionMode('idle');
+                            setAttackableTiles([]);
+                          } else {
+                            setActionMode(slotKey);
+                            setReachableTiles([]);
+                            setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range));
+                          }
+                        }}
+                        className={cn(
+                          "relative w-full flex flex-col items-center justify-center rounded border transition-all duration-150 py-1.5 px-1",
+                          "min-h-[56px] overflow-hidden",
+                          isActive
+                            ? "border-primary bg-primary/20 shadow-[0_0_8px_rgba(212,160,23,0.4)]"
+                            : isDisabled
+                              ? "border-white/5 bg-black/30 opacity-50 cursor-not-allowed"
+                              : "border-white/15 bg-black/40 hover:border-white/30 hover:bg-white/5 cursor-pointer"
+                        )}
                       >
-                        {slotStyle.roman}
-                      </div>
+                        {/* Slot Roman numeral */}
+                        <div
+                          className="absolute top-0.5 left-1 text-[8px] font-display font-bold"
+                          style={{ color: slotStyle.color }}
+                        >
+                          {slotStyle.roman}
+                        </div>
 
-                      {/* Skill icon + name */}
-                      {skill ? (
-                        <>
-                          <div className="text-lg leading-none mt-1">{skill.icon}</div>
-                          <div className="text-[8px] text-center leading-tight text-white/70 mt-0.5 px-0.5 truncate w-full text-center">
-                            {skill.name}
-                          </div>
-                          {isOnCooldown && !isUltimateUsed && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-bold text-orange-400">
-                              {cd}
+                        {/* Skill icon + name */}
+                        {skill ? (
+                          <>
+                            <div className="text-lg leading-none mt-1">{skill.icon}</div>
+                            <div className="text-[8px] text-center leading-tight text-white/70 mt-0.5 px-0.5 truncate w-full text-center">
+                              {skill.name}
                             </div>
-                          )}
-                          {isUltimateUsed && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-[9px] text-muted-foreground">
-                              Used
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-white/20 text-xs font-display mt-1">{slotStyle.roman}</div>
-                      )}
+                            {isOnCooldown && !isUltimateUsed && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-bold text-orange-400">
+                                {cd}
+                              </div>
+                            )}
+                            {isUltimateUsed && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-[9px] text-muted-foreground">
+                                Used
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-white/20 text-xs font-display mt-1">{slotStyle.roman}</div>
+                        )}
 
-                      {/* Hotkey number */}
-                      <div className="absolute bottom-0.5 right-1 text-[8px] text-white/25 font-mono">{slot}</div>
-                    </button>
+                        {/* Hotkey number */}
+                        <div className="absolute bottom-0.5 right-1 text-[8px] text-white/25 font-mono">{slot}</div>
+                      </button>
+                    </div>
                   );
                 })}
               </div>

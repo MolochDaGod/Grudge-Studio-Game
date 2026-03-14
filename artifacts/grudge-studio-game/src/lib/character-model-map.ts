@@ -60,6 +60,12 @@ export interface CharacterConfig {
   secondaryWeapon?: SecondaryWeaponConfig;
   /** Per-character overrides for the DEFAULT_ANIM_MAP */
   animMap?: Partial<Record<AnimState, string>>;
+  /** World-space Y for name label (override for models with unusual native scale) */
+  labelHeight?: number;
+  /** World-space Y for HP arc ring */
+  hpRingHeight?: number;
+  /** World-space radius of selection ring */
+  selectionRingRadius?: number;
 }
 
 // Weapon natural longest-axis lengths (from actual GLB vertex bounds):
@@ -296,143 +302,116 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
-  // ── RPG Characters Nov 2020 pack ──────────────────────────────────────────
+  // ── RPG Characters Nov 2020 pack ─────────────────────────────────────────
+  // These FBX→GLB models are in centimeter scale (100× larger native geometry).
+  // Scale is 0.0072 base (= 0.72 / 100). Weapon scales are compensated ×100.
+  // Label/ring heights are explicit world-space values (~1.3 m character height).
 
   'orc-blood-guard': {
     modelId: 'warrior_rpg',
-    scale: [0.72 * 1.3, 0.72 * 1.05, 0.72 * 1.3],
+    scale: [0.0072 * 1.3, 0.0072 * 1.05, 0.0072 * 1.3],
     materials: {
-      Warrior_Texture:      { color: '#28500e', roughness: 0.75 },
+      Warrior_Texture:       { color: '#28500e', roughness: 0.75 },
       Warrior_Sword_Texture: { color: '#b08840', metalness: 0.6, roughness: 0.4 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
+    // warrior_rpg animations: Sword_Attack / Sword_Attack2 → greatsword
+    primaryWeapon: { modelId: 'greatsword', position: [0,0,0], rotation: [Math.PI/2, 0, 0], scale: 43 },
     animMap: {
-      idle2:   'Idle_Weapon',
-      attack1: 'Sword_Attack',
-      attack2: 'Sword_Attack2',
-      attack3: 'Punch',
-      attack4: 'Roll',
-      cast:    'Idle_Weapon',
-      stunned: 'RecieveHit',
-      block:   'Idle_Weapon',
-      victory: 'Idle_Attacking',
-      special1:'Run_Weapon',
-      special2:'Roll',
+      idle2: 'Idle_Weapon', attack1: 'Sword_Attack', attack2: 'Sword_Attack2',
+      attack3: 'Punch', attack4: 'Roll', cast: 'Idle_Weapon',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
+      special1: 'Run_Weapon', special2: 'Roll',
     },
+    labelHeight: 1.62, hpRingHeight: 1.44, selectionRingRadius: 0.52,
   },
 
   'saltbone-corsair': {
     modelId: 'ranger_rpg',
-    scale: [0.72 * 0.95, 0.72 * 1.05, 0.72 * 0.95],
+    scale: [0.0072 * 0.95, 0.0072 * 1.05, 0.0072 * 0.95],
     materials: {
       Ranger_Texture: { color: '#c8c0a8', emissive: '#220044', emissiveIntensity: 0.25, roughness: 0.85 },
       Bow_Texture:    { color: '#c0b8a0', roughness: 0.9 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.daggers,
+    // ranger_rpg animations: Bow_Shoot / Bow_Draw → bow
+    primaryWeapon: { modelId: 'bow', position: [0,0,0], rotation: [Math.PI/2, Math.PI/2, 0], scale: 19 },
     animMap: {
-      idle2:   'Idle_Weapon',
-      attack1: 'Bow_Shoot',
-      attack2: 'Punch',
-      attack3: 'Roll',
-      attack4: 'Roll',
-      cast:    'Bow_Draw',
-      stunned: 'RecieveHit',
-      block:   'Idle_Weapon',
-      victory: 'Idle_Attacking',
-      special1:'Run_Holding',
-      special2:'Roll',
+      idle2: 'Idle_Weapon', attack1: 'Bow_Shoot', attack2: 'Bow_Shoot',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Draw',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
+      special1: 'Run_Holding', special2: 'Roll',
     },
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 
   'grave-shade': {
     modelId: 'rogue_rpg',
-    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
+    scale: [0.0072 * 0.9, 0.0072 * 1.0, 0.0072 * 0.9],
     materials: {
       Rogue_Texture:        { color: '#706860', emissive: '#6600aa', emissiveIntensity: 0.4, roughness: 0.9 },
       Rogue_Dagger_Texture: { color: '#909090', metalness: 0.4, roughness: 0.6 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    // rogue_rpg animations: Dagger_Attack / Dagger_Attack2 → daggers
+    primaryWeapon: { modelId: 'daggers', position: [0,0,0], rotation: [Math.PI/2, 0, Math.PI/6], scale: 115 },
     animMap: {
-      idle2:   'Attacking_Idle',
-      attack1: 'Dagger_Attack',
-      attack2: 'Dagger_Attack2',
-      attack3: 'Roll',
-      attack4: 'Roll',
-      cast:    'Attacking_Idle',
-      stunned: 'RecieveHit',
-      block:   'Attacking_Idle',
-      victory: 'Attacking_Idle',
-      special1:'Run',
-      special2:'Roll',
+      idle2: 'Attacking_Idle', attack1: 'Dagger_Attack', attack2: 'Dagger_Attack2',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Attacking_Idle',
+      stunned: 'RecieveHit', block: 'Attacking_Idle', victory: 'Attacking_Idle',
+      special1: 'Run', special2: 'Roll',
     },
+    labelHeight: 1.54, hpRingHeight: 1.36, selectionRingRadius: 0.46,
   },
 
   'orc-warlock': {
     modelId: 'wizard_rpg',
-    scale: [0.72 * 1.2, 0.72 * 1.08, 0.72 * 1.2],
+    scale: [0.0072 * 1.2, 0.0072 * 1.08, 0.0072 * 1.2],
     materials: {
-      Wizard_Texture:      { color: '#1c3806', emissive: '#ff4400', emissiveIntensity: 0.12, roughness: 0.8 },
+      Wizard_Texture:       { color: '#1c3806', emissive: '#ff4400', emissiveIntensity: 0.12, roughness: 0.8 },
       Wizard_Staff_Texture: { color: '#a06020', metalness: 0.5, roughness: 0.5 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    // wizard_rpg animations: Staff_Attack / Spell1 / Spell2 → fire_staff (orc warlock = fire)
+    primaryWeapon: { modelId: 'fire_staff', position: [0,0,0], rotation: [Math.PI/2, 0, 0], scale: 14 },
     animMap: {
-      idle2:   'Idle_Weapon',
-      attack1: 'Staff_Attack',
-      attack2: 'Punch',
-      attack3: 'Roll',
-      attack4: 'Roll',
-      cast:    'Spell1',
-      stunned: 'RecieveHit',
-      block:   'Idle_Weapon',
-      victory: 'Idle_Attacking',
-      special1:'Spell2',
-      special2:'Roll',
+      idle2: 'Idle_Weapon', attack1: 'Staff_Attack', attack2: 'Punch',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Spell1',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
+      special1: 'Spell2', special2: 'Roll',
     },
+    labelHeight: 1.60, hpRingHeight: 1.42, selectionRingRadius: 0.50,
   },
 
   'hollow-zealot': {
     modelId: 'cleric_rpg',
-    scale: [0.72 * 1.0, 0.72 * 1.05, 0.72 * 1.0],
+    scale: [0.0072 * 1.0, 0.0072 * 1.05, 0.0072 * 1.0],
     materials: {
-      Cleric_Texture:      { color: '#cbb870', emissive: '#aa8800', emissiveIntensity: 0.18, roughness: 0.85 },
+      Cleric_Texture:       { color: '#cbb870', emissive: '#aa8800', emissiveIntensity: 0.18, roughness: 0.85 },
       Cleric_Staff_Texture: { color: '#a8a070', roughness: 0.9 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.rusted_sword,
+    // cleric_rpg animations: Staff_Attack / Spell1 → war_hammer (divine zealot)
+    primaryWeapon: { modelId: 'war_hammer', position: [0,0,0], rotation: [Math.PI/2, 0, 0], scale: 21 },
     animMap: {
-      idle2:   'Idle_Weapon',
-      attack1: 'Staff_Attack',
-      attack2: 'Punch',
-      attack3: 'Punch',
-      attack4: 'RecieveHit_Attacking',
-      cast:    'Spell1',
-      stunned: 'RecieveHit',
-      block:   'Idle_Weapon',
-      victory: 'RecieveHit_Attacking',
-      special1:'Run',
-      special2:'Punch',
+      idle2: 'Idle_Weapon', attack1: 'Staff_Attack', attack2: 'Punch',
+      attack3: 'Punch', attack4: 'RecieveHit_Attacking', cast: 'Spell1',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'RecieveHit_Attacking',
+      special1: 'Run', special2: 'Punch',
     },
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 
   'iron-pilgrim': {
     modelId: 'monk_rpg',
-    scale: [0.72 * 1.05, 0.72 * 1.05, 0.72 * 1.05],
+    scale: [0.0072 * 1.05, 0.0072 * 1.05, 0.0072 * 1.05],
     materials: {
       Monk_Texture: { color: '#8a6040', roughness: 0.7 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    // monk_rpg animations: Attack / Attack2 (melee) → greatsword (warrior-monk)
+    primaryWeapon: { modelId: 'greatsword', position: [0,0,0], rotation: [Math.PI/2, 0, 0], scale: 43 },
     animMap: {
-      idle2:   'Idle_Attacking',
-      attack1: 'Attack',
-      attack2: 'Attack2',
-      attack3: 'Roll',
-      attack4: 'Roll',
-      cast:    'Attack',
-      stunned: 'RecieveHit',
-      block:   'Idle_Attacking',
-      victory: 'Idle_Attacking',
-      special1:'Run',
-      special2:'Roll',
+      idle2: 'Idle_Attacking', attack1: 'Attack', attack2: 'Attack2',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Attack',
+      stunned: 'RecieveHit', block: 'Idle_Attacking', victory: 'Idle_Attacking',
+      special1: 'Run', special2: 'Roll',
     },
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 };
 

@@ -253,9 +253,9 @@ function CharacterModelInner({
   });
 
   const [sx, sy, sz] = config.scale;
-  const labelY  = sy * 2.25;
-  const hpRingY = sy * 2.05;
-  const ringRad = Math.max(sx, sz) * 0.58;
+  const labelY  = config.labelHeight  ?? sy * 2.25;
+  const hpRingY = config.hpRingHeight ?? sy * 2.05;
+  const ringRad = config.selectionRingRadius ?? Math.max(sx, sz) * 0.58;
 
   return (
     <group ref={groupRef} position={position} rotation={[0, facingAngle, 0]}>
