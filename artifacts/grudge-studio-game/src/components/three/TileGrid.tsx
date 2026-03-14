@@ -1,133 +1,132 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
+import { LevelDef } from '@/lib/levels';
 
-export const GRID_W = 16;
-export const GRID_H = 12;
-export const TILE_SIZE = 1.5;
-export const TILE_HEIGHT = 0.2;
+export { GRID_W, GRID_H, TILE_SIZE } from './TileGrid.constants';
 
-const ELEVATION_MAP: Record<string, number> = {
-  // Central plateau
-  '7,5': 0.5, '8,5': 0.5, '7,6': 0.5, '8,6': 0.5,
-  '6,5': 0.3, '9,5': 0.3, '7,4': 0.3, '8,7': 0.3,
-  // Left flank hills
-  '2,2': 0.3, '3,2': 0.3, '2,3': 0.3,
-  '1,8': 0.3, '2,8': 0.3, '1,9': 0.3,
-  '0,0': 0.5, '0,11': 0.5,
-  // Right flank hills
-  '13,2': 0.3, '14,2': 0.3, '13,3': 0.3,
-  '12,8': 0.3, '13,8': 0.3, '13,9': 0.3,
-  '15,0': 0.5, '15,11': 0.5,
-  // Mid terrain
-  '5,5': 0.3, '5,6': 0.3, '4,10': 0.3,
-  '10,5': 0.3, '10,6': 0.3, '11,1': 0.3,
-  // Low bumps
-  '3,6': 0.15, '7,3': 0.15, '9,9': 0.15, '12,6': 0.15,
-  '6,10': 0.15, '10,2': 0.15,
-};
+// Re-export convenience helpers
+export function getTileElevation(_x: number, _y: number): number { return 0; }
 
-export function getTileElevation(x: number, y: number): number {
-  return ELEVATION_MAP[`${x},${y}`] || 0;
-}
-
-export function tileToWorld(x: number, y: number, elevation: number = 0): [number, number, number] {
-  return [
-    x * TILE_SIZE + TILE_SIZE / 2,
-    elevation + TILE_HEIGHT / 2,
-    y * TILE_SIZE + TILE_SIZE / 2
-  ];
+export function tileToWorld(x: number, y: number, tileSize: number, elevation = 0): [number, number, number] {
+  return [x * tileSize + tileSize / 2, elevation, y * tileSize + tileSize / 2];
 }
 
 interface TileGridProps {
-  reachableTiles: Array<{x: number, y: number}>;
-  attackableTiles: Array<{x: number, y: number}>;
+  level: LevelDef;
+  reachableTiles: Array<{ x: number; y: number }>;
+  attackableTiles: Array<{ x: number; y: number }>;
   onTileClick: (x: number, y: number) => void;
-  hoveredTile: {x: number, y: number} | null;
-  setHoveredTile: (tile: {x: number, y: number} | null) => void;
+  hoveredTile: { x: number; y: number } | null;
+  setHoveredTile: (t: { x: number; y: number } | null) => void;
 }
 
-export function TileGrid({ reachableTiles, attackableTiles, onTileClick, hoveredTile, setHoveredTile }: TileGridProps) {
-  const tiles = useMemo(() => {
-    const arr = [];
-    for (let x = 0; x < GRID_W; x++) {
-      for (let y = 0; y < GRID_H; y++) {
-        arr.push({ x, y });
+const TILE_H = 0.18;
+
+// Color palette
+const COLOR_DARK    = new THREE.Color(0x2a2a35);
+const COLOR_LIGHT   = new THREE.Color(0x3a3a45);
+const COLOR_BLOCKED = new THREE.Color(0x1a1218);
+
+export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, hoveredTile, setHoveredTile }: TileGridProps) {
+  const { gridW, gridH, tileSize, obstacleTiles, groundColor, groundColor2 } = level;
+  const instRef = useRef<THREE.InstancedMesh>(null!);
+  const totalTiles = gridW * gridH;
+
+  // Build instanced mesh once per level
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  const colorDark  = useMemo(() => new THREE.Color(groundColor),  [groundColor]);
+  const colorLight = useMemo(() => new THREE.Color(groundColor2), [groundColor2]);
+  const colorBlock = useMemo(() => COLOR_BLOCKED.clone(), []);
+
+  // Initialize instance matrices and colors
+  useEffect(() => {
+    const mesh = instRef.current;
+    if (!mesh) return;
+    let idx = 0;
+    for (let x = 0; x < gridW; x++) {
+      for (let y = 0; y < gridH; y++) {
+        const elev = 0;
+        const isObs = obstacleTiles.has(`${x},${y}`);
+        const h = isObs ? TILE_H * 3 : TILE_H;
+        dummy.position.set(x * tileSize + tileSize / 2, h / 2, y * tileSize + tileSize / 2);
+        dummy.scale.set(tileSize * 0.96, h, tileSize * 0.96);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(idx, dummy.matrix);
+        const col = isObs ? colorBlock : ((x + y) % 2 === 0 ? colorDark : colorLight);
+        mesh.setColorAt(idx, col);
+        idx++;
       }
     }
-    return arr;
-  }, []);
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [gridW, gridH, tileSize, obstacleTiles, colorDark, colorLight, colorBlock, dummy]);
+
+  // Highlight tile overlays (only highlighted tiles rendered separately for clarity)
+  const highlightedTiles = useMemo(() => {
+    const all: Array<{ x: number; y: number; type: 'reach' | 'attack' | 'hover' }> = [];
+    for (const t of reachableTiles) all.push({ ...t, type: 'reach' });
+    for (const t of attackableTiles) all.push({ ...t, type: 'attack' });
+    if (hoveredTile) all.push({ ...hoveredTile, type: 'hover' });
+    return all;
+  }, [reachableTiles, attackableTiles, hoveredTile]);
+
+  // Invisible click catcher plane
+  const worldW = gridW * tileSize;
+  const worldH = gridH * tileSize;
+
+  const handleClick = (e: any) => {
+    e.stopPropagation();
+    const p = e.point;
+    const x = Math.floor(p.x / tileSize);
+    const y = Math.floor(p.z / tileSize);
+    if (x >= 0 && x < gridW && y >= 0 && y < gridH) onTileClick(x, y);
+  };
+  const handleMove = (e: any) => {
+    e.stopPropagation();
+    const p = e.point;
+    const x = Math.floor(p.x / tileSize);
+    const y = Math.floor(p.z / tileSize);
+    if (x >= 0 && x < gridW && y >= 0 && y < gridH) {
+      setHoveredTile({ x, y });
+    } else {
+      setHoveredTile(null);
+    }
+  };
 
   return (
     <group>
-      {tiles.map(({ x, y }) => {
-        const isDark = (x + y) % 2 === 0;
-        const elevation = getTileElevation(x, y);
-        const [wx, wy, wz] = tileToWorld(x, y, elevation);
+      {/* Instanced tiles */}
+      <instancedMesh ref={instRef} args={[undefined, undefined, totalTiles]} receiveShadow castShadow>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial roughness={0.85} metalness={0.1} />
+      </instancedMesh>
 
-        const isReachable = reachableTiles.some(t => t.x === x && t.y === y);
-        const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
-        const isHovered = hoveredTile?.x === x && hoveredTile?.y === y;
+      {/* Ground plane */}
+      <mesh position={[worldW / 2, -0.08, worldH / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[worldW + 8, worldH + 8]} />
+        <meshStandardMaterial color={groundColor} roughness={1} />
+      </mesh>
 
-        let emissiveColor = new THREE.Color(0x000000);
-        let emissiveIntensity = 0;
+      {/* Invisible event catcher */}
+      <mesh position={[worldW / 2, 0.15, worldH / 2]} rotation={[-Math.PI / 2, 0, 0]}
+        onClick={handleClick} onPointerMove={handleMove} onPointerOut={() => setHoveredTile(null)}>
+        <planeGeometry args={[worldW, worldH]} />
+        <meshBasicMaterial visible={false} side={THREE.DoubleSide} />
+      </mesh>
 
-        if (isAttackable) {
-          emissiveColor.setHex(0xff0000);
-          emissiveIntensity = 0.5;
-        } else if (isReachable) {
-          emissiveColor.setHex(0x0088ff);
-          emissiveIntensity = 0.5;
-        } else if (isHovered) {
-          emissiveColor.setHex(0xaaaa00);
-          emissiveIntensity = 0.3;
-        }
-
-        const baseColor = isDark ? '#2a2a35' : '#3a3a45';
-
+      {/* Highlight overlays */}
+      {highlightedTiles.map(({ x, y, type }, i) => {
+        const [wx, , wz] = tileToWorld(x, y, tileSize);
+        const color = type === 'attack' ? '#ff3333' : type === 'hover' ? '#ffffaa' : '#3388ff';
+        const opacity = type === 'hover' ? 0.45 : 0.38;
         return (
-          <mesh
-            key={`${x},${y}`}
-            position={[wx, elevation / 2, wz]}
-            onClick={(e) => { e.stopPropagation(); onTileClick(x, y); }}
-            onPointerOver={(e) => { e.stopPropagation(); setHoveredTile({x, y}); }}
-            onPointerOut={(e) => { e.stopPropagation(); setHoveredTile(null); }}
-            receiveShadow
-            castShadow
-          >
-            <boxGeometry args={[TILE_SIZE * 0.95, TILE_HEIGHT + elevation, TILE_SIZE * 0.95]} />
-            <meshStandardMaterial
-              color={baseColor}
-              roughness={0.8}
-              metalness={0.2}
-              emissive={emissiveColor}
-              emissiveIntensity={emissiveIntensity}
-            />
-            {(isReachable || isAttackable) && (
-              <mesh
-                position={[0, (TILE_HEIGHT + elevation) / 2 + 0.01, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <planeGeometry args={[TILE_SIZE * 0.8, TILE_SIZE * 0.8]} />
-                <meshBasicMaterial
-                  color={isAttackable ? '#ff4444' : '#4488ff'}
-                  transparent
-                  opacity={0.3}
-                  depthWrite={false}
-                />
-              </mesh>
-            )}
+          <mesh key={`hl_${i}`} position={[wx, 0.22, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[tileSize * 0.82, tileSize * 0.82]} />
+            <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
           </mesh>
         );
       })}
-
-      <mesh
-        position={[(GRID_W * TILE_SIZE) / 2, -0.1, (GRID_H * TILE_SIZE) / 2]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[GRID_W * TILE_SIZE + 4, GRID_H * TILE_SIZE + 4]} />
-        <meshStandardMaterial color="#111116" roughness={1} />
-      </mesh>
     </group>
   );
 }

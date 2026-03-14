@@ -16,6 +16,7 @@ export type { AnimState };
 interface CharacterModelProps {
   unit: TacticalUnit;
   position: [number, number, number];
+  facingAngle?: number;
   isSelected: boolean;
   animState: AnimState;
 }
@@ -89,7 +90,7 @@ function attachToBone(
   (bone as THREE.Object3D).add(clone);
 }
 
-export function CharacterModel({ unit, position, isSelected, animState }: CharacterModelProps) {
+export function CharacterModel({ unit, position, facingAngle = Math.PI, isSelected, animState }: CharacterModelProps) {
   const config = useMemo(() => getCharacterConfig(unit.characterId), [unit.characterId]);
 
   const charUrl   = C(config.modelId);
@@ -253,7 +254,7 @@ export function CharacterModel({ unit, position, isSelected, animState }: Charac
   const ringRad = Math.max(sx, sz) * 0.58;
 
   return (
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef} position={position} rotation={[0, facingAngle, 0]}>
       <group scale={[sx, sy, sz]}>
         <primitive object={charScene} />
       </group>

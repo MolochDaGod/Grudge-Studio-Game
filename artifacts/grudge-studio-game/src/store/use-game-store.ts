@@ -16,6 +16,8 @@ export interface TacticalUnit {
   move: number;
   range: number;
   position: { x: number; y: number };
+  /** 0=N, 1=E, 2=S, 3=W */
+  facing: 0 | 1 | 2 | 3;
   isPlayerControlled: boolean;
   specialAbility: string;
   specialAbilityDescription: string;
@@ -52,6 +54,7 @@ export interface GameState {
   equippedSkills: Record<string, Record<SkillSlot, string>>;
   skillCooldowns: Record<string, Record<string, number>>;
   usedUltimates: Record<string, boolean>;
+  currentLevelId: string;
 
   setPhase: (phase: GameState['phase']) => void;
   setAllCharacters: (characters: Character[]) => void;
@@ -73,6 +76,8 @@ export interface GameState {
   markUltimateUsed: (unitId: string) => void;
   applyStatus: (unitId: string, effect: string, duration: number) => void;
   tickStatusEffects: (unitId: string) => void;
+  setCurrentLevelId: (id: string) => void;
+  rotateFacing: (unitId: string, direction: 'cw' | 'ccw') => void;
   reset: () => void;
 }
 
@@ -99,6 +104,7 @@ export const useGameStore = create<GameState>((set) => ({
   equippedSkills: {},
   skillCooldowns: {},
   usedUltimates: {},
+  currentLevelId: 'ruins',
 
   setPhase: (phase) => set({ phase }),
   setAllCharacters: (characters) => set({ allCharacters: characters }),
@@ -180,6 +186,16 @@ export const useGameStore = create<GameState>((set) => ({
     }
     return { units: state.units.map(u => u.id === unitId ? { ...u, statusEffects: active, statusDurations: newDurs } : u) };
   }),
+
+  setCurrentLevelId: (id) => set({ currentLevelId: id }),
+
+  rotateFacing: (unitId, direction) => set((state) => ({
+    units: state.units.map(u => {
+      if (u.id !== unitId) return u;
+      const newFacing = ((u.facing + (direction === 'cw' ? 1 : 3)) % 4) as 0 | 1 | 2 | 3;
+      return { ...u, facing: newFacing };
+    })
+  })),
 
   reset: () => set({ 
     playerSquad: [], 

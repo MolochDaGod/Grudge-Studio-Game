@@ -4,7 +4,7 @@ import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { HealthBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Skull, Move, FastForward } from "lucide-react";
+import { Skull, Move, FastForward, RotateCcw, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BattleScene } from "@/components/three/BattleScene";
 import { AnimState } from "@/components/three/CharacterModel";
@@ -13,7 +13,7 @@ import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
   SkillSlot, Skill
 } from "@/lib/weapon-skills";
-import { GRID_W, GRID_H } from "@/components/three/TileGrid";
+import { LEVELS, LevelDef, hasLineOfSight } from "@/lib/levels";
 
 // Determine best anim state for a given skill
 function getSkillAnimState(skill: Skill): AnimState {
@@ -34,7 +34,12 @@ export default function Battle() {
     equippedSkills, skillCooldowns, usedUltimates,
     setSkillCooldown, tickSkillCooldowns, markUltimateUsed,
     applyStatus, tickStatusEffects,
+    currentLevelId, rotateFacing,
   } = useGameStore();
+
+  const level: LevelDef = LEVELS.find(l => l.id === currentLevelId) ?? LEVELS[0];
+  const GRID_W = level.gridW;
+  const GRID_H = level.gridH;
 
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
 
@@ -91,7 +96,7 @@ export default function Battle() {
   const getReachableTiles = (start: {x: number, y: number}, maxMove: number) => {
     const queue = [{...start, dist: 0}];
     const visited = new Set([`${start.x},${start.y}`]);
-    const reachable = [];
+    const reachable: {x: number; y: number}[] = [];
 
     while (queue.length > 0) {
       const {x, y, dist} = queue.shift()!;
@@ -102,11 +107,12 @@ export default function Battle() {
         for (const [dx, dy] of neighbors) {
           const nx = x + dx;
           const ny = y + dy;
+          const key = `${nx},${ny}`;
           if (nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
-            if (!visited.has(`${nx},${ny}`)) {
+            if (!visited.has(key) && !level.obstacleTiles.has(key)) {
                const isOccupied = grid[nx]?.[ny] != null;
                if (!isOccupied || (nx === start.x && ny === start.y)) {
-                 visited.add(`${nx},${ny}`);
+                 visited.add(key);
                  queue.push({x: nx, y: ny, dist: dist + 1});
                }
             }
@@ -118,21 +124,42 @@ export default function Battle() {
   };
 
   const getAttackableTiles = (start: {x: number, y: number}, range: number) => {
-    const tiles = [];
+    const tiles: {x: number; y: number}[] = [];
     for (let x = 0; x < GRID_W; x++) {
       for (let y = 0; y < GRID_H; y++) {
         const dist = Math.abs(start.x - x) + Math.abs(start.y - y);
         if (dist <= range && dist > 0) {
-          tiles.push({x, y});
+          // Only include tiles with clear LOS
+          if (hasLineOfSight(start, {x, y}, level.visionBlockers)) {
+            tiles.push({x, y});
+          }
         }
       }
     }
     return tiles;
   };
 
+  /** Facing defence modifier: rear attacks get +50% damage */
+  const facingDefenseMultiplier = (attacker: TacticalUnit, defender: TacticalUnit): number => {
+    const dx = attacker.position.x - defender.position.x;
+    const dy = attacker.position.y - defender.position.y;
+    // Direction attacker is coming from, relative to defender's facing
+    // Defender facing 0=N(–z), 1=E(+x), 2=S(+z), 3=W(–x)
+    const df = defender.facing ?? 2;
+    // Is attacker in rear hemisphere? Rear = opposite of facing direction
+    let isRear = false;
+    if      (df === 0 /* N */ && dy > 0) isRear = true;  // attacker is south = behind
+    else if (df === 1 /* E */ && dx < 0) isRear = true;  // attacker is west = behind
+    else if (df === 2 /* S */ && dy < 0) isRear = true;  // attacker is north = behind
+    else if (df === 3 /* W */ && dx > 0) isRear = true;  // attacker is east = behind
+    return isRear ? 1.5 : 1.0;
+  };
+
   const calculateDamage = (attacker: TacticalUnit, defender: TacticalUnit, isCrit: boolean = false) => {
-    let damage = Math.max(1, attacker.attack - defender.defense + Math.floor(Math.random() * 6) - 2);
-    if (isCrit) damage *= 2;
+    const facingMult = facingDefenseMultiplier(attacker, defender);
+    const effectiveDef = facingMult > 1 ? Math.floor(defender.defense * 0.5) : defender.defense;
+    let damage = Math.max(1, attacker.attack - effectiveDef + Math.floor(Math.random() * 6) - 2);
+    if (isCrit) damage = Math.floor(damage * 2);
     return damage;
   };
 
@@ -475,6 +502,7 @@ export default function Battle() {
 
         <BattleScene 
           units={units}
+          level={level}
           reachableTiles={reachableTiles}
           attackableTiles={attackableTiles}
           currentUnitId={currentUnitId}
@@ -570,6 +598,31 @@ export default function Battle() {
                   <span className="text-muted-foreground block text-[10px]">RNG</span>{activeUnit.range}
                 </div>
               </div>
+
+              {/* Facing direction controls */}
+              {activeUnit.isPlayerControlled && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Facing:</span>
+                  <span className="text-[10px] font-mono text-white/70 w-6 text-center">
+                    {['N','E','S','W'][activeUnit.facing ?? 2]}
+                  </span>
+                  <button
+                    onClick={() => rotateFacing(activeUnit.id, 'ccw')}
+                    className="p-1 rounded border border-white/15 bg-black/40 hover:bg-white/10 text-white/60 hover:text-white"
+                    title="Rotate counter-clockwise"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => rotateFacing(activeUnit.id, 'cw')}
+                    className="p-1 rounded border border-white/15 bg-black/40 hover:bg-white/10 text-white/60 hover:text-white"
+                    title="Rotate clockwise"
+                  >
+                    <RotateCw className="w-3 h-3" />
+                  </button>
+                  <span className="text-[9px] text-white/30 ml-1">(rear = ½ DEF)</span>
+                </div>
+              )}
 
               {CHARACTER_LORE[activeUnit.characterId] && (
                  <div className="mt-3 text-[10px] text-muted-foreground italic border-l-2 border-primary/30 pl-2 line-clamp-2">

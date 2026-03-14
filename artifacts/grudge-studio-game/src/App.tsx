@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import Home from "@/pages/home";
 import CharacterSelect from "@/pages/character-select";
+import LevelSelect from "@/pages/level-select";
 import SkillTree from "@/pages/skill-tree";
 import Battle from "@/pages/battle";
 import Result from "@/pages/result";
@@ -26,6 +27,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/select" component={CharacterSelect} />
+      <Route path="/level-select" component={LevelSelect} />
       <Route path="/skill-tree" component={SkillTree} />
       <Route path="/battle" component={Battle} />
       <Route path="/result" component={Result} />

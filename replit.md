@@ -22,7 +22,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **React + Vite** web app at path `/`
 - **Theme:** Dark fantasy, gold/amber accents, Cinzel Decorative font
 - **Game type:** Final Fantasy Tactics–style tactical grid RPG
-- **Grid:** 8×6 tile battlefield with BFS movement and CT-based turn order
+- **Grid:** Dynamic level-driven grids (80×80 to 140×140) with InstancedMesh tile rendering, BFS obstacle-aware movement, and CT-based turn order
 - **Characters:** All 11 Grudge Studio characters from the Character Index lore doc (Frost Orc Berserker, Magma Orc Destroyer, Brother Maltheus, Canal Lurker, Warlord Garnok, Elven Archer, Orcish Warrior, Human Knight, Human Barbarian, Skeleton Warrior, Dwarven Forge Master)
 - **npm packages used:** `@grudge/domain` (Card/CardType/Deck domain models), `zustand`, `framer-motion`, `lucide-react`, `@react-three/fiber`, `@react-three/drei`, `three`, `@types/three`
 - **Logo:** `public/images/logo-nobg.png` (background removed)

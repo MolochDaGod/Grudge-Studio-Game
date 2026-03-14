@@ -74,6 +74,7 @@ export default function CharacterSelect() {
         move,
         range,
         position: { x, y },
+        facing: (isPlayer ? 1 : 3) as 0 | 1 | 2 | 3,
         isPlayerControlled: isPlayer,
         specialAbility: char.specialAbility,
         specialAbilityDescription: char.specialAbilityDescription,
@@ -92,7 +93,7 @@ export default function CharacterSelect() {
     const enemyUnits = enemyChars.map((c, i) => createTacticalUnit(c, false, i));
 
     initBattle([...playerUnits, ...enemyUnits]);
-    setLocation("/skill-tree");
+    setLocation("/level-select");
   };
 
   if (isLoading) {
