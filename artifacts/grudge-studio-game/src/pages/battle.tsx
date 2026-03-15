@@ -6,7 +6,7 @@ import { HealthBar, StatBar, ActionBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skull, Move, FastForward, RotateCcw, RotateCw, Zap, Target, Clock, Star, Eye, Layers, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BattleScene, CameraMode } from "@/components/three/BattleScene";
+import { BattleScene, CameraMode, MapPing } from "@/components/three/BattleScene";
 import { AnimState } from "@/components/three/CharacterModel";
 import { CombatEffectData, EffectType } from "@/components/three/CombatEffects";
 import { tileToWorld } from "@/components/three/TileGrid";
@@ -141,6 +141,13 @@ export default function Battle() {
   const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
   const [cameraFocus, setCameraFocus] = useState<[number, number, number] | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>('free');
+  const [showUnitInfo, setShowUnitInfo] = useState(false);
+  const [mapPings, setMapPings] = useState<MapPing[]>([]);
+
+  type CtxMenu =
+    | { kind: 'portrait' | 'unit'; unit: TacticalUnit; x: number; y: number }
+    | { kind: 'map'; tx: number; ty: number; x: number; y: number };
+  const [contextMenu, setContextMenu] = useState<CtxMenu | null>(null);
 
   const CAMERA_META: Record<CameraMode, { label: string; icon: JSX.Element; next: CameraMode }> = {
     'free':         { label: 'Free',    icon: <Eye className="w-3.5 h-3.5" />,    next: 'third-person' },
@@ -154,6 +161,52 @@ export default function Battle() {
     const [wx, , wz] = tileToWorld(u.position.x, u.position.y, level.tileSize, 0.5);
     setCameraFocus([wx, 0, wz]);
     setCameraMode('third-person');
+  };
+
+  // Hotkey handler: U = toggle unit info (rings + health bars)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'u' || e.key === 'U') setShowUnitInfo(v => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Close context menu when clicking anywhere else
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = (e: MouseEvent) => {
+      if (e.button === 0) setContextMenu(null);
+    };
+    window.addEventListener('mousedown', close, { capture: true });
+    return () => window.removeEventListener('mousedown', close, { capture: true });
+  }, [contextMenu]);
+
+  // Add a temporary ping marker to the map
+  const addPing = (tx: number, ty: number, type: MapPing['type']) => {
+    const id = `ping_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const ping: MapPing = { id, tx, ty, type, createdAt: Date.now() };
+    setMapPings(prev => [...prev.slice(-12), ping]);
+    setTimeout(() => setMapPings(prev => prev.filter(p => p.id !== id)), 8000);
+  };
+
+  // Right-click on a unit in 3D — show unit context menu
+  const handleUnitRightClick = (unitId: string, screenX: number, screenY: number) => {
+    const u = units.find(x => x.id === unitId);
+    if (!u || u.hp <= 0) return;
+    setContextMenu({ kind: 'unit', unit: u, x: screenX, y: screenY });
+  };
+
+  // Right-click on the map — show ping placement menu
+  const handleMapRightClick = (tx: number, ty: number, screenX: number, screenY: number) => {
+    setContextMenu({ kind: 'map', tx, ty, x: screenX, y: screenY });
+  };
+
+  // Right-click on a portrait in the top turn strip
+  const handlePortraitRightClick = (e: React.MouseEvent, unit: TacticalUnit) => {
+    e.preventDefault();
+    setContextMenu({ kind: 'portrait', unit, x: e.clientX, y: e.clientY });
   };
 
   // Expire old effects every 250ms
@@ -682,11 +735,12 @@ export default function Battle() {
                     key={u.id + index}
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    title={`${u.name} — CT ${Math.round(Math.min(100, u.ct))}% · SPD ${u.speed} (click to focus camera)`}
+                    title={`${u.name} — CT ${Math.round(Math.min(100, u.ct))}% · SPD ${u.speed} (click to focus, right-click for options)`}
                     onClick={() => {
                       const [wx, , wz] = tileToWorld(u.position.x, u.position.y, tileSize, 0.5);
                       setCameraFocus([wx, 0, wz]);
                     }}
+                    onContextMenu={(e) => handlePortraitRightClick(e, u)}
                     className={cn(
                       "flex-shrink-0 w-9 h-[38px] rounded border overflow-hidden relative flex flex-col",
                       "hover:scale-110 hover:z-10 transition-transform duration-100 cursor-pointer",
@@ -786,6 +840,10 @@ export default function Battle() {
           cameraFocus={cameraFocus}
           cameraMode={cameraMode}
           onUnitDoubleClick={handleUnitDoubleClick}
+          showUnitInfo={showUnitInfo}
+          mapPings={mapPings}
+          onUnitRightClick={handleUnitRightClick}
+          onMapRightClick={handleMapRightClick}
         />
       </div>
 
@@ -814,6 +872,25 @@ export default function Battle() {
             </motion.div>
           ))}
         </AnimatePresence>
+      </div>
+
+      {/* ── HOTKEY BUTTONS (bottom-left) ───────────────────────────────────── */}
+      <div className="absolute left-3 z-20 flex flex-col gap-1.5" style={{ bottom: 138 }}>
+        <button
+          onClick={() => setShowUnitInfo(v => !v)}
+          className={cn(
+            "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1.5 rounded border transition-all",
+            showUnitInfo
+              ? "bg-blue-950/90 border-blue-500/60 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+              : "bg-black/60 border-white/10 text-white/35 hover:text-white/65 hover:border-white/25"
+          )}
+          title="Toggle unit circles & health bars (U)"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <circle cx="12" cy="8" r="4"/><ellipse cx="12" cy="17" rx="7" ry="4"/>
+          </svg>
+          Units [U]
+        </button>
       </div>
 
       {/* ── MINIMAP ────────────────────────────────────────────────────────── */}
@@ -1030,6 +1107,128 @@ export default function Battle() {
         </div>
 
       </div>
+
+      {/* ── CONTEXT MENU OVERLAY ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            key="ctx"
+            initial={{ opacity: 0, scale: 0.93 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.93 }}
+            transition={{ duration: 0.1 }}
+            className="fixed z-[100] select-none"
+            style={{
+              left: Math.min(contextMenu.x, window.innerWidth - 260),
+              top: contextMenu.kind === 'unit' && !(contextMenu as any).unit?.isPlayerControlled
+                ? Math.min(contextMenu.y, window.innerHeight - 320)
+                : contextMenu.kind === 'unit' || contextMenu.kind === 'portrait'
+                  ? Math.max(contextMenu.y - 300, 56)
+                  : Math.min(contextMenu.y, window.innerHeight - 150),
+            }}
+            onMouseDown={e => e.stopPropagation()}
+          >
+            {/* ─ UNIT context (portrait or 3D right-click) ─ */}
+            {(contextMenu.kind === 'unit' || contextMenu.kind === 'portrait') && (() => {
+              const u = (contextMenu as Extract<typeof contextMenu, { unit: TacticalUnit }>).unit;
+              const isAlly = u.isPlayerControlled;
+              const loadout = equippedSkills[u.id] || getDefaultSkillLoadout(u.characterId);
+              const skills = ([1,2,3,4,5] as const)
+                .map(s => loadout[s]).filter(Boolean)
+                .map(id => getSkillById(id!)).filter(Boolean);
+              return (
+                <div className={cn(
+                  "w-56 rounded-lg border overflow-hidden shadow-2xl backdrop-blur-md",
+                  isAlly ? "bg-[#040c18]/96 border-blue-600/35" : "bg-[#140606]/96 border-red-700/35"
+                )}>
+                  {/* Header */}
+                  <div className={cn("flex items-center gap-2 px-3 py-2 border-b", isAlly ? "border-blue-800/30 bg-blue-950/40" : "border-red-900/30 bg-red-950/40")}>
+                    <div className="relative w-8 h-10 shrink-0 rounded overflow-hidden border border-white/10">
+                      <img src={`${BASE}images/chars/${u.characterId}.png`} alt={u.name} className="absolute inset-0 w-full h-full object-cover object-top" onError={e => { (e.currentTarget as HTMLImageElement).style.opacity='0'; }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display text-[11px] font-bold text-white truncate">{u.name}</div>
+                      <div className={cn("text-[9px] font-mono", isAlly ? "text-blue-400" : "text-red-400")}>
+                        {isAlly ? "Ally" : "Enemy"} · HP {u.hp}/{u.maxHp}
+                      </div>
+                    </div>
+                    <button onClick={() => setContextMenu(null)} className="text-white/25 hover:text-white/60 text-xs leading-none px-1">✕</button>
+                  </div>
+                  {/* HP + stats */}
+                  <div className="px-3 pt-2 pb-1">
+                    <div className="flex items-center gap-1.5 text-[9px] text-white/40 mb-2">
+                      <span className="w-4">HP</span>
+                      <div className="flex-1 h-2 bg-black/60 rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full", (u.hp/u.maxHp)>0.6?"bg-green-500":(u.hp/u.maxHp)>0.3?"bg-yellow-500":"bg-red-500")} style={{width:`${(u.hp/u.maxHp)*100}%`}} />
+                      </div>
+                      <span>{u.hp}/{u.maxHp}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 mb-2">
+                      {([['ATK',u.attack],['DEF',u.defense],['MOV',u.move],['SPD',u.speed]] as [string,number][]).map(([k,v]) => (
+                        <div key={k} className="text-center text-[8px] font-mono">
+                          <div className="text-white/20">{k}</div>
+                          <div className="text-white/60 font-bold">{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Skills list */}
+                    {skills.length > 0 && (
+                      <>
+                        <div className="text-[8px] text-white/25 uppercase tracking-widest mb-1">Skills</div>
+                        <div className="flex flex-col gap-0.5 mb-1">
+                          {skills.slice(0,5).map(sk => sk && (
+                            <div key={sk.id} className="flex items-center gap-1.5 text-[9px] py-0.5 border-b border-white/4">
+                              <span className="text-sm leading-none">{sk.icon}</span>
+                              <span className="text-white/55 flex-1 truncate">{sk.name}</span>
+                              <span className="text-white/25 text-[8px] shrink-0">Rng {sk.range}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* Action buttons */}
+                  <div className="border-t border-white/8 flex flex-col">
+                    <button className="px-3 py-1.5 text-[10px] text-left text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+                      onClick={() => { const [wx,,wz]=tileToWorld(u.position.x,u.position.y,tileSize,0.5); setCameraFocus([wx,0,wz]); setContextMenu(null); }}>
+                      📸 Focus Camera
+                    </button>
+                    <button className="px-3 py-1.5 text-[10px] text-left text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+                      onClick={() => { const [wx,,wz]=tileToWorld(u.position.x,u.position.y,tileSize,0.5); setCameraFocus([wx,0,wz]); setCameraMode('third-person'); setContextMenu(null); }}>
+                      👁 Third-Person View
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ─ MAP right-click: ping options ─ */}
+            {contextMenu.kind === 'map' && (
+              <div className="w-44 rounded-lg border border-white/10 overflow-hidden shadow-2xl bg-[#080810]/96 backdrop-blur-md">
+                <div className="px-3 py-2 text-[9px] text-white/30 uppercase tracking-widest border-b border-white/8">
+                  Place Marker
+                </div>
+                {([
+                  { type: 'alert' as const, emoji: '⚠️', label: 'Alert — Caution', color: 'text-yellow-400' },
+                  { type: 'danger' as const, emoji: '☠️', label: 'Danger — Enemy Here', color: 'text-red-400' },
+                  { type: 'retreat' as const, emoji: '↩️', label: 'Retreat — Fall Back', color: 'text-blue-400' },
+                ]).map(opt => (
+                  <button key={opt.type}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[10px] text-left hover:bg-white/5 transition-colors"
+                    onClick={() => {
+                      addPing((contextMenu as Extract<typeof contextMenu,{kind:'map'}>).tx, (contextMenu as Extract<typeof contextMenu,{kind:'map'}>).ty, opt.type);
+                      setContextMenu(null);
+                    }}>
+                    <span className="text-base">{opt.emoji}</span>
+                    <span className={opt.color}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

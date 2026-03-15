@@ -1,6 +1,6 @@
 import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Sky } from '@react-three/drei';
+import { OrbitControls, Sky, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
 import { CharacterModel, AnimState } from './CharacterModel';
@@ -11,6 +11,14 @@ import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
 export type CameraMode = 'free' | 'third-person' | 'rts';
+
+export type MapPing = {
+  id: string;
+  tx: number;
+  ty: number;
+  type: 'alert' | 'danger' | 'retreat';
+  createdAt: number;
+};
 
 interface BattleSceneProps {
   units: TacticalUnit[];
@@ -25,6 +33,10 @@ interface BattleSceneProps {
   cameraFocus?: [number, number, number] | null;
   cameraMode?: CameraMode;
   onUnitDoubleClick?: (unitId: string) => void;
+  showUnitInfo?: boolean;
+  mapPings?: MapPing[];
+  onUnitRightClick?: (unitId: string, screenX: number, screenY: number) => void;
+  onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
 }
 
 // ── Triple-mode Camera Controller ────────────────────────────────────────────
@@ -48,7 +60,7 @@ function CameraController({
   tileSize: number;
   maxDist: number;
 }) {
-  const { camera, controls } = useThree() as any;
+  const { camera, controls, gl } = useThree() as any;
 
   // Smooth-pan target for 'free' mode
   const panTarget = useRef(new THREE.Vector3());
@@ -57,6 +69,23 @@ function CameraController({
   // Scratch vectors (avoid allocation in useFrame)
   const _camPos = useRef(new THREE.Vector3());
   const _lookAt = useRef(new THREE.Vector3());
+
+  // Zoom level for non-free modes: 1.0 = default, scroll wheel adjusts
+  const zoomRef = useRef(1.0);
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+
+  // Mouse wheel zoom — only active in RTS / third-person
+  useEffect(() => {
+    const canvas = gl.domElement as HTMLCanvasElement;
+    const onWheel = (e: WheelEvent) => {
+      if (modeRef.current === 'free') return; // OrbitControls handles it
+      e.preventDefault();
+      zoomRef.current = Math.max(0.2, Math.min(2.8, zoomRef.current + e.deltaY * 0.0008));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [gl.domElement]);
 
   // Pick up new focus whenever it changes
   useEffect(() => {
@@ -72,7 +101,6 @@ function CameraController({
     if (mode === 'free') {
       // ── Free orbit: re-enable controls and apply any pending smooth-pan
       if (!controls.enabled) {
-        // Restore target so OrbitControls picks up cleanly
         controls.target.copy(camera.position.clone().add(
           new THREE.Vector3(0, 0, -5).applyQuaternion(camera.quaternion)
         ));
@@ -90,7 +118,8 @@ function CameraController({
       // ── RTS: overhead bird's-eye, locked, centered on map
       controls.enabled = false;
       isPanning.current = false;
-      _camPos.current.set(centerX, maxDist * 0.85, centerZ + tileSize * 1.5);
+      const rtsY = maxDist * 0.85 * zoomRef.current;
+      _camPos.current.set(centerX, rtsY, centerZ + tileSize * 1.5);
       _lookAt.current.set(centerX, 0, centerZ);
       camera.position.lerp(_camPos.current, Math.min(1, delta * 2.2));
       controls.target.lerp(_lookAt.current, Math.min(1, delta * 2.2));
@@ -104,12 +133,12 @@ function CameraController({
 
       const [wx, , wz] = tileToWorld(currentUnit.position.x, currentUnit.position.y, tileSize, 0);
       const angle = FACING_ANGLES[currentUnit.facing ?? 2];
-      // Direction unit is facing (in XZ plane)
       const fwdX = Math.sin(angle);
       const fwdZ = Math.cos(angle);
 
-      // Camera sits 6 units BEHIND and 4 units UP from the unit
-      _camPos.current.set(wx - fwdX * 6, 4, wz - fwdZ * 6);
+      const followDist   = 6 * Math.max(0.3, zoomRef.current);
+      const followHeight = 4 * Math.max(0.3, zoomRef.current);
+      _camPos.current.set(wx - fwdX * followDist, followHeight, wz - fwdZ * followDist);
       _lookAt.current.set(wx, 1, wz);
 
       camera.position.lerp(_camPos.current, Math.min(1, delta * 3.5));
@@ -122,6 +151,92 @@ function CameraController({
 }
 
 const FACING_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+
+// ── Unit team rings + floating health bars ────────────────────────────────────
+function UnitMarkers({ units, tileSize }: { units: TacticalUnit[]; tileSize: number }) {
+  return (
+    <>
+      {units.filter(u => u.hp > 0).map(unit => {
+        const [wx, , wz] = tileToWorld(unit.position.x, unit.position.y, tileSize, 0);
+        const hpPct = Math.max(0, (unit.hp / unit.maxHp) * 100);
+        const ringColor = unit.isPlayerControlled ? '#4488ff' : '#ff4444';
+        const barColor  = hpPct > 60 ? '#22cc55' : hpPct > 30 ? '#ffaa00' : '#ff3333';
+        const borderColor = unit.isPlayerControlled ? '#4488ffaa' : '#ff4444aa';
+        return (
+          <group key={unit.id + '_marker'}>
+            {/* Glowing team ring under feet */}
+            <mesh position={[wx, 0.09, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.52, 0.70, 36]} />
+              <meshBasicMaterial color={ringColor} transparent opacity={0.82} depthWrite={false} />
+            </mesh>
+            {/* Floating health bar */}
+            <Html position={[wx, 3.1, wz]} center distanceFactor={16} zIndexRange={[0, 10]}>
+              <div style={{ width: 58, pointerEvents: 'none' }}>
+                <div style={{
+                  background: 'rgba(0,0,0,0.88)',
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 4,
+                  padding: '3px 4px 2px',
+                }}>
+                  <div style={{ fontSize: 8, color: unit.isPlayerControlled ? '#88aaff' : '#ff8888', fontWeight: 700, fontFamily: 'monospace', marginBottom: 2, textAlign: 'center', letterSpacing: 0.5, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                    {unit.name.split(' ')[0]}
+                  </div>
+                  <div style={{ height: 5, background: '#1a1a1a', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${hpPct}%`, background: barColor, transition: 'width 0.35s' }} />
+                  </div>
+                  <div style={{ fontSize: 8, textAlign: 'center', color: '#aaa', fontFamily: 'monospace', marginTop: 1, lineHeight: 1.1 }}>
+                    {unit.hp}/{unit.maxHp}
+                  </div>
+                </div>
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </>
+  );
+}
+
+// ── Map ping markers (alert / danger / retreat) ───────────────────────────────
+function PingMarkers({ pings, tileSize }: { pings: MapPing[]; tileSize: number }) {
+  const ringRefs = useRef<Record<string, THREE.Mesh | null>>({});
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    Object.entries(ringRefs.current).forEach(([, mesh]) => {
+      if (!mesh) return;
+      const s = 0.85 + 0.3 * Math.abs(Math.sin(t * 2.2));
+      mesh.scale.set(s, s, s);
+      (mesh.material as THREE.MeshBasicMaterial).opacity = 0.45 + 0.35 * Math.abs(Math.sin(t * 2.2));
+    });
+  });
+
+  return (
+    <>
+      {pings.map(ping => {
+        const [wx, , wz] = tileToWorld(ping.tx, ping.ty, tileSize, 0);
+        const color = ping.type === 'alert' ? '#ffcc00' : ping.type === 'danger' ? '#ff3333' : '#4488ff';
+        const emoji = ping.type === 'alert' ? '⚠️' : ping.type === 'danger' ? '☠️' : '↩️';
+        return (
+          <group key={ping.id}>
+            <mesh
+              ref={el => { ringRefs.current[ping.id] = el; }}
+              position={[wx, 0.18, wz]} rotation={[-Math.PI / 2, 0, 0]}
+            >
+              <ringGeometry args={[0.55, 0.78, 32]} />
+              <meshBasicMaterial color={color} transparent opacity={0.65} depthWrite={false} />
+            </mesh>
+            <Html position={[wx, 2.0, wz]} center zIndexRange={[0, 5]}>
+              <div style={{ fontSize: 22, pointerEvents: 'none', filter: 'drop-shadow(0 1px 5px #000)', lineHeight: 1 }}>
+                {emoji}
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </>
+  );
+}
 
 // ── Animated ocean plane ─────────────────────────────────────────────────────
 function OceanPlane({ cx, cz }: { cx: number; cz: number }) {
@@ -299,6 +414,7 @@ export function BattleScene({
   units, level, reachableTiles, attackableTiles,
   currentUnitId, actionMode, onTileClick, animStates,
   combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
+  showUnitInfo = false, mapPings = [], onUnitRightClick, onMapRightClick,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
   const currentUnit = units.find(u => u.id === currentUnitId) ?? null;
@@ -393,6 +509,7 @@ export function BattleScene({
             onTileClick={onTileClick}
             hoveredTile={hoveredTile}
             setHoveredTile={setHoveredTile}
+            onRightClick={onMapRightClick}
           />
 
           <ScenePropLayer props={level.props} />
@@ -410,6 +527,10 @@ export function BattleScene({
                   e.stopPropagation();
                   onUnitDoubleClick?.(unit.id);
                 }}
+                onContextMenu={e => {
+                  e.stopPropagation();
+                  onUnitRightClick?.(unit.id, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
+                }}
               >
                 <CharacterModel
                   unit={unit}
@@ -421,6 +542,9 @@ export function BattleScene({
               </group>
             );
           })}
+
+          {showUnitInfo && <UnitMarkers units={units} tileSize={tileSize} />}
+          {mapPings.length > 0 && <PingMarkers pings={mapPings} tileSize={tileSize} />}
 
           <CombatEffectsLayer effects={combatEffects} />
         </group>

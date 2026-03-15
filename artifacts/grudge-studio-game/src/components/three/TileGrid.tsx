@@ -18,6 +18,7 @@ interface TileGridProps {
   onTileClick: (x: number, y: number) => void;
   hoveredTile: { x: number; y: number } | null;
   setHoveredTile: (t: { x: number; y: number } | null) => void;
+  onRightClick?: (x: number, y: number, screenX: number, screenY: number) => void;
 }
 
 const TILE_H = 0.18;
@@ -28,7 +29,7 @@ const COLOR_DARK    = new THREE.Color(0x2a2a35);
 const COLOR_LIGHT   = new THREE.Color(0x3a3a45);
 const COLOR_BLOCKED = new THREE.Color(0x1a1218);
 
-export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, hoveredTile, setHoveredTile }: TileGridProps) {
+export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, hoveredTile, setHoveredTile, onRightClick }: TileGridProps) {
   const { gridW, gridH, tileSize, obstacleTiles, groundColor, groundColor2 } = level;
   const instRef = useRef<THREE.InstancedMesh>(null!);
   const totalTiles = gridW * gridH;
@@ -83,6 +84,16 @@ export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, 
     const y = Math.floor(p.z / tileSize);
     if (x >= 0 && x < gridW && y >= 0 && y < gridH) onTileClick(x, y);
   };
+
+  const handleRightClick = (e: any) => {
+    e.stopPropagation();
+    const p = e.point;
+    const x = Math.floor(p.x / tileSize);
+    const y = Math.floor(p.z / tileSize);
+    if (x >= 0 && x < gridW && y >= 0 && y < gridH) {
+      onRightClick?.(x, y, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
+    }
+  };
   const handleMove = (e: any) => {
     e.stopPropagation();
     const p = e.point;
@@ -111,7 +122,8 @@ export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, 
 
       {/* Invisible event catcher */}
       <mesh position={[worldW / 2, 0.15, worldH / 2]} rotation={[-Math.PI / 2, 0, 0]}
-        onClick={handleClick} onPointerMove={handleMove} onPointerOut={() => setHoveredTile(null)}>
+        onClick={handleClick} onPointerMove={handleMove} onPointerOut={() => setHoveredTile(null)}
+        onContextMenu={handleRightClick}>
         <planeGeometry args={[worldW, worldH]} />
         <meshBasicMaterial visible={false} side={THREE.DoubleSide} />
       </mesh>
