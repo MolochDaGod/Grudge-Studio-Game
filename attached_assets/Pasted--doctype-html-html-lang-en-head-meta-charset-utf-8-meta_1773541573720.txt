@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Grudge Warlords • Main Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0705;--panel:#1a120c;--panel2:#221710;--panel3:#2e1f14;
+  --border:#c9950a;--border2:#7a5c1e;--border-dim:#3a2a1a;
+  --text:#f5e2c1;--muted:#9b7d52;--dim:#6b5535;
+  --gold:#d4a400;--gold-glow:rgba(212,164,0,.25);
+  --green:#6ec96e;--red:#d45050;--blue:#5a9ad8;--purple:#a87ddb;
+  --orange:#d89040;--cyan:#50b8c0;
+  --slot:#1e140e;--slot-b:#3a2a1a;
+  --shadow:0 6px 24px rgba(0,0,0,.6);
+  --font-display:'Cinzel',serif;
+  --font-body:'Crimson Text',Georgia,serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-body);color:var(--text);
+  background:
+    radial-gradient(ellipse 900px 400px at 10% 0%,rgba(212,164,0,.06),transparent),
+    radial-gradient(ellipse 700px 500px at 90% 100%,rgba(140,40,20,.06),transparent),
+    linear-gradient(170deg,#120c06 0%,#0a0705 40%,#080604 100%);
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#3a2a1a;border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ═══ LAYOUT ═══ */
+.app{display:flex;height:100vh;flex-direction:column}
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 16px;
+  background:linear-gradient(90deg,#1a100a,#221710,#1a100a);
+  border-bottom:2px solid var(--border);
+  box-shadow:0 2px 12px rgba(0,0,0,.5);
+  flex-shrink:0;
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo h1{font-family:var(--font-display);font-size:15px;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+.logo .sub{font-size:11px;color:var(--muted)}
+.player-info{display:flex;align-items:center;gap:14px;font-size:12px}
+.player-info .name{color:var(--gold);font-family:var(--font-display);font-weight:700}
+.player-info .lvl{color:var(--muted);font-size:11px}
+.resource-bars{display:flex;gap:8px}
+.res-bar{width:120px;height:14px;background:#1a0f08;border:1px solid var(--border-dim);border-radius:3px;overflow:hidden;position:relative}
+.res-bar .fill{height:100%;border-radius:2px;transition:width .4s}
+.res-bar .fill.hp{background:linear-gradient(90deg,#8b2020,#d44040);width:78%}
+.res-bar .fill.mp{background:linear-gradient(90deg,#1a3a6a,#3a7ad8);width:62%}
+.res-bar .fill.sp{background:linear-gradient(90deg,#5a6a1a,#9ab830);width:91%}
+.res-bar .lbl{position:absolute;top:0;left:0;right:0;text-align:center;font-size:9px;font-family:var(--font-mono);line-height:14px;color:#fff;text-shadow:0 1px 2px #000}
+
+.main-body{display:flex;flex:1;min-height:0}
+
+/* ═══ LEFT: STATS + CHAR ═══ */
+.left-col{
+  width:260px;flex-shrink:0;
+  background:linear-gradient(180deg,#1a120c,#140e08);
+  border-right:2px solid var(--border-dim);
+  display:flex;flex-direction:column;overflow-y:auto;
+}
+.char-preview{
+  height:200px;
+  background:radial-gradient(circle at 50% 60%,rgba(212,164,0,.08),transparent 70%),
+             linear-gradient(180deg,#0f0a06,#1a120c);
+  border-bottom:1px solid var(--border-dim);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.char-silhouette{
+  width:120px;height:170px;
+  background:radial-gradient(ellipse at 50% 40%,rgba(200,160,80,.12),transparent 60%);
+  border:2px dashed var(--border-dim);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--dim);font-size:11px;font-family:var(--font-display);text-transform:uppercase;letter-spacing:1px;
+}
+.stat-section{padding:10px 12px}
+.stat-section h3{
+  font-family:var(--font-display);font-size:11px;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1.5px;
+  border-bottom:1px solid var(--gold-glow);padding-bottom:4px;margin-bottom:6px;
+}
+.stat-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03)}
+.stat-row .k{color:var(--muted);font-weight:600}
+.stat-row .v{color:var(--text);font-family:var(--font-mono);font-size:11px}
+.stat-row .v.green{color:var(--green)}
+
+/* ═══ CENTER: TABS + CONTENT ═══ */
+.center-col{flex:1;display:flex;flex-direction:column;min-width:0}
+.tab-strip{
+  display:flex;gap:0;
+  background:linear-gradient(90deg,#14100a,#1e150e,#14100a);
+  border-bottom:2px solid var(--border);flex-shrink:0;
+  overflow-x:auto;
+}
+.tab-btn{
+  border:0;background:transparent;color:var(--muted);cursor:pointer;
+  padding:10px 14px;font-family:var(--font-display);font-size:10px;
+  text-transform:uppercase;letter-spacing:1px;font-weight:700;
+  border-bottom:2px solid transparent;
+  white-space:nowrap;transition:.15s;
+}
+.tab-btn:hover{color:var(--text);background:rgba(212,164,0,.05)}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(212,164,0,.08)}
+
+.content-area{flex:1;overflow-y:auto;padding:16px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ═══ RIGHT: INVENTORY ═══ */
+.right-col{
+  width:280px;flex-shrink:0;
+  background:linear-gradient(180deg,#1a120c,#140e08);
+  border-left:2px solid var(--border-dim);
+  display:flex;flex-direction:column;
+}
+.inv-header{
+  padding:10px 12px;border-bottom:1px solid var(--border-dim);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.inv-header h3{font-family:var(--font-display);font-size:12px;color:var(--gold);text-transform:uppercase;letter-spacing:1px}
+.inv-header .gold-display{font-family:var(--font-mono);font-size:12px;color:#ffd56a}
+.inv-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:4px;
+  padding:8px;flex:1;overflow-y:auto;align-content:start;
+}
+.inv-cell{
+  aspect-ratio:1;border:2px solid var(--border-dim);border-radius:6px;
+  background:linear-gradient(135deg,#221710,#1a0f08);
+  cursor:pointer;transition:.15s;position:relative;
+}
+.inv-cell:hover{border-color:var(--gold);box-shadow:0 0 8px var(--gold-glow)}
+.inv-cell.filled{border-color:#5a4020}
+.inv-cell .item-icon{width:100%;height:100%;object-fit:contain;padding:4px}
+.inv-cell .qty{position:absolute;bottom:1px;right:3px;font-size:9px;font-family:var(--font-mono);color:var(--gold)}
+
+.trash-zone{
+  padding:8px 12px;border-top:1px solid var(--border-dim);
+  display:flex;align-items:center;gap:8px;
+}
+.trash-slot{
+  width:40px;height:40px;border:2px dashed var(--red);border-radius:6px;
+  background:rgba(200,40,40,.08);display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--red);
+}
+.trash-zone span{font-size:11px;color:var(--muted)}
+
+/* ═══ BOTTOM BAR ═══ */
+.bottom-bar{
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:6px 16px;
+  background:linear-gradient(90deg,#120c06,#1a120c,#120c06);
+  border-top:2px solid var(--border);flex-shrink:0;
+}
+.hotbar{display:flex;gap:4px}
+.hb-slot{
+  width:44px;height:44px;border:2px solid var(--border-dim);border-radius:6px;
+  background:linear-gradient(135deg,#2a1e14,#1a0f08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:var(--dim);font-family:var(--font-mono);
+  cursor:pointer;transition:.15s;position:relative;
+}
+.hb-slot:hover{border-color:var(--gold)}
+.hb-slot .key{position:absolute;top:2px;left:4px;font-size:8px;color:var(--muted)}
+
+/* ═══ SHARED COMPONENTS ═══ */
+.section-title{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--font-display);font-size:12px;color:var(--gold);
+  text-transform:uppercase;letter-spacing:1px;
+  margin:16px 0 10px;
+}
+.section-title::before{content:'';width:3px;height:14px;background:var(--gold);border-radius:3px}
+
+.card{
+  background:linear-gradient(135deg,#221710,#1a0f08);
+  border:1px solid var(--border-dim);border-radius:10px;
+  padding:12px;box-shadow:var(--shadow);transition:.15s;
+}
+.card:hover{border-color:var(--border2);transform:translateY(-1px)}
+
+/* Equipment Panel */
+.equip-layout{display:grid;grid-template-columns:80px 1fr 80px;gap:16px;align-items:center;max-width:500px;margin:0 auto}
+.equip-stack{display:flex;flex-direction:column;gap:10px;align-items:center}
+.eq-slot{
+  width:72px;height:72px;border:2px solid var(--border);border-radius:8px;
+  background:linear-gradient(135deg,#2e1f14,#1a0f08);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:.15s;
+}
+.eq-slot:hover{border-color:var(--gold);box-shadow:0 0 12px var(--gold-glow)}
+.eq-slot .cat{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:var(--font-display)}
+.eq-center{
+  width:140px;height:140px;border:3px solid var(--border);border-radius:12px;
+  background:radial-gradient(circle,rgba(212,164,0,.08),transparent 70%),linear-gradient(135deg,#2e1f14,#1a0f08);
+  display:flex;align-items:center;justify-content:center;margin:0 auto;
+  font-family:var(--font-display);font-size:10px;color:var(--muted);text-transform:uppercase;
+}
+
+/* Attributes Panel */
+.attr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.attr-card{
+  display:flex;align-items:center;gap:10px;padding:10px;
+  background:linear-gradient(135deg,#1e1510,#160e08);
+  border:1px solid var(--border-dim);border-radius:8px;
+}
+.attr-icon{
+  width:40px;height:40px;border-radius:8px;
+  background:radial-gradient(circle,rgba(212,164,0,.15),transparent);
+  border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.attr-info .name{font-size:12px;font-weight:700;color:var(--text)}
+.attr-info .val{font-size:18px;font-family:var(--font-mono);color:var(--gold);font-weight:700}
+.attr-info .desc{font-size:10px;color:var(--muted);margin-top:2px}
+.attr-btn{
+  margin-left:auto;width:24px;height:24px;border-radius:4px;
+  border:1px solid var(--green);background:rgba(110,200,110,.1);
+  color:var(--green);cursor:pointer;font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.attr-btn:hover{background:rgba(110,200,110,.25)}
+
+/* Skill Trees */
+.tree-selector{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tree-btn{
+  padding:6px 12px;border:1px solid var(--border-dim);border-radius:6px;
+  background:var(--panel);color:var(--muted);cursor:pointer;
+  font-family:var(--font-display);font-size:10px;text-transform:uppercase;letter-spacing:.5px;
+  transition:.15s;
+}
+.tree-btn:hover{border-color:var(--border2);color:var(--text)}
+.tree-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(212,164,0,.1)}
+
+.skill-tier{margin-bottom:16px}
+.tier-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:700;margin-bottom:8px;font-family:var(--font-display)}
+.skill-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+
+.skill-node{
+  display:flex;gap:8px;padding:10px;
+  background:linear-gradient(135deg,#1e1710,#160f08);
+  border:1px solid var(--border-dim);border-radius:10px;
+  cursor:pointer;transition:.15s;
+}
+.skill-node:hover{border-color:var(--border2);transform:translateY(-1px)}
+.skill-node.unlocked{border-color:#4a7a30;background:linear-gradient(135deg,#1a2810,#142008)}
+.skill-node.locked{opacity:.5}
+.skill-node .sk-icon{
+  width:36px;height:36px;border-radius:8px;flex-shrink:0;
+  background:radial-gradient(circle,rgba(212,164,0,.12),transparent);
+  border:1px solid var(--border-dim);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.skill-node .sk-name{font-size:11px;font-weight:700;color:var(--text)}
+.skill-node .sk-desc{font-size:10px;color:var(--muted);line-height:1.3;margin-top:2px}
+.skill-node .sk-meta{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.chip{
+  font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;
+  border:1px solid;border-radius:99px;padding:1px 6px;
+}
+.chip.dmg{color:#ff8b95;border-color:#ff8b9540;background:#ff8b9510}
+.chip.cd{color:#84b2ff;border-color:#84b2ff40;background:#84b2ff10}
+.chip.heal{color:#6ec96e;border-color:#6ec96e40;background:#6ec96e10}
+.chip.buff{color:#ffd56a;border-color:#ffd56a40;background:#ffd56a10}
+.chip.cc{color:#a87ddb;border-color:#a87ddb40;background:#a87ddb10}
+.chip.ult{color:#ff9d4d;border-color:#ff9d4d40;background:#ff9d4d10}
+
+/* Class badges */
+.class-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:99px;font-size:9px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.5px;border:1px solid;
+}
+.class-badge.warrior{color:#ff7d87;border-color:#ff7d8740;background:#ff7d8712}
+.class-badge.mage{color:#bb95ff;border-color:#bb95ff40;background:#bb95ff12}
+.class-badge.ranger{color:#49de95;border-color:#49de9540;background:#49de9512}
+.class-badge.worge{color:#ffb16d;border-color:#ffb16d40;background:#ffb16d12}
+
+/* Crafting */
+.craft-layout{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start;max-width:600px;margin:0 auto}
+.craft-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.craft-slot{
+  width:64px;height:64px;border:2px solid var(--border-dim);border-radius:8px;
+  background:linear-gradient(135deg,#221710,#1a0f08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:var(--dim);cursor:pointer;
+}
+.craft-arrow{font-size:28px;color:var(--gold);align-self:center}
+.craft-result{
+  width:80px;height:80px;border:3px solid var(--border);border-radius:10px;
+  background:radial-gradient(circle,rgba(212,164,0,.1),transparent),linear-gradient(135deg,#2e1f14,#1a0f08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;color:var(--muted);
+}
+.craft-btn{
+  grid-column:1/-1;margin:12px auto 0;
+  padding:10px 28px;border:2px solid var(--gold);border-radius:8px;
+  background:linear-gradient(180deg,rgba(212,164,0,.2),rgba(212,164,0,.05));
+  color:var(--gold);font-family:var(--font-display);font-size:12px;
+  text-transform:uppercase;letter-spacing:1px;cursor:pointer;
+  transition:.15s;
+}
+.craft-btn:hover{background:linear-gradient(180deg,rgba(212,164,0,.35),rgba(212,164,0,.1));box-shadow:0 0 16px var(--gold-glow)}
+
+/* Guild */
+.guild-header{
+  display:flex;gap:16px;align-items:center;padding:14px;
+  background:linear-gradient(135deg,#221710,#1a0f08);
+  border:1px solid var(--border-dim);border-radius:10px;margin-bottom:14px;
+}
+.guild-crest{
+  width:64px;height:64px;border:2px solid var(--border);border-radius:10px;
+  background:radial-gradient(circle,rgba(212,164,0,.15),transparent);
+  display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;
+}
+.guild-info .gname{font-family:var(--font-display);font-size:18px;color:var(--gold)}
+.guild-info .gmaster{font-size:12px;color:var(--muted);margin-top:2px}
+.guild-info .gcap{font-size:11px;color:var(--dim);margin-top:2px;font-family:var(--font-mono)}
+.member-list{display:flex;flex-direction:column;gap:6px}
+.member-row{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:linear-gradient(135deg,#1e1510,#160e08);
+  border:1px solid var(--border-dim);border-radius:8px;
+}
+.member-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.member-dot.online{background:var(--green);box-shadow:0 0 6px rgba(110,200,110,.4)}
+.member-dot.offline{background:#555}
+.member-name{flex:1;font-size:12px}
+.member-lvl{font-size:11px;color:var(--muted);font-family:var(--font-mono)}
+.member-rank{font-size:10px;color:var(--gold);font-family:var(--font-display);text-transform:uppercase}
+
+/* Quest Panel */
+.quest-card{
+  padding:12px;margin-bottom:8px;
+  background:linear-gradient(135deg,#1e1510,#160e08);
+  border:1px solid var(--border-dim);border-radius:10px;
+  border-left:3px solid var(--gold);
+}
+.quest-card .q-title{font-family:var(--font-display);font-size:13px;color:var(--text)}
+.quest-card .q-desc{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+.quest-card .q-progress{
+  margin-top:8px;height:6px;background:#1a0f08;border-radius:3px;overflow:hidden;
+  border:1px solid var(--border-dim);
+}
+.quest-card .q-progress .q-fill{height:100%;background:linear-gradient(90deg,var(--gold),#ffd56a);border-radius:2px}
+.quest-card .q-reward{font-size:10px;color:var(--gold);margin-top:6px;font-family:var(--font-mono)}
+
+/* Upgrade Panel */
+.upgrade-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.upgrade-card{
+  padding:12px;
+  background:linear-gradient(135deg,#1e1710,#160f08);
+  border:1px solid var(--border-dim);border-radius:10px;
+  cursor:pointer;transition:.15s;
+}
+.upgrade-card:hover{border-color:var(--border2)}
+.upgrade-card .u-name{font-family:var(--font-display);font-size:12px;color:var(--text)}
+.upgrade-card .u-level{font-size:11px;color:var(--gold);margin-top:2px;font-family:var(--font-mono)}
+.upgrade-card .u-desc{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.3}
+.upgrade-card .u-cost{
+  margin-top:8px;font-size:10px;color:var(--orange);
+  display:flex;align-items:center;gap:4px;
+}
+
+/* Tooltip */
+.tooltip{
+  position:fixed;z-index:9999;pointer-events:none;display:none;
+  width:260px;max-width:calc(100vw - 20px);
+  background:linear-gradient(135deg,#221710,#1a0f08);
+  border:1px solid var(--border);border-radius:10px;
+  padding:10px;box-shadow:0 12px 32px rgba(0,0,0,.6);
+}
+.tooltip.show{display:block}
+.tooltip .tt-name{font-family:var(--font-display);font-size:13px;color:var(--gold)}
+.tooltip .tt-type{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+.tooltip .tt-desc{font-size:11px;color:var(--text);line-height:1.4;margin-top:8px;padding-top:6px;border-top:1px solid var(--border-dim)}
+
+/* Responsive */
+@media(max-width:1100px){
+  .left-col{display:none}
+  .right-col{display:none}
+}
+@media(max-width:700px){
+  .tab-btn{padding:8px 8px;font-size:8px;letter-spacing:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="logo">
+      <h1>⚔ Grudge Warlords</h1>
+      <span class="sub">Main Panel [C]</span>
+    </div>
+    <div class="player-info">
+      <div class="resource-bars">
+        <div class="res-bar"><div class="fill hp"></div><span class="lbl">HP 780/1000</span></div>
+        <div class="res-bar"><div class="fill mp"></div><span class="lbl">MP 310/500</span></div>
+        <div class="res-bar"><div class="fill sp"></div><span class="lbl">SP 91/100</span></div>
+      </div>
+      <span class="name">Racalvin</span>
+      <span class="lvl">Lv.42 Warrior</span>
+    </div>
+  </header>
+
+  <div class="main-body">
+
+    <!-- LEFT: STATS -->
+    <aside class="left-col">
+      <div class="char-preview">
+        <div class="char-silhouette">Character<br>Preview</div>
+      </div>
+      <div class="stat-section">
+        <h3>Combat Stats</h3>
+        <div class="stat-row"><span class="k">Health</span><span class="v">1000</span></div>
+        <div class="stat-row"><span class="k">Mana</span><span class="v">500</span></div>
+        <div class="stat-row"><span class="k">Damage</span><span class="v green">142</span></div>
+        <div class="stat-row"><span class="k">Crit %</span><span class="v">18%</span></div>
+        <div class="stat-row"><span class="k">Defense</span><span class="v">88</span></div>
+        <div class="stat-row"><span class="k">Block %</span><span class="v">12%</span></div>
+        <div class="stat-row"><span class="k">Speed</span><span class="v">1.4</span></div>
+        <div class="stat-row"><span class="k">Accuracy</span><span class="v">94%</span></div>
+        <div class="stat-row"><span class="k">Resistance</span><span class="v">35</span></div>
+      </div>
+      <div class="stat-section">
+        <h3>Progression</h3>
+        <div class="stat-row"><span class="k">EXP</span><span class="v">42,580 / 60,000</span></div>
+        <div class="stat-row"><span class="k">Skill Pts</span><span class="v green">3</span></div>
+        <div class="stat-row"><span class="k">Attr Pts</span><span class="v green">5</span></div>
+        <div class="stat-row"><span class="k">Mastery</span><span class="v">Sword 14</span></div>
+      </div>
+    </aside>
+
+    <!-- CENTER: TABBED CONTENT -->
+    <main class="center-col">
+      <nav class="tab-strip" id="tabStrip"></nav>
+      <div class="content-area" id="contentArea"></div>
+    </main>
+
+    <!-- RIGHT: INVENTORY -->
+    <aside class="right-col">
+      <div class="inv-header">
+        <h3>Inventory</h3>
+        <span class="gold-display">⚜ 22,578</span>
+      </div>
+      <div class="inv-grid" id="invGrid"></div>
+      <div class="trash-zone">
+        <div class="trash-slot">🗑</div>
+        <span>Drop items here to destroy</span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- BOTTOM: HOTBAR -->
+  <footer class="bottom-bar">
+    <div class="hotbar" id="hotbar"></div>
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   GRUDGE WARLORDS — MAIN PANEL ENGINE
+   ═══════════════════════════════════════════════════════════ */
+
+const CDN = 'https://molochdagod.github.io/ObjectStore';
+const ICON = p => CDN + '/icons/' + p;
+
+// ── Tab definitions (mirrors MainPanel.cs) ──
+const TABS = [
+  { id:'equipment',  label:'Equipment' },
+  { id:'attributes', label:'Attributes' },
+  { id:'classSkill', label:'Class Skills' },
+  { id:'skillTree',  label:'Weapon Skills' },
+  { id:'upgrade',    label:'Upgrades' },
+  { id:'craft',      label:'Crafting' },
+  { id:'quest',      label:'Quests' },
+  { id:'guild',      label:'Guild' }
+];
+
+let activeTab = 'equipment';
+
+// ── CLASS SKILL TREES ──
+const CLASS_TREES = {
+  Warrior: {
+    color:'#ff7d87',
+    tiers:[
+      { name:'Tier 1 — Foundations', skills:[
+        { name:'Battle Hardened', icon:'⚔', desc:'Increase max HP by 5% per point. Stacks with armor bonuses.', chips:['buff'] },
+        { name:'Iron Stance', icon:'🛡', desc:'Reduce incoming physical damage by 3%. Passive always active.', chips:['buff'] },
+        { name:'War Cry', icon:'📯', desc:'AoE shout that taunts nearby enemies for 4s and reduces their damage.', chips:['cc','cd'] }
+      ]},
+      { name:'Tier 2 — Aggression', skills:[
+        { name:'Berserker Rage', icon:'🔥', desc:'Below 30% HP, gain 25% attack speed and 15% lifesteal.', chips:['dmg','buff'] },
+        { name:'Cleaving Strikes', icon:'⚔', desc:'Melee attacks hit 1 additional nearby target.', chips:['dmg'] },
+        { name:'Stunning Blow', icon:'💫', desc:'Heavy attack that stuns target for 2s. 12s cooldown.', chips:['cc','cd'] }
+      ]},
+      { name:'Tier 3 — Mastery', skills:[
+        { name:'Unbreakable', icon:'🏰', desc:'Activate to become immune to CC for 6s. 45s cooldown.', chips:['buff','cd'] },
+        { name:'Execute', icon:'💀', desc:'Massive strike dealing 200% damage to targets below 20% HP.', chips:['dmg','ult'] }
+      ]},
+      { name:'Tier 4 — Ultimate', skills:[
+        { name:'Warlord Ascendancy', icon:'👑', desc:'All warrior abilities enhanced. +10% all stats for 15s.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Mage: {
+    color:'#bb95ff',
+    tiers:[
+      { name:'Tier 1 — Foundations', skills:[
+        { name:'Arcane Intellect', icon:'🔮', desc:'Increase max Mana by 8% per point. Improves spell scaling.', chips:['buff'] },
+        { name:'Mana Shield', icon:'🛡', desc:'Convert 30% of damage taken to mana cost instead.', chips:['buff'] },
+        { name:'Elemental Attunement', icon:'✨', desc:'Gain 5% bonus to your active element damage type.', chips:['dmg'] }
+      ]},
+      { name:'Tier 2 — Spellcraft', skills:[
+        { name:'Spell Weaving', icon:'🌀', desc:'Cast two spells in rapid succession. Second spell costs 50% mana.', chips:['dmg','buff'] },
+        { name:'Mana Surge', icon:'⚡', desc:'Restore 25% max mana instantly. 30s cooldown.', chips:['heal','cd'] },
+        { name:'Frost Nova', icon:'❄', desc:'AoE freeze around caster. Roots enemies for 3s.', chips:['cc','cd'] }
+      ]},
+      { name:'Tier 3 — Mastery', skills:[
+        { name:'Meteor Strike', icon:'☄', desc:'Call down a meteor dealing massive AoE fire damage.', chips:['dmg','ult'] },
+        { name:'Time Warp', icon:'⏳', desc:'Slow time in area. Enemies move 50% slower for 6s.', chips:['cc','cd'] }
+      ]},
+      { name:'Tier 4 — Ultimate', skills:[
+        { name:'Archmage Ascendancy', icon:'👑', desc:'All spells cost 30% less. +15% spell damage for 20s.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Ranger: {
+    color:'#49de95',
+    tiers:[
+      { name:'Tier 1 — Foundations', skills:[
+        { name:'Eagle Eye', icon:'🎯', desc:'Increase ranged accuracy by 5% and critical range by 10%.', chips:['buff'] },
+        { name:'Swift Feet', icon:'💨', desc:'Increase movement speed by 8%. Bonus when not in combat.', chips:['buff'] },
+        { name:'Trap Mastery', icon:'🪤', desc:'Traps deal 20% more damage and last 50% longer.', chips:['dmg'] }
+      ]},
+      { name:'Tier 2 — Precision', skills:[
+        { name:'Multi-Shot', icon:'🏹', desc:'Fire 3 arrows in a cone. Each deals 60% weapon damage.', chips:['dmg','cd'] },
+        { name:'Shadow Step', icon:'👤', desc:'Teleport behind target and gain 3s stealth.', chips:['buff','cd'] },
+        { name:'Poison Arrow', icon:'☠', desc:'Coat arrows in venom. 30% chance to apply DoT for 8s.', chips:['dmg','cc'] }
+      ]},
+      { name:'Tier 3 — Mastery', skills:[
+        { name:'Rain of Arrows', icon:'🌧', desc:'Barrage area with arrows for 4s. Massive sustained AoE.', chips:['dmg','ult'] },
+        { name:'Camouflage', icon:'🍃', desc:'Full stealth for 10s. First attack from stealth crits.', chips:['buff','cd'] }
+      ]},
+      { name:'Tier 4 — Ultimate', skills:[
+        { name:'Deadeye Ascendancy', icon:'👑', desc:'All ranged attacks pierce. +20% crit damage for 15s.', chips:['ult','dmg'] }
+      ]}
+    ]
+  },
+  Worge: {
+    color:'#ffb16d',
+    tiers:[
+      { name:'Tier 1 — Foundations', skills:[
+        { name:'Beast Form', icon:'🐺', desc:'Shift between human and beast. Beast gains +15% melee, human +15% magic.', chips:['buff'] },
+        { name:'Primal Instinct', icon:'👁', desc:'Sense nearby enemies. Reveal stealthed targets within 15m.', chips:['buff'] },
+        { name:'Pack Bond', icon:'🤝', desc:'Nearby allies gain 5% damage and 5% defense.', chips:['heal','buff'] }
+      ]},
+      { name:'Tier 2 — Feral', skills:[
+        { name:'Savage Leap', icon:'🦁', desc:'Leap to target dealing AoE damage on landing. Stuns 1s.', chips:['dmg','cc'] },
+        { name:'Howl of Fury', icon:'🌙', desc:'Terrify enemies in cone. They flee for 3s.', chips:['cc','cd'] },
+        { name:'Spirit Link', icon:'🔗', desc:'Share damage with bonded ally. Both take 40% less.', chips:['heal','buff'] }
+      ]},
+      { name:'Tier 3 — Mastery', skills:[
+        { name:'Alpha Strike', icon:'⚡', desc:'Unleash rapid combo dealing 300% weapon damage total.', chips:['dmg','ult'] },
+        { name:'Nature Communion', icon:'🌿', desc:'Channel nature to heal self and allies for 8s.', chips:['heal','cd'] }
+      ]},
+      { name:'Tier 4 — Ultimate', skills:[
+        { name:'Apex Predator', icon:'👑', desc:'Full beast ascension. +20% all stats, fear aura for 20s.', chips:['ult','buff'] }
+      ]}
+    ]
+  }
+};
+
+// ── WEAPON SKILL TREES ──
+const WEAPON_TREES = {
+  Sword: {
+    icon:'⚔', tiers:[
+      { name:'Tier 1 — Fundamentals', skills:[
+        { name:'Blade Mastery', icon:'⚔', desc:'Increases sword damage by 5% per rank.', chips:['dmg'] },
+        { name:'Swift Strikes', icon:'💨', desc:'Increases attack speed with swords by 3%.', chips:['buff'] },
+        { name:'Precision Cuts', icon:'🎯', desc:'Increases critical strike chance by 2%.', chips:['dmg'] }
+      ]},
+      { name:'Tier 2 — Combat', skills:[
+        { name:'Parry Mastery', icon:'🛡', desc:'+4% block and parry chance with swords.', chips:['buff'] },
+        { name:'Combo Extension', icon:'🔄', desc:'+6% combo chain damage bonus.', chips:['dmg'] },
+        { name:'Bleeding Wounds', icon:'🩸', desc:'+3% bleed chance on sword hits.', chips:['dmg','cc'] }
+      ]},
+      { name:'Tier 3 — Mastery', skills:[
+        { name:'Counter Specialist', icon:'⚡', desc:'+10% counter attack damage after parry.', chips:['dmg'] },
+        { name:'Cleaving Blows', icon:'💥', desc:'Sword attacks hit +1 additional target.', chips:['dmg'] }
+      ]},
+      { name:'Tier 4 — Ultimate', skills:[
+        { name:'Master Swordsman', icon:'👑', desc:'+8% to ALL sword combat stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Axe: {
+    icon:'🪓', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Brutal Force', icon:'🪓', desc:'+6% axe damage per rank.', chips:['dmg'] },
+        { name:'Cleave', icon:'💥', desc:'Hit +1 additional target with axe.', chips:['dmg'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Rending Cuts', icon:'🩸', desc:'+5% bleed chance on hit.', chips:['dmg'] },
+        { name:'Executioner', icon:'💀', desc:'+12% damage vs targets below 25% HP.', chips:['dmg'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Frenzy', icon:'🔥', desc:'+3% speed per kill for 8s. Stacks 5x.', chips:['buff'] },
+        { name:'Armor Break', icon:'🛡', desc:'+8% armor penetration.', chips:['dmg'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Berserker', icon:'👑', desc:'+8% to ALL axe stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Bow: {
+    icon:'🏹', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Keen Eye', icon:'👁', desc:'+5% accuracy with bows.', chips:['buff'] },
+        { name:'Strong Draw', icon:'🏹', desc:'+4% charge speed.', chips:['buff'] },
+        { name:'Long Shot', icon:'🎯', desc:'+10% effective range.', chips:['buff'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Deadly Aim', icon:'💀', desc:'+8% critical damage bonus.', chips:['dmg'] },
+        { name:'Piercing', icon:'⚡', desc:'Arrows pierce +1 target.', chips:['dmg'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Multi-Shot', icon:'🌧', desc:'Fire +1 extra arrow per volley.', chips:['dmg'] },
+        { name:'Rapid Fire', icon:'💨', desc:'+6% attack speed with bows.', chips:['buff'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Master Archer', icon:'👑', desc:'+8% to ALL bow stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Staff: {
+    icon:'🪄', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Arcane Power', icon:'✨', desc:'+5% spell damage with staves.', chips:['dmg'] },
+        { name:'Mana Flow', icon:'💧', desc:'+8% mana regeneration.', chips:['heal'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Spell Critical', icon:'⚡', desc:'+3% spell crit chance.', chips:['dmg'] },
+        { name:'Magic Ward', icon:'🛡', desc:'+6% magic defense.', chips:['buff'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Chain Magic', icon:'🔗', desc:'Spells chain to +1 target.', chips:['dmg'] },
+        { name:'Efficiency', icon:'💎', desc:'-5% mana cost on all spells.', chips:['buff'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Archmage', icon:'👑', desc:'+8% to ALL staff stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Dagger: {
+    icon:'🗡', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Quick Hands', icon:'💨', desc:'+6% dagger attack speed.', chips:['buff'] },
+        { name:'Stealth', icon:'👤', desc:'+10% stealth effectiveness.', chips:['buff'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Vital Strikes', icon:'🎯', desc:'+4% crit chance with daggers.', chips:['dmg'] },
+        { name:'Poison Coat', icon:'☠', desc:'+5% poison chance on hit.', chips:['dmg','cc'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Backstab Mastery', icon:'💀', desc:'+15% damage from behind.', chips:['dmg'] },
+        { name:'Deadly Wounds', icon:'🩸', desc:'+10% bleed damage.', chips:['dmg'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Master Assassin', icon:'👑', desc:'+8% to ALL dagger stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Hammer: {
+    icon:'🔨', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Heavy Blows', icon:'🔨', desc:'+6% hammer damage.', chips:['dmg'] },
+        { name:'Concussive', icon:'💫', desc:'+4% stun chance on hit.', chips:['cc'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Ground Slam', icon:'💥', desc:'+8% AoE damage bonus.', chips:['dmg'] },
+        { name:'Armor Crush', icon:'🛡', desc:'+6% armor penetration.', chips:['dmg'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Knockback', icon:'💨', desc:'+5% knockback chance.', chips:['cc'] },
+        { name:'Shatter', icon:'⚡', desc:'+15% bonus vs stunned targets.', chips:['dmg'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Titan', icon:'👑', desc:'+8% to ALL hammer stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Shield: {
+    icon:'🛡', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Block Mastery', icon:'🛡', desc:'+5% block chance.', chips:['buff'] },
+        { name:'Fortify', icon:'🏰', desc:'+4% damage reduction while blocking.', chips:['buff'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Shield Bash', icon:'💥', desc:'+6% shield bash damage and stun duration.', chips:['dmg','cc'] },
+        { name:'Threat Gen', icon:'📯', desc:'+8% threat generation.', chips:['buff'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Reflect', icon:'🔄', desc:'Reflect 10% of blocked damage.', chips:['dmg'] },
+        { name:'Iron Wall', icon:'🏰', desc:'+15% block during active block stance.', chips:['buff'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Unbreakable', icon:'👑', desc:'+8% to ALL shield stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  },
+  Lance: {
+    icon:'🔱', tiers:[
+      { name:'Tier 1', skills:[
+        { name:'Extended Reach', icon:'🔱', desc:'+10% weapon range.', chips:['buff'] },
+        { name:'First Strike', icon:'⚡', desc:'+8% opener damage.', chips:['dmg'] }
+      ]},
+      { name:'Tier 2', skills:[
+        { name:'Piercing', icon:'💥', desc:'Pierce through +1 target.', chips:['dmg'] },
+        { name:'Phalanx', icon:'🛡', desc:'+6% block chance.', chips:['buff'] }
+      ]},
+      { name:'Tier 3', skills:[
+        { name:'Charge Bonus', icon:'🐎', desc:'+12% charge attack damage.', chips:['dmg'] },
+        { name:'Impale', icon:'☠', desc:'+4% root chance on hit.', chips:['cc'] }
+      ]},
+      { name:'Tier 4', skills:[
+        { name:'Cavalier', icon:'👑', desc:'+8% to ALL lance stats.', chips:['ult','buff'] }
+      ]}
+    ]
+  }
+};
+
+// ── Equipment slots ──
+const EQUIP_LEFT = ['Helmet','Chest','Legs','Boots'];
+const EQUIP_RIGHT = ['Gloves','Belt','Ring','Amulet'];
+
+// ── Sample Data ──
+const SAMPLE_QUESTS = [
+  { title:'The Iron Grudge', desc:'Defeat 15 Ironclad Sentinels in the Forgespire Depths.', progress:60, reward:'1200 EXP, Ironvow Blade' },
+  { title:'Blood Tribute', desc:'Collect 8 Blood Crystals from the Crimson Caverns.', progress:37, reward:'800 EXP, 500 Gold' },
+  { title:'Warlord\'s Challenge', desc:'Win 3 PvP arena matches without dying.', progress:100, reward:'2500 EXP, Title: Grudgebearer' },
+];
+
+const SAMPLE_UPGRADES = [
+  { name:'Weapon Enhancement +3', level:'Lv.2 → Lv.3', desc:'Increase weapon base damage by 12%.', cost:'3 Iron Ingots, 500 Gold' },
+  { name:'Armor Reinforcement', level:'Lv.1 → Lv.2', desc:'Add +8 defense to equipped armor.', cost:'2 Steel Plates, 300 Gold' },
+  { name:'Socket Gem', level:'Slot 1 of 3', desc:'Insert a gem to add bonus stats to equipment.', cost:'1 Ruby, 200 Gold' },
+  { name:'Enchant: Lifesteal', level:'Not Applied', desc:'Add 3% lifesteal to main weapon.', cost:'1 Soul Shard, 800 Gold' },
+];
+
+const GUILD_MEMBERS = [
+  { name:'Racalvin', level:42, rank:'Warlord', online:true },
+  { name:'Shadowfang', level:38, rank:'Officer', online:true },
+  { name:'Ironmaul', level:35, rank:'Veteran', online:false },
+  { name:'Emberclaw', level:31, rank:'Member', online:true },
+  { name:'Duskwhisper', level:28, rank:'Recruit', online:false },
+];
+
+const ATTRIBUTES = [
+  { name:'Strength', val:28, icon:'💪', desc:'Increases melee damage and carry weight' },
+  { name:'Agility', val:22, icon:'💨', desc:'Increases attack speed and dodge chance' },
+  { name:'Intelligence', val:15, icon:'🧠', desc:'Increases spell damage and max mana' },
+  { name:'Vitality', val:32, icon:'❤', desc:'Increases max HP and HP regen' },
+  { name:'Endurance', val:18, icon:'🛡', desc:'Increases defense and stamina' },
+  { name:'Luck', val:10, icon:'🍀', desc:'Increases crit chance and drop rates' },
+];
+
+// ═══ RENDER ENGINE ═══
+
+function buildTabs() {
+  const strip = document.getElementById('tabStrip');
+  strip.innerHTML = TABS.map(t =>
+    `<button class="tab-btn ${t.id===activeTab?'active':''}" data-tab="${t.id}">${t.label}</button>`
+  ).join('');
+  strip.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = () => { activeTab = btn.dataset.tab; buildTabs(); renderContent(); };
+  });
+}
+
+function renderContent() {
+  const area = document.getElementById('contentArea');
+  const renderers = {
+    equipment: renderEquipment,
+    attributes: renderAttributes,
+    classSkill: renderClassSkills,
+    skillTree: renderWeaponSkills,
+    upgrade: renderUpgrades,
+    craft: renderCrafting,
+    quest: renderQuests,
+    guild: renderGuild
+  };
+  area.innerHTML = (renderers[activeTab] || (() => ''))();
+}
+
+function renderEquipment() {
+  return `
+    <div class="section-title">Equipment Loadout</div>
+    <div class="equip-layout">
+      <div class="equip-stack">
+        ${EQUIP_LEFT.map(s => `<div class="eq-slot"><span class="cat">${s}</span></div>`).join('')}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+        <div class="eq-center">Main Hand</div>
+        <div class="eq-slot" style="width:80px;height:80px"><span class="cat">Off-Hand</span></div>
+      </div>
+      <div class="equip-stack">
+        ${EQUIP_RIGHT.map(s => `<div class="eq-slot"><span class="cat">${s}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:20px">Equipped Set Bonuses</div>
+    <div style="padding:12px;background:linear-gradient(135deg,#1e1510,#160e08);border:1px solid var(--border-dim);border-radius:10px">
+      <div style="font-size:12px;color:var(--muted);font-style:italic">Equip matching armor pieces to unlock set bonuses...</div>
+    </div>
+  `;
+}
+
+function renderAttributes() {
+  return `
+    <div class="section-title">Character Attributes</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Available Points: <span style="color:var(--green);font-family:var(--font-mono)">5</span></div>
+    <div class="attr-grid">
+      ${ATTRIBUTES.map(a => `
+        <div class="attr-card">
+          <div class="attr-icon">${a.icon}</div>
+          <div class="attr-info">
+            <div class="name">${a.name}</div>
+            <div class="val">${a.val}</div>
+            <div class="desc">${a.desc}</div>
+          </div>
+          <button class="attr-btn" title="Add point">+</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderSkillTree(tree, label) {
+  let html = '';
+  tree.tiers.forEach(tier => {
+    html += `<div class="skill-tier">
+      <div class="tier-label">${tier.name}</div>
+      <div class="skill-grid">
+        ${tier.skills.map((sk, i) => {
+          const unlocked = Math.random() > 0.5;
+          return `<div class="skill-node ${unlocked ? 'unlocked' : ''}">
+            <div class="sk-icon">${sk.icon}</div>
+            <div>
+              <div class="sk-name">${sk.name}</div>
+              <div class="sk-desc">${sk.desc}</div>
+              <div class="sk-meta">
+                ${sk.chips.map(c => `<span class="chip ${c}">${c}</span>`).join('')}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+let activeClass = 'Warrior';
+function renderClassSkills() {
+  const classes = Object.keys(CLASS_TREES);
+  const tree = CLASS_TREES[activeClass];
+  return `
+    <div class="section-title">Class Skill Tree</div>
+    <div class="tree-selector">
+      ${classes.map(c => `<button class="tree-btn ${c===activeClass?'active':''}" onclick="activeClass='${c}';renderContent()">
+        <span class="class-badge ${c.toLowerCase()}">${c}</span>
+      </button>`).join('')}
+    </div>
+    ${renderSkillTree(tree)}
+  `;
+}
+
+let activeWeapon = 'Sword';
+function renderWeaponSkills() {
+  const weapons = Object.keys(WEAPON_TREES);
+  const tree = WEAPON_TREES[activeWeapon];
+  return `
+    <div class="section-title">Weapon Mastery Tree</div>
+    <div class="tree-selector">
+      ${weapons.map(w => `<button class="tree-btn ${w===activeWeapon?'active':''}" onclick="activeWeapon='${w}';renderContent()">
+        ${WEAPON_TREES[w].icon} ${w}
+      </button>`).join('')}
+    </div>
+    ${renderSkillTree(tree)}
+  `;
+}
+
+function renderCrafting() {
+  return `
+    <div class="section-title">Crafting Station</div>
+    <div class="craft-layout">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Ingredients</div>
+        <div class="craft-slots">
+          ${Array(6).fill(0).map((_,i) => `<div class="craft-slot">Slot ${i+1}</div>`).join('')}
+        </div>
+      </div>
+      <div class="craft-arrow">→</div>
+      <div style="text-align:center">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Result</div>
+        <div class="craft-result">?</div>
+      </div>
+      <button class="craft-btn">Craft</button>
+    </div>
+    <div class="section-title" style="margin-top:20px">Known Recipes</div>
+    <div style="font-size:11px;color:var(--muted);padding:12px;border:1px dashed var(--border-dim);border-radius:8px;text-align:center">
+      Discover recipes by combining ingredients...
+    </div>
+  `;
+}
+
+function renderQuests() {
+  return `
+    <div class="section-title">Active Quests</div>
+    ${SAMPLE_QUESTS.map(q => `
+      <div class="quest-card">
+        <div class="q-title">${q.title}</div>
+        <div class="q-desc">${q.desc}</div>
+        <div class="q-progress"><div class="q-fill" style="width:${q.progress}%"></div></div>
+        <div class="q-reward">Reward: ${q.reward}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderUpgrades() {
+  return `
+    <div class="section-title">Equipment Upgrades</div>
+    <div class="upgrade-grid">
+      ${SAMPLE_UPGRADES.map(u => `
+        <div class="upgrade-card">
+          <div class="u-name">${u.name}</div>
+          <div class="u-level">${u.level}</div>
+          <div class="u-desc">${u.desc}</div>
+          <div class="u-cost">Cost: ${u.cost}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderGuild() {
+  return `
+    <div class="section-title">Guild</div>
+    <div class="guild-header">
+      <div class="guild-crest">⚔</div>
+      <div class="guild-info">
+        <div class="gname">Grudge Warlords</div>
+        <div class="gmaster">Warlord: Racalvin</div>
+        <div class="gcap">Members: ${GUILD_MEMBERS.length} / 50</div>
+      </div>
+    </div>
+    <div class="section-title">Members</div>
+    <div class="member-list">
+      ${GUILD_MEMBERS.map(m => `
+        <div class="member-row">
+          <div class="member-dot ${m.online?'online':'offline'}"></div>
+          <span class="member-name">${m.name}</span>
+          <span class="member-lvl">Lv.${m.level}</span>
+          <span class="member-rank">${m.rank}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ═══ INVENTORY ═══
+function buildInventory() {
+  const grid = document.getElementById('invGrid');
+  let html = '';
+  for (let i = 0; i < 30; i++) {
+    const filled = Math.random() > 0.7;
+    html += `<div class="inv-cell ${filled?'filled':''}"></div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ═══ HOTBAR ═══
+function buildHotbar() {
+  const bar = document.getElementById('hotbar');
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  bar.innerHTML = keys.map(k => `<div class="hb-slot"><span class="key">${k}</span></div>`).join('');
+}
+
+// ═══ INIT ═══
+buildTabs();
+renderContent();
+buildInventory();
+buildHotbar();
+</script>
+</body>
+</html>

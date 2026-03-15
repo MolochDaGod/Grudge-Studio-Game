@@ -1,0 +1,26 @@
+RPG & MMO User Interface
+
+The pack includes more than 25 elements you will need to begin with your RPG or MMO
+game project. The asset is made with vectors and Layer Styles, the layers are well grouped and
+groups are properly named for easy management.
+
+GUI Elements Included:
+
+- Window Frame
+- Action Bar (2 Variants)
+- Menu
+- Unit Frame (3 Variants)
+- Loading bar
+- Mini map
+- Dialog box
+- Login box
+- Talents box
+- Spells box
+- Character Equipment box
+
+Files Included: PSD 
+
+Fonts: Chaparral Pro, Arial
+
+If you have any problems feel free to contact me and ask for assistance!
+Regards!

@@ -11,6 +11,7 @@ import { AnimState } from "@/components/three/CharacterModel";
 import { CombatEffectData, EffectType } from "@/components/three/CombatEffects";
 import { tileToWorld } from "@/components/three/TileGrid";
 import { CHARACTER_LORE } from "@/lib/lore";
+import { Minimap } from "@/components/ui/Minimap";
 import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
   SkillSlot, Skill, CHARACTER_WEAPON_MAP,
@@ -132,6 +133,7 @@ export default function Battle() {
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
   const [combatEffects, setCombatEffects] = useState<CombatEffectData[]>([]);
   const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
+  const [cameraFocus, setCameraFocus] = useState<[number, number, number] | null>(null);
 
   // Expire old effects every 250ms
   useEffect(() => {
@@ -614,26 +616,117 @@ export default function Battle() {
   }, [currentUnitId, units, endTurn, addLog]);
 
   const activeUnit = currentUnitId ? units.find(u => u.id === currentUnitId) : null;
-  const logEndRef = useRef<HTMLDivElement>(null);
 
+  // ── Auto-focus camera on unit whose turn it is ───────────────────────────
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [combatLog]);
+    if (!currentUnitId) return;
+    const unit = units.find(u => u.id === currentUnitId);
+    if (!unit || unit.hp <= 0) return;
+    const [wx, , wz] = tileToWorld(unit.position.x, unit.position.y, level.tileSize, 0.5);
+    setCameraFocus([wx, 0, wz]);
+  }, [currentUnitId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tileSize = level.tileSize;
 
   if (phase !== 'battle') return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background font-sans">
-      
-      {/* 3D Canvas Area */}
-      <div className="flex-1 relative min-h-0 flex flex-col">
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-10 p-4 pointer-events-none text-center">
-          <h2 className="font-display text-3xl text-primary text-glow uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Tactical Arena</h2>
-          <p className="text-sm text-white font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">Destroy the enemy forces to claim victory</p>
+    <div className="relative h-screen overflow-hidden bg-black select-none">
+
+      {/* ── TOP TURN ORDER STRIP ─────────────────────────────────────────── */}
+      <div className="absolute top-0 left-0 right-0 z-30 h-[52px] bg-[#0a0a10]/96 backdrop-blur-sm border-b border-white/10 flex items-center px-3 gap-3">
+        {/* Game label */}
+        <div className="shrink-0 font-display text-[9px] uppercase tracking-[0.2em] text-white/20 whitespace-nowrap">
+          Realm of Grudges
+        </div>
+        <div className="shrink-0 w-px h-5 bg-white/10" />
+
+        {/* Scrollable turn-order thumbnails */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex items-center gap-1.5 h-[40px]">
+            <AnimatePresence>
+              {turnOrder.map((id, index) => {
+                const u = units.find(u => u.id === id);
+                if (!u) return null;
+                const isActive = currentUnitId === u.id;
+                return (
+                  <motion.button
+                    key={u.id + index}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    title={`${u.name} — CT ${Math.round(Math.min(100, u.ct))}% · SPD ${u.speed} (click to focus camera)`}
+                    onClick={() => {
+                      const [wx, , wz] = tileToWorld(u.position.x, u.position.y, tileSize, 0.5);
+                      setCameraFocus([wx, 0, wz]);
+                    }}
+                    className={cn(
+                      "flex-shrink-0 w-9 h-[38px] rounded border overflow-hidden relative flex flex-col",
+                      "hover:scale-110 hover:z-10 transition-transform duration-100 cursor-pointer",
+                      u.isPlayerControlled ? "border-primary/50" : "border-destructive/50",
+                      isActive && "ring-2 ring-white scale-110 z-10"
+                    )}
+                  >
+                    {/* CT bar top */}
+                    <div className="h-1 bg-black/80 shrink-0 relative">
+                      <div
+                        className={cn("h-full transition-all", Math.min(100, u.ct) >= 100 ? "bg-yellow-400" : u.isPlayerControlled ? "bg-primary" : "bg-destructive")}
+                        style={{ width: `${Math.min(100, u.ct)}%` }}
+                      />
+                    </div>
+                    {/* Portrait */}
+                    <div className="flex-1 relative bg-black/60">
+                      <img
+                        src={`${BASE}images/chars/${u.characterId}.png`}
+                        alt={u.name}
+                        className="absolute inset-0 w-full h-full object-cover object-top"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }}
+                      />
+                      {/* Dark overlay for HP depletion */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50" style={{ height: `${100 - (u.hp / u.maxHp) * 100}%` }} />
+                      {/* Active arrow */}
+                      {isActive && <div className="absolute top-0.5 right-0.5 text-[7px] text-yellow-300 font-bold leading-none">▶</div>}
+                    </div>
+                    {/* HP bar bottom */}
+                    <div className="h-1 bg-black/80 shrink-0 relative">
+                      <div
+                        className="h-full bg-green-500 transition-all"
+                        style={{ width: `${(u.hp / u.maxHp) * 100}%` }}
+                      />
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
+          </div>
         </div>
 
-        <BattleScene 
+        {/* Right: turn status chip */}
+        {activeUnit && (
+          <div className={cn(
+            "shrink-0 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider rounded-full px-2.5 py-1 border",
+            activeUnit.isPlayerControlled
+              ? "text-emerald-400 border-emerald-700/40 bg-emerald-950/60"
+              : "text-red-400 border-red-800/40 bg-red-950/60"
+          )}>
+            {activeUnit.isPlayerControlled
+              ? <><Move className="w-3 h-3" />Your Turn</>
+              : <><Skull className="w-3 h-3" />Enemy</>
+            }
+          </div>
+        )}
+
+        {/* Far right: retreat */}
+        <button
+          onClick={() => setLocation('/')}
+          className="shrink-0 text-[9px] text-white/20 hover:text-white/50 transition-colors uppercase tracking-wider"
+        >
+          ← Flee
+        </button>
+      </div>
+
+      {/* ── 3D SCENE: fills viewport minus top/bottom bars ─────────────────── */}
+      <div className="absolute inset-0" style={{ top: 52, bottom: 130 }}>
+        <BattleScene
           units={units}
           level={level}
           reachableTiles={reachableTiles}
@@ -643,376 +736,252 @@ export default function Battle() {
           onTileClick={handleTileClick}
           animStates={animStates}
           combatEffects={combatEffects}
+          cameraFocus={cameraFocus}
         />
       </div>
 
-      {/* Right Area: Sidebar */}
+      {/* ── FLOATING COMBAT LOG (bottom-right, above minimap) ─────────────── */}
       <div
-        className="relative z-10 w-full md:w-[320px] lg:w-[380px] border-l border-border flex flex-col h-screen shadow-[-10px_0_30px_rgba(0,0,0,0.5)]"
-        style={{
-          backgroundImage: `url('${UI("Windows/Window/Window_Background.png")}')`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "64px 64px",
-        }}
+        className="absolute right-3 z-20 flex flex-col-reverse gap-0.5 pointer-events-none"
+        style={{ bottom: 300, width: 220 }}
       >
-        
-        {/* Turn Order */}
-        <div className="p-4 border-b border-white/10 shrink-0">
-          <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
-            <FastForward className="w-3 h-3" /> Turn Order
-          </h3>
-          <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-            <AnimatePresence>
-              {turnOrder.map((id, index) => {
-                const u = units.find(u => u.id === id);
-                if (!u) return null;
-                return (
-                  <motion.div 
-                    key={u.id + index}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    title={`${u.name} — CT ${Math.round(Math.min(100, u.ct))}% · SPD ${u.speed}`}
-                    className={cn(
-                      "flex-shrink-0 w-12 h-14 rounded border overflow-hidden relative flex flex-col",
-                      u.isPlayerControlled ? "border-primary" : "border-destructive",
-                      currentUnitId === u.id && "ring-2 ring-white scale-110 z-10"
-                    )}
-                  >
-                    {/* Action bar (CT) at top — amber fill */}
-                    <div className="relative h-1.5 bg-black shrink-0">
-                      <motion.div
-                        className={cn(
-                          "h-full",
-                          Math.min(100, u.ct) >= 100
-                            ? "bg-gradient-to-r from-amber-500 to-yellow-300"
-                            : "bg-amber-700",
-                        )}
-                        initial={{ width: `${Math.min(100, u.ct)}%` }}
-                        animate={{ width: `${Math.min(100, u.ct)}%` }}
-                        transition={{ type: "spring", stiffness: 80, damping: 18 }}
-                      />
-                    </div>
+        <AnimatePresence initial={false}>
+          {[...combatLog].reverse().slice(0, 8).map(log => (
+            <motion.div
+              key={log.id}
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 0.85, x: 0 }}
+              exit={{ opacity: 0 }}
+              className={cn(
+                "text-[10px] font-mono px-2 py-0.5 rounded-sm bg-black/70 backdrop-blur-sm border border-white/5 leading-snug",
+                log.type === 'damage' ? 'text-orange-400' :
+                log.type === 'heal'   ? 'text-green-400'  :
+                log.type === 'buff'   ? 'text-blue-400'   :
+                log.type === 'debuff' ? 'text-purple-400' :
+                'text-white/35'
+              )}
+            >
+              {log.text}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
-                    {/* Portrait */}
-                    <img 
-                      src={`${import.meta.env.BASE_URL}images/chars/${u.characterId}.png`} 
-                      alt={u.name} 
-                      className="flex-1 w-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiNmZmYiPj88L3RleHQ+PC9zdmc+';
-                      }}
-                    />
+      {/* ── MINIMAP ────────────────────────────────────────────────────────── */}
+      <div className="absolute right-3 z-20" style={{ bottom: 138 }}>
+        <Minimap
+          units={units}
+          gridW={GRID_W}
+          gridH={GRID_H}
+          tileSize={tileSize}
+          currentUnitId={currentUnitId}
+          onFocusTile={(wx, wz) => setCameraFocus([wx, 0, wz])}
+        />
+      </div>
 
-                    {/* HP bar at bottom — green/red */}
-                    <div className="relative h-1 bg-black shrink-0">
-                      <motion.div
-                        className={cn("h-full", u.isPlayerControlled ? "bg-green-500" : "bg-red-500")}
-                        initial={{ width: `${(u.hp / u.maxHp) * 100}%` }}
-                        animate={{ width: `${(u.hp / u.maxHp) * 100}%` }}
-                        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                      />
-                    </div>
+      {/* ── ENEMY TURN BANNER ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {activeUnit && !activeUnit.isPlayerControlled && (
+          <motion.div
+            key="enemy-banner"
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="absolute z-40 pointer-events-none"
+            style={{ top: 60, left: '50%', transform: 'translateX(-50%)' }}
+          >
+            <div className="bg-red-950/90 border border-red-700/50 rounded-full px-4 py-1.5 flex items-center gap-2 text-sm font-bold text-red-300 shadow-[0_4px_24px_rgba(180,20,20,0.5)] backdrop-blur-sm">
+              <Skull className="w-3.5 h-3.5 animate-pulse" />
+              {activeUnit.name} is acting…
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-                    {/* Craftpix SmallUnitFrame overlay */}
-                    <div
-                      className="absolute inset-0 pointer-events-none z-20"
-                      style={{
-                        backgroundImage: `url('${UI("Mobile/Unit Frames/SmallUnitFrame_Background.png")}')`,
-                        backgroundSize: "100% 100%",
-                        backgroundRepeat: "no-repeat",
-                        opacity: 0.75,
-                        mixBlendMode: "screen",
-                      }}
-                    />
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
+      {/* ── BOTTOM HUD ─────────────────────────────────────────────────────── */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 h-[130px] bg-[#070710]/97 backdrop-blur-sm border-t border-white/10 flex items-stretch">
+
+        {/* LEFT column: portrait + stats */}
+        <div className="flex items-center gap-2.5 px-3 border-r border-white/8 shrink-0" style={{ width: 310 }}>
+          {activeUnit ? (
+            <>
+              {/* Portrait */}
+              <div className="relative h-[104px] w-[60px] shrink-0 rounded overflow-hidden border border-white/15">
+                <img
+                  src={`${BASE}images/chars/${activeUnit.characterId}.png`}
+                  alt={activeUnit.name}
+                  className="absolute inset-0 w-full h-full object-cover object-top"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }}
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{ background: activeUnit.isPlayerControlled ? 'rgba(0,30,0,0.3)' : 'rgba(30,0,0,0.3)' }}
+                />
+              </div>
+
+              {/* Stat column */}
+              <div className="flex-1 min-w-0 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-display text-sm font-bold text-white truncate">{activeUnit.name}</span>
+                  {activeUnit.isPlayerControlled
+                    ? <span className="text-[8px] shrink-0 px-1 py-0.5 rounded-full bg-emerald-900/60 text-emerald-400 border border-emerald-700/30">Ally</span>
+                    : <span className="text-[8px] shrink-0 px-1 py-0.5 rounded-full bg-red-900/60 text-red-400 border border-red-700/30">Enemy</span>
+                  }
+                </div>
+
+                <HealthBar current={activeUnit.hp} max={activeUnit.maxHp} label="HP" />
+                <StatBar current={activeUnit.mp ?? 0} max={activeUnit.maxMp ?? 1} label="MP" fillClass="bg-blue-500" borderClass="border-blue-900/50" />
+                <StatBar current={activeUnit.stamina ?? 0} max={activeUnit.maxStamina ?? 1} label="ST" fillClass="bg-orange-500" borderClass="border-orange-900/50" />
+                <ActionBar ct={activeUnit.ct} speed={activeUnit.speed} isActive={activeUnit.id === currentUnitId} />
+
+                <div className="flex items-center gap-2 text-[9px] font-mono text-white/35">
+                  <span>ATK {activeUnit.attack}</span>
+                  <span>DEF {activeUnit.defense}</span>
+                  <span>MOV {activeUnit.move}</span>
+                  <span>SPD {activeUnit.speed}</span>
+                  {activeUnit.isPlayerControlled && (
+                    <span className="ml-1 flex items-center gap-1">
+                      <button onClick={() => rotateFacing(activeUnit.id, 'ccw')} className="hover:text-white transition-colors" title="Rotate CCW">
+                        <RotateCcw className="w-2.5 h-2.5" />
+                      </button>
+                      <span className="text-white/60 font-bold w-3 text-center">{['N','E','S','W'][activeUnit.facing ?? 2]}</span>
+                      <button onClick={() => rotateFacing(activeUnit.id, 'cw')} className="hover:text-white transition-colors" title="Rotate CW">
+                        <RotateCw className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 text-center text-white/20 text-xs italic">Awaiting turn…</div>
+          )}
         </div>
 
-        {/* Current Unit Info */}
-        <div className="p-4 border-b border-white/10 shrink-0 relative overflow-hidden">
-          {/* Craftpix UnitFrame_Main_Background as subtle section texture */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage: `url('${UI("HUD/Unit Frames/Main/UnitFrame_Main_Background.png")}')`,
-              backgroundSize: "100% auto",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "top center",
-              opacity: 0.12,
-              mixBlendMode: "screen",
-            }}
-          />
-          {activeUnit ? (
-            <div className="animate-in fade-in relative z-10">
-              <div className="flex gap-4 mb-3">
-                {/* Portrait with Avatar overlay */}
-                <div className="w-20 h-20 rounded border border-white/20 overflow-hidden shrink-0 bg-black/50 relative">
-                  <img 
-                    src={`${import.meta.env.BASE_URL}images/chars/${activeUnit.characterId}.png`} 
-                    alt={activeUnit.name} 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiNmZmYiPj88L3RleHQ+PC9zdmc+';
+        {/* CENTER: 5 skill slots */}
+        <div className="flex-1 flex items-center justify-center px-4 gap-2.5 border-r border-white/8">
+          {activeUnit?.isPlayerControlled && activeUnit.id === currentUnitId ? (
+            ([1, 2, 3, 4, 5] as SkillSlot[]).map(slot => {
+              const slotKey = `skill_${slot}` as const;
+              const loadout = equippedSkills[activeUnit.id] || getDefaultSkillLoadout(activeUnit.characterId);
+              const skillId = loadout[slot];
+              const skill = skillId ? getSkillById(skillId) : undefined;
+              const cdMap = skillCooldowns[activeUnit.id] || {};
+              const cd = skillId ? (cdMap[skillId] || 0) : 0;
+              const isUltimateUsed = skillId ? (cdMap[skillId] === 999) : false;
+              const isOnCooldown = cd > 0;
+              const isActive = actionMode === slotKey;
+              const slotStyle = SLOT_LABELS[slot];
+              const isDisabled = activeUnit.hasActed || isOnCooldown || isUltimateUsed;
+              const tierStyle = skill ? (TIER_STYLES[skill.tier] ?? TIER_STYLES.T1) : null;
+              return (
+                <div key={slot} className="relative">
+                  {hoveredSlot === slot && skill && tierStyle && (
+                    <SkillTooltip skill={skill} tierLabel={tierStyle.label} tierColor={tierStyle.color} />
+                  )}
+                  <button
+                    disabled={isDisabled}
+                    onMouseEnter={() => setHoveredSlot(slot)}
+                    onMouseLeave={() => setHoveredSlot(null)}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      if (isActive) {
+                        setActionMode('idle');
+                        setAttackableTiles([]);
+                      } else {
+                        setActionMode(slotKey);
+                        setReachableTiles([]);
+                        setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range));
+                      }
                     }}
-                  />
-                  {/* Craftpix Avatar Overlay */}
-                  <div
-                    className="absolute inset-0 pointer-events-none z-10"
+                    className={cn(
+                      "relative flex flex-col items-center justify-center rounded border transition-all duration-150",
+                      "w-[80px] h-[96px] overflow-hidden",
+                      isActive
+                        ? "border-primary shadow-[0_0_16px_rgba(212,160,23,0.65)]"
+                        : isDisabled
+                          ? "border-white/5 opacity-35 cursor-not-allowed"
+                          : "border-white/15 hover:border-primary/50 cursor-pointer hover:shadow-[0_0_10px_rgba(212,160,23,0.35)]"
+                    )}
                     style={{
-                      backgroundImage: `url('${UI("HUD/Unit Frames/Main/Avatar/UnitFrame_Main_Avatar_Overlay.png")}')`,
+                      backgroundImage: `url('${UI("HUD/Action Bar/Slots/ActionBar_MainSlot_Background.png")}')`,
                       backgroundSize: "100% 100%",
                       backgroundRepeat: "no-repeat",
-                      opacity: 0.8,
-                      mixBlendMode: "screen",
+                      filter: isActive
+                        ? "brightness(1.35) sepia(0.5) hue-rotate(-10deg)"
+                        : isDisabled
+                        ? "brightness(0.45) saturate(0.2)"
+                        : "brightness(0.88)",
                     }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <h2 className={cn("font-display text-lg font-bold leading-tight uppercase", activeUnit.isPlayerControlled ? "text-primary text-glow" : "text-destructive text-glow-red")}>
-                    {activeUnit.name}
-                  </h2>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest">{activeUnit.role}</p>
-                </div>
-              </div>
-
-              {/* ── Stat bars: HP / Mana / Stamina / Action ── */}
-              <div className="space-y-2">
-                <HealthBar current={activeUnit.hp} max={activeUnit.maxHp} />
-                <StatBar
-                  current={activeUnit.mana ?? 0}
-                  max={activeUnit.maxMana ?? 1}
-                  label="Mana"
-                  fillClass="bg-blue-600"
-                  borderClass="border-blue-900/50"
-                />
-                <StatBar
-                  current={activeUnit.stamina ?? 0}
-                  max={activeUnit.maxStamina ?? 1}
-                  label="Stamina"
-                  fillClass="bg-orange-600"
-                  borderClass="border-orange-900/50"
-                />
-                <ActionBar
-                  ct={activeUnit.ct}
-                  speed={activeUnit.speed}
-                  isActive={activeUnit.id === currentUnitId}
-                />
-              </div>
-              
-              <div className="grid grid-cols-4 gap-2 mt-3 text-xs font-mono text-center">
-                <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block text-[10px]">ATK</span>{activeUnit.attack}
-                </div>
-                <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block text-[10px]">DEF</span>{activeUnit.defense}
-                </div>
-                <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block text-[10px]">MOV</span>{activeUnit.move}
-                </div>
-                <div className="bg-black/50 p-1 rounded border border-white/5">
-                  <span className="text-muted-foreground block text-[10px]">RNG</span>{activeUnit.range}
-                </div>
-              </div>
-
-              {/* Facing direction controls */}
-              {activeUnit.isPlayerControlled && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Facing:</span>
-                  <span className="text-[10px] font-mono text-white/70 w-6 text-center">
-                    {['N','E','S','W'][activeUnit.facing ?? 2]}
-                  </span>
-                  <button
-                    onClick={() => rotateFacing(activeUnit.id, 'ccw')}
-                    className="p-1 rounded border border-white/15 bg-black/40 hover:bg-white/10 text-white/60 hover:text-white"
-                    title="Rotate counter-clockwise"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <div className="absolute top-1 left-1.5 text-[9px] font-display font-bold" style={{ color: slotStyle.color }}>
+                      {slotStyle.roman}
+                    </div>
+                    {skill ? (
+                      <>
+                        <div className="text-[26px] leading-none mt-2">{skill.icon}</div>
+                        <div className="text-[9px] text-center leading-tight text-white/65 mt-1 px-1 truncate w-full">{skill.name}</div>
+                        {isOnCooldown && !isUltimateUsed && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/72 text-base font-bold text-orange-400">{cd}</div>
+                        )}
+                        {isUltimateUsed && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-[9px] text-white/25">Used</div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-white/12 text-xl font-display">{slotStyle.roman}</div>
+                    )}
+                    <div className="absolute bottom-1 right-1.5 text-[8px] text-white/18 font-mono">{slot}</div>
                   </button>
-                  <button
-                    onClick={() => rotateFacing(activeUnit.id, 'cw')}
-                    className="p-1 rounded border border-white/15 bg-black/40 hover:bg-white/10 text-white/60 hover:text-white"
-                    title="Rotate clockwise"
-                  >
-                    <RotateCw className="w-3 h-3" />
-                  </button>
-                  <span className="text-[9px] text-white/30 ml-1">(rear = ½ DEF)</span>
                 </div>
-              )}
-
-              {CHARACTER_LORE[activeUnit.characterId] && (
-                 <div className="mt-3 text-[10px] text-muted-foreground italic border-l-2 border-primary/30 pl-2 line-clamp-2">
-                    {CHARACTER_LORE[activeUnit.characterId].quote}
-                 </div>
-              )}
-            </div>
+              );
+            })
           ) : (
-            <div className="h-32 flex items-center justify-center text-muted-foreground italic">
-              Calculating turns...
+            <div className="flex items-center gap-2 text-white/25 animate-pulse">
+              <Skull className="w-4 h-4 text-red-700/60" />
+              <span className="text-xs font-display uppercase tracking-widest">Enemy taking turn…</span>
             </div>
           )}
         </div>
 
-        {/* Action Bar */}
-        <div className="p-3 border-b border-white/10 shrink-0">
+        {/* RIGHT: Move + End Turn */}
+        <div className="flex flex-col items-stretch justify-center gap-2 px-3 shrink-0" style={{ width: 126 }}>
           {activeUnit?.isPlayerControlled && activeUnit.id === currentUnitId ? (
             <>
-              {/* Move Button */}
-              <div className="mb-2">
-                <FantasyButton 
-                  onClick={() => {
-                    const isMove = actionMode === 'move';
-                    setActionMode(isMove ? 'idle' : 'move');
-                    setAttackableTiles([]);
-                    setReachableTiles(isMove ? [] : getReachableTiles(activeUnit.position, activeUnit.move));
-                  }}
-                  disabled={activeUnit.hasMoved}
-                  variant={actionMode === 'move' ? 'primary' : 'secondary'}
-                  className="w-full text-xs h-8"
-                >
-                  <Move className="w-3 h-3 mr-2" />
-                  {activeUnit.hasMoved ? 'Moved' : 'Move'}
-                </FantasyButton>
-              </div>
-
-              {/* 5-Slot Skill Action Bar */}
-              <div className="flex gap-1 mb-2 relative">
-                {([1, 2, 3, 4, 5] as SkillSlot[]).map(slot => {
-                  const slotKey = `skill_${slot}` as const;
-                  const loadout = equippedSkills[activeUnit.id] || getDefaultSkillLoadout(activeUnit.characterId);
-                  const skillId = loadout[slot];
-                  const skill = skillId ? getSkillById(skillId) : undefined;
-                  const cdMap = skillCooldowns[activeUnit.id] || {};
-                  const cd = skillId ? (cdMap[skillId] || 0) : 0;
-                  const isUltimateUsed = skillId ? (cdMap[skillId] === 999) : false;
-                  const isOnCooldown = cd > 0;
-                  const isActive = actionMode === slotKey;
-                  const slotStyle = SLOT_LABELS[slot];
-                  const isDisabled = activeUnit.hasActed || isOnCooldown || isUltimateUsed;
-                  const tierStyle = skill ? (TIER_STYLES[skill.tier] ?? TIER_STYLES.T1) : null;
-
-                  return (
-                    <div key={slot} className="relative flex-1">
-                      {/* Rich tooltip shown on hover */}
-                      {hoveredSlot === slot && skill && tierStyle && (
-                        <SkillTooltip skill={skill} tierLabel={tierStyle.label} tierColor={tierStyle.color} />
-                      )}
-                      <button
-                        disabled={isDisabled}
-                        onMouseEnter={() => setHoveredSlot(slot)}
-                        onMouseLeave={() => setHoveredSlot(null)}
-                        onClick={() => {
-                          if (isDisabled) return;
-                          if (isActive) {
-                            setActionMode('idle');
-                            setAttackableTiles([]);
-                          } else {
-                            setActionMode(slotKey);
-                            setReachableTiles([]);
-                            setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range));
-                          }
-                        }}
-                        className={cn(
-                          "relative w-full flex flex-col items-center justify-center rounded border transition-all duration-150 py-1.5 px-1",
-                          "min-h-[56px] overflow-hidden",
-                          isActive
-                            ? "border-primary shadow-[0_0_10px_rgba(212,160,23,0.5)]"
-                            : isDisabled
-                              ? "border-white/5 opacity-50 cursor-not-allowed"
-                              : "border-white/15 hover:border-primary/50 cursor-pointer"
-                        )}
-                        style={{
-                          backgroundImage: `url('${UI("HUD/Action Bar/Slots/ActionBar_MainSlot_Background.png")}')`,
-                          backgroundSize: "100% 100%",
-                          backgroundRepeat: "no-repeat",
-                          filter: isActive
-                            ? "brightness(1.3) sepia(0.5) hue-rotate(-10deg)"
-                            : isDisabled
-                            ? "brightness(0.5) saturate(0.3)"
-                            : "brightness(0.85)",
-                        }}
-                      >
-                        {/* Slot Roman numeral */}
-                        <div
-                          className="absolute top-0.5 left-1 text-[8px] font-display font-bold"
-                          style={{ color: slotStyle.color }}
-                        >
-                          {slotStyle.roman}
-                        </div>
-
-                        {/* Skill icon + name */}
-                        {skill ? (
-                          <>
-                            <div className="text-lg leading-none mt-1">{skill.icon}</div>
-                            <div className="text-[8px] text-center leading-tight text-white/70 mt-0.5 px-0.5 truncate w-full text-center">
-                              {skill.name}
-                            </div>
-                            {isOnCooldown && !isUltimateUsed && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs font-bold text-orange-400">
-                                {cd}
-                              </div>
-                            )}
-                            {isUltimateUsed && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-[9px] text-muted-foreground">
-                                Used
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="text-white/20 text-xs font-display mt-1">{slotStyle.roman}</div>
-                        )}
-
-                        {/* Hotkey number */}
-                        <div className="absolute bottom-0.5 right-1 text-[8px] text-white/25 font-mono">{slot}</div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* End Turn */}
-              <FantasyButton 
+              <FantasyButton
+                onClick={() => {
+                  const isMove = actionMode === 'move';
+                  setActionMode(isMove ? 'idle' : 'move');
+                  setAttackableTiles([]);
+                  setReachableTiles(isMove ? [] : getReachableTiles(activeUnit.position, activeUnit.move));
+                }}
+                disabled={activeUnit.hasMoved}
+                variant={actionMode === 'move' ? 'primary' : 'secondary'}
+                className="w-full text-xs h-9"
+              >
+                <Move className="w-3 h-3 mr-1.5" />
+                {activeUnit.hasMoved ? 'Moved' : 'Move'}
+              </FantasyButton>
+              <FantasyButton
                 onClick={endTurn}
                 variant="ghost"
-                className="w-full text-xs h-8 border border-white/10"
+                className="w-full text-xs h-9 border border-white/10"
               >
-                End Turn / Wait
+                End Turn
               </FantasyButton>
             </>
           ) : (
-            <div className="py-4 text-center text-muted-foreground animate-pulse flex items-center justify-center gap-2">
-              <Skull className="w-4 h-4" /> Enemy is thinking...
-            </div>
+            <button
+              onClick={() => setLocation('/')}
+              className="text-[10px] text-white/20 hover:text-white/45 transition-colors underline text-center"
+            >
+              ← Retreat
+            </button>
           )}
-        </div>
-
-        {/* Combat Log */}
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-black/40 font-mono text-xs">
-          <AnimatePresence initial={false}>
-            {combatLog.map((log) => (
-              <motion.div 
-                key={log.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={cn(
-                  "mb-2 pb-1 border-b border-white/5",
-                  log.type === 'damage' ? 'text-orange-400' :
-                  log.type === 'heal' ? 'text-green-400' :
-                  log.type === 'buff' ? 'text-blue-400' :
-                  log.type === 'debuff' ? 'text-purple-400' :
-                  'text-muted-foreground'
-                )}
-              >
-                {log.text}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={logEndRef} />
         </div>
 
       </div>
     </div>
   );
 }
+

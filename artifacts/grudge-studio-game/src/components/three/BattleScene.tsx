@@ -1,5 +1,5 @@
-import React, { Suspense, useState, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Sky } from '@react-three/drei';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
@@ -20,6 +20,33 @@ interface BattleSceneProps {
   onTileClick: (x: number, y: number) => void;
   animStates: Record<string, AnimState>;
   combatEffects?: CombatEffectData[];
+  cameraFocus?: [number, number, number] | null;
+  onUnitDoubleClick?: (unitId: string) => void;
+}
+
+// ── Camera Focus Rig — smooth pan to target when currentUnitId changes ─────
+function CameraFocusRig({ focus }: { focus: [number, number, number] | null | undefined }) {
+  const { controls } = useThree() as any;
+  const targetVec = useRef(new THREE.Vector3());
+  const moving = useRef(false);
+
+  useEffect(() => {
+    if (focus) {
+      targetVec.current.set(focus[0], focus[1], focus[2]);
+      moving.current = true;
+    }
+  }, [focus]);
+
+  useFrame((_, delta) => {
+    if (!controls || !moving.current) return;
+    const t = controls.target as THREE.Vector3;
+    const dist = t.distanceTo(targetVec.current);
+    if (dist < 0.08) { moving.current = false; return; }
+    t.lerp(targetVec.current, Math.min(1, delta * 4.5));
+    controls.update();
+  });
+
+  return null;
 }
 
 const FACING_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
@@ -199,7 +226,7 @@ function SceneSky({ theme, fogColor }: { theme: IslandTheme; fogColor: string })
 export function BattleScene({
   units, level, reachableTiles, attackableTiles,
   currentUnitId, actionMode, onTileClick, animStates,
-  combatEffects = [],
+  combatEffects = [], cameraFocus, onUnitDoubleClick,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
 
@@ -257,6 +284,7 @@ export function BattleScene({
       <pointLight position={[centerX * 2 - 10, 15, centerZ * 2 - 10]} color="#ff4422" intensity={0.8} distance={tileSize * 20} />
 
       <OrbitControls
+        makeDefault
         target={[centerX, 0, centerZ]}
         enablePan
         panSpeed={2}
@@ -265,6 +293,7 @@ export function BattleScene({
         minDistance={tileSize * 5}
         maxDistance={maxDist}
       />
+      <CameraFocusRig focus={cameraFocus} />
 
       {/* Island + ocean */}
       <IslandEnvironment

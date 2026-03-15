@@ -28,23 +28,11 @@ export function WeaponPicker({ heroName, heroPortrait, weapons, onSelect, onCanc
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="w-full max-w-4xl border border-primary/40 rounded-sm shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden relative"
-          style={{
-            backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Windows/Window/Window_Background.png')`,
-            backgroundRepeat: "repeat",
-            backgroundSize: "64px 64px",
-          }}
+          className="w-full max-w-4xl border border-primary/30 rounded-sm shadow-[0_0_80px_rgba(0,0,0,0.95)] overflow-hidden relative bg-[#0c0c18]"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div
-            className="flex items-center justify-between px-6 py-4 border-b border-primary/20"
-            style={{
-              backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Windows/Window/Header/Window_Header_Background.png')`,
-              backgroundRepeat: "repeat",
-              backgroundSize: "64px 64px",
-            }}
-          >
+          <div className="flex items-center justify-between px-6 py-4 border-b border-primary/15 bg-[#0a0a14]">
             <div className="flex items-center gap-4">
               <img
                 src={heroPortrait}
@@ -74,12 +62,7 @@ export function WeaponPicker({ heroName, heroPortrait, weapons, onSelect, onCanc
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
                 onClick={() => onSelect(weapon.weaponType)}
-                className="group text-left border border-white/15 hover:border-primary/60 rounded-sm p-5 transition-all duration-200 hover:shadow-[0_0_20px_rgba(212,160,23,0.2)] focus:outline-none focus:border-primary"
-                style={{
-                  backgroundImage: `url('${import.meta.env.BASE_URL}images/ui/Windows/Inventory/Inventory_Slot_Background.png')`,
-                  backgroundRepeat: "repeat",
-                  backgroundSize: "64px 64px",
-                }}
+                className="group text-left border border-white/10 hover:border-primary/50 rounded-sm p-5 transition-all duration-200 bg-white/[0.03] hover:bg-white/[0.06] hover:shadow-[0_0_24px_rgba(212,160,23,0.18)] focus:outline-none focus:border-primary/60"
               >
                 {/* Icon + Name */}
                 <div className="flex items-center gap-3 mb-3">
