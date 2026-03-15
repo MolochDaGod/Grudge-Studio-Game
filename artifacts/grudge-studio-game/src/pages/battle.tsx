@@ -4,9 +4,9 @@ import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { HealthBar, StatBar, ActionBar } from "@/components/ui/health-bar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Skull, Move, FastForward, RotateCcw, RotateCw, Zap, Target, Clock, Star } from "lucide-react";
+import { Skull, Move, FastForward, RotateCcw, RotateCw, Zap, Target, Clock, Star, Eye, Layers, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BattleScene } from "@/components/three/BattleScene";
+import { BattleScene, CameraMode } from "@/components/three/BattleScene";
 import { AnimState } from "@/components/three/CharacterModel";
 import { CombatEffectData, EffectType } from "@/components/three/CombatEffects";
 import { tileToWorld } from "@/components/three/TileGrid";
@@ -134,6 +134,21 @@ export default function Battle() {
   const [combatEffects, setCombatEffects] = useState<CombatEffectData[]>([]);
   const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
   const [cameraFocus, setCameraFocus] = useState<[number, number, number] | null>(null);
+  const [cameraMode, setCameraMode] = useState<CameraMode>('free');
+
+  const CAMERA_META: Record<CameraMode, { label: string; icon: JSX.Element; next: CameraMode }> = {
+    'free':         { label: 'Free',    icon: <Eye className="w-3.5 h-3.5" />,    next: 'third-person' },
+    'third-person': { label: '3rd',     icon: <User className="w-3.5 h-3.5" />,   next: 'rts' },
+    'rts':          { label: 'RTS',     icon: <Layers className="w-3.5 h-3.5" />, next: 'free' },
+  };
+
+  const handleUnitDoubleClick = (unitId: string) => {
+    const u = units.find(x => x.id === unitId);
+    if (!u) return;
+    const [wx, , wz] = tileToWorld(u.position.x, u.position.y, level.tileSize, 0.5);
+    setCameraFocus([wx, 0, wz]);
+    setCameraMode('third-person');
+  };
 
   // Expire old effects every 250ms
   useEffect(() => {
@@ -715,6 +730,25 @@ export default function Battle() {
           </div>
         )}
 
+        {/* Camera mode toggle button */}
+        <div className="shrink-0 flex items-center">
+          <button
+            onClick={() => setCameraMode(m => CAMERA_META[m].next)}
+            className={cn(
+              "flex items-center gap-1.5 rounded border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-all",
+              cameraMode === 'third-person'
+                ? "border-cyan-600/60 bg-cyan-950/60 text-cyan-300 shadow-[0_0_8px_rgba(34,211,238,0.3)]"
+                : cameraMode === 'rts'
+                ? "border-violet-600/60 bg-violet-950/60 text-violet-300 shadow-[0_0_8px_rgba(167,139,250,0.3)]"
+                : "border-white/15 bg-white/5 text-white/45 hover:text-white/70 hover:border-white/30"
+            )}
+            title={`Camera: ${cameraMode} — click to cycle (free → 3rd person → RTS)`}
+          >
+            {CAMERA_META[cameraMode].icon}
+            {CAMERA_META[cameraMode].label}
+          </button>
+        </div>
+
         {/* Far right: retreat */}
         <button
           onClick={() => setLocation('/')}
@@ -737,6 +771,8 @@ export default function Battle() {
           animStates={animStates}
           combatEffects={combatEffects}
           cameraFocus={cameraFocus}
+          cameraMode={cameraMode}
+          onUnitDoubleClick={handleUnitDoubleClick}
         />
       </div>
 

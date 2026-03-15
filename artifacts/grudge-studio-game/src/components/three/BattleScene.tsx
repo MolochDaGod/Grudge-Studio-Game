@@ -10,6 +10,8 @@ import { NatureDecor } from './NatureDecor';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
+export type CameraMode = 'free' | 'third-person' | 'rts';
+
 interface BattleSceneProps {
   units: TacticalUnit[];
   level: LevelDef;
@@ -21,29 +23,99 @@ interface BattleSceneProps {
   animStates: Record<string, AnimState>;
   combatEffects?: CombatEffectData[];
   cameraFocus?: [number, number, number] | null;
+  cameraMode?: CameraMode;
   onUnitDoubleClick?: (unitId: string) => void;
 }
 
-// ── Camera Focus Rig — smooth pan to target when currentUnitId changes ─────
-function CameraFocusRig({ focus }: { focus: [number, number, number] | null | undefined }) {
-  const { controls } = useThree() as any;
-  const targetVec = useRef(new THREE.Vector3());
-  const moving = useRef(false);
+// ── Triple-mode Camera Controller ────────────────────────────────────────────
+// free        → normal OrbitControls (with optional smooth pan-to-focus)
+// third-person → locks behind the active unit, follows turn changes
+// rts          → locks high overhead, top-down strategy view
+function CameraController({
+  focus,
+  mode,
+  currentUnit,
+  centerX,
+  centerZ,
+  tileSize,
+  maxDist,
+}: {
+  focus: [number, number, number] | null | undefined;
+  mode: CameraMode;
+  currentUnit: TacticalUnit | null;
+  centerX: number;
+  centerZ: number;
+  tileSize: number;
+  maxDist: number;
+}) {
+  const { camera, controls } = useThree() as any;
 
+  // Smooth-pan target for 'free' mode
+  const panTarget = useRef(new THREE.Vector3());
+  const isPanning = useRef(false);
+
+  // Scratch vectors (avoid allocation in useFrame)
+  const _camPos = useRef(new THREE.Vector3());
+  const _lookAt = useRef(new THREE.Vector3());
+
+  // Pick up new focus whenever it changes
   useEffect(() => {
     if (focus) {
-      targetVec.current.set(focus[0], focus[1], focus[2]);
-      moving.current = true;
+      panTarget.current.set(focus[0], focus[1], focus[2]);
+      isPanning.current = true;
     }
   }, [focus]);
 
   useFrame((_, delta) => {
-    if (!controls || !moving.current) return;
-    const t = controls.target as THREE.Vector3;
-    const dist = t.distanceTo(targetVec.current);
-    if (dist < 0.08) { moving.current = false; return; }
-    t.lerp(targetVec.current, Math.min(1, delta * 4.5));
-    controls.update();
+    if (!controls) return;
+
+    if (mode === 'free') {
+      // ── Free orbit: re-enable controls and apply any pending smooth-pan
+      if (!controls.enabled) {
+        // Restore target so OrbitControls picks up cleanly
+        controls.target.copy(camera.position.clone().add(
+          new THREE.Vector3(0, 0, -5).applyQuaternion(camera.quaternion)
+        ));
+        controls.enabled = true;
+      }
+      if (isPanning.current) {
+        const t = controls.target as THREE.Vector3;
+        const dist = t.distanceTo(panTarget.current);
+        if (dist < 0.08) { isPanning.current = false; return; }
+        t.lerp(panTarget.current, Math.min(1, delta * 4.5));
+        controls.update();
+      }
+
+    } else if (mode === 'rts') {
+      // ── RTS: overhead bird's-eye, locked, centered on map
+      controls.enabled = false;
+      isPanning.current = false;
+      _camPos.current.set(centerX, maxDist * 0.85, centerZ + tileSize * 1.5);
+      _lookAt.current.set(centerX, 0, centerZ);
+      camera.position.lerp(_camPos.current, Math.min(1, delta * 2.2));
+      controls.target.lerp(_lookAt.current, Math.min(1, delta * 2.2));
+      camera.lookAt(_lookAt.current);
+
+    } else if (mode === 'third-person') {
+      // ── Third-person: locked behind & above the current unit
+      controls.enabled = false;
+      isPanning.current = false;
+      if (!currentUnit) return;
+
+      const [wx, , wz] = tileToWorld(currentUnit.position.x, currentUnit.position.y, tileSize, 0);
+      const angle = FACING_ANGLES[currentUnit.facing ?? 2];
+      // Direction unit is facing (in XZ plane)
+      const fwdX = Math.sin(angle);
+      const fwdZ = Math.cos(angle);
+
+      // Camera sits 6 units BEHIND and 4 units UP from the unit
+      _camPos.current.set(wx - fwdX * 6, 4, wz - fwdZ * 6);
+      _lookAt.current.set(wx, 1, wz);
+
+      camera.position.lerp(_camPos.current, Math.min(1, delta * 3.5));
+      controls.target.lerp(_lookAt.current, Math.min(1, delta * 3.5));
+      camera.lookAt(_lookAt.current);
+    }
   });
 
   return null;
@@ -226,9 +298,10 @@ function SceneSky({ theme, fogColor }: { theme: IslandTheme; fogColor: string })
 export function BattleScene({
   units, level, reachableTiles, attackableTiles,
   currentUnitId, actionMode, onTileClick, animStates,
-  combatEffects = [], cameraFocus, onUnitDoubleClick,
+  combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
+  const currentUnit = units.find(u => u.id === currentUnitId) ?? null;
 
   const { gridW, gridH, tileSize, fogColor, fogNear, fogFar, theme } = level;
   const centerX = (gridW * tileSize) / 2;
@@ -288,12 +361,20 @@ export function BattleScene({
         target={[centerX, 0, centerZ]}
         enablePan
         panSpeed={2}
-        minPolarAngle={Math.PI / 8}
-        maxPolarAngle={Math.PI / 2.3}
-        minDistance={tileSize * 5}
+        minPolarAngle={cameraMode === 'rts' ? Math.PI / 16 : Math.PI / 8}
+        maxPolarAngle={cameraMode === 'rts' ? Math.PI / 8 : Math.PI / 2.3}
+        minDistance={tileSize * 3}
         maxDistance={maxDist}
       />
-      <CameraFocusRig focus={cameraFocus} />
+      <CameraController
+        focus={cameraFocus}
+        mode={cameraMode}
+        currentUnit={currentUnit}
+        centerX={centerX}
+        centerZ={centerZ}
+        tileSize={tileSize}
+        maxDist={maxDist}
+      />
 
       {/* Island + ocean */}
       <IslandEnvironment
@@ -323,14 +404,21 @@ export function BattleScene({
             const worldPos = tileToWorld(unit.position.x, unit.position.y, tileSize);
             const facingAngle = FACING_ANGLES[unit.facing ?? 2];
             return (
-              <CharacterModel
+              <group
                 key={unit.id}
-                unit={unit}
-                position={worldPos}
-                facingAngle={facingAngle}
-                isSelected={currentUnitId === unit.id}
-                animState={animStates[unit.id] || 'idle'}
-              />
+                onDoubleClick={e => {
+                  e.stopPropagation();
+                  onUnitDoubleClick?.(unit.id);
+                }}
+              >
+                <CharacterModel
+                  unit={unit}
+                  position={worldPos}
+                  facingAngle={facingAngle}
+                  isSelected={currentUnitId === unit.id}
+                  animState={animStates[unit.id] || 'idle'}
+                />
+              </group>
             );
           })}
 
