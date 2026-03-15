@@ -85,7 +85,13 @@ function SkillTooltip({ skill, tierLabel, tierColor }: { skill: Skill; tierLabel
 
         {/* Tags + meta */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]">
-          <span className="flex items-center gap-1 text-white/50"><Target className="w-2.5 h-2.5" />Range {skill.range ?? 1}</span>
+          <span className="flex items-center gap-1 text-white/50"><Target className="w-2.5 h-2.5" />Range {skill.attackType === 'dash' ? `${skill.range}+${skill.dashBonus ?? 0} dash` : (skill.range ?? 1)}</span>
+          {skill.attackType === 'jump' && (
+            <span className="flex items-center gap-1 text-emerald-400 font-bold">🦘 Leap (ignores walls)</span>
+          )}
+          {skill.attackType === 'dash' && (
+            <span className="flex items-center gap-1 text-amber-400 font-bold">💨 Dash (ignores LOS)</span>
+          )}
           {skill.cooldown > 0 && skill.cooldown < 999 && (
             <span className="flex items-center gap-1 text-orange-400/80"><Clock className="w-2.5 h-2.5" />CD {skill.cooldown}</span>
           )}
@@ -250,16 +256,23 @@ export default function Battle() {
     return reachable;
   };
 
-  const getAttackableTiles = (start: {x: number, y: number}, range: number) => {
+  const getAttackableTiles = (start: {x: number, y: number}, range: number, skill?: Skill) => {
+    const attackType = skill?.attackType ?? 'normal';
+    const effectiveRange = attackType === 'dash'
+      ? range + (skill?.dashBonus ?? 0)
+      : range;
     const tiles: {x: number; y: number}[] = [];
     for (let x = 0; x < GRID_W; x++) {
       for (let y = 0; y < GRID_H; y++) {
         const dist = Math.abs(start.x - x) + Math.abs(start.y - y);
-        if (dist <= range && dist > 0) {
-          // Only include tiles with clear LOS
-          if (hasLineOfSight(start, {x, y}, level.visionBlockers)) {
-            tiles.push({x, y});
-          }
+        if (dist <= effectiveRange && dist > 0) {
+          // jump: ignores line-of-sight (leaps over walls)
+          // dash: also ignores LOS (charges through)
+          // normal: requires clear LOS
+          const passesLos = attackType !== 'normal'
+            ? true
+            : hasLineOfSight(start, {x, y}, level.visionBlockers);
+          if (passesLos) tiles.push({x, y});
         }
       }
     }
@@ -927,7 +940,7 @@ export default function Battle() {
                       } else {
                         setActionMode(slotKey);
                         setReachableTiles([]);
-                        setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range));
+                        setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range, skill ?? undefined));
                       }
                     }}
                     className={cn(

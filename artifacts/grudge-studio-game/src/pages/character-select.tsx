@@ -11,6 +11,7 @@ import { Loader2, ArrowLeft, Skull, Sword } from "lucide-react";
 import { CHARACTER_LORE } from "@/lib/lore";
 import { getHeroWeaponOptions } from "@/lib/hero-weapons";
 import { WEAPON_SKILL_TREES, SkillSlot } from "@/lib/weapon-skills";
+import { getLevelWithEdits } from "@/lib/levels";
 
 export default function CharacterSelect() {
   const [, setLocation] = useLocation();
@@ -21,7 +22,7 @@ export default function CharacterSelect() {
   const [weaponByCharId, setWeaponByCharId] = useState<Record<string, string>>({});
   const [loadoutByCharId, setLoadoutByCharId] = useState<Record<string, Record<SkillSlot, string>>>({});
 
-  const { initBattle, setAllCharacters, setPlayerSquad, setEquippedSkills } = useGameStore();
+  const { initBattle, setAllCharacters, setPlayerSquad, setEquippedSkills, currentLevelId } = useGameStore();
 
   useEffect(() => {
     if (characters) {
@@ -72,6 +73,8 @@ export default function CharacterSelect() {
 
     setPlayerSquad(selectedIds);
 
+    const level = getLevelWithEdits(currentLevelId);
+
     const playerChars = characters.filter(c => selectedIds.includes(c.id));
 
     const possibleEnemies = characters.filter(c => !selectedIds.includes(c.id));
@@ -81,16 +84,20 @@ export default function CharacterSelect() {
 
     const createTacticalUnit = (char: typeof characters[0], isPlayer: boolean, index: number): TacticalUnit => {
       const speed = char.speed;
-      const move = Math.max(4, Math.floor(speed / 7));
-      const range = char.role === 'Ranger' ? 6
-                  : char.role === 'Mage'   ? 5
-                  : char.role === 'Worg'   ? 2
-                  : 1.5;
+      // 3× movement so units can actually cross the map
+      const move = Math.max(12, Math.floor(speed / 7) * 3);
+      const range = char.role === 'Ranger' ? 8
+                  : char.role === 'Mage'   ? 7
+                  : char.role === 'Worg'   ? 3
+                  : 2;
 
+      // Spawn teams on opposite sides of the map using level spawn zones
+      const spawn = isPlayer ? level.playerSpawn : level.enemySpawn;
       const col = index % 2;
       const row = Math.floor(index / 2);
-      const x = isPlayer ? col : (15 - col);
-      const y = row * 4 + 2;
+      // Space units out within the spawn band
+      const x = Math.min(spawn.xMax, spawn.xMin + col * 3);
+      const y = Math.min(spawn.yMax, spawn.yMin + row * 5);
 
       const maxMana    = Math.round(Math.max(20, 10 + speed * 3));
       const maxStamina = Math.round(Math.max(40, 30 + speed * 2));

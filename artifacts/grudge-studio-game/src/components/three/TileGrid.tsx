@@ -21,6 +21,7 @@ interface TileGridProps {
 }
 
 const TILE_H = 0.18;
+const OBSTACLE_H_DEFAULT = TILE_H * 3;
 
 // Color palette
 const COLOR_DARK    = new THREE.Color(0x2a2a35);
@@ -43,12 +44,12 @@ export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, 
   useEffect(() => {
     const mesh = instRef.current;
     if (!mesh) return;
+    const obsH = level.wallHeight ?? OBSTACLE_H_DEFAULT;
     let idx = 0;
     for (let x = 0; x < gridW; x++) {
       for (let y = 0; y < gridH; y++) {
-        const elev = 0;
         const isObs = obstacleTiles.has(`${x},${y}`);
-        const h = isObs ? TILE_H * 3 : TILE_H;
+        const h = isObs ? obsH : TILE_H;
         dummy.position.set(x * tileSize + tileSize / 2, h / 2, y * tileSize + tileSize / 2);
         dummy.scale.set(tileSize * 0.96, h, tileSize * 0.96);
         dummy.updateMatrix();
@@ -60,7 +61,7 @@ export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, 
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [gridW, gridH, tileSize, obstacleTiles, colorDark, colorLight, colorBlock, dummy]);
+  }, [gridW, gridH, tileSize, obstacleTiles, colorDark, colorLight, colorBlock, dummy, level.wallHeight]);
 
   // Highlight tile overlays (only highlighted tiles rendered separately for clarity)
   const highlightedTiles = useMemo(() => {

@@ -28,6 +28,8 @@ export interface LevelDef {
   enemySpawn:  { xMin: number; xMax: number; yMin: number; yMax: number };
   groundColor:  string;
   groundColor2: string;
+  /** Height (world units) of obstacle/wall tiles. Ruins get ~0.54, fortress maps get 3–4. */
+  wallHeight: number;
 }
 
 declare const import_meta_env: { BASE_URL: string };
@@ -180,6 +182,7 @@ function makeRuinsLevel(): LevelDef {
     playerSpawn: { xMin: 2, xMax: 8, yMin: 30, yMax: 50 },
     enemySpawn:  { xMin: 72, xMax: 78, yMin: 30, yMax: 50 },
     groundColor: '#242c18', groundColor2: '#2e3a20',
+    wallHeight: 0.54,
   };
 }
 
@@ -342,6 +345,7 @@ function makeOrcLevel(): LevelDef {
     playerSpawn: { xMin: IW+3, xMax: IW+10, yMin: G/2-8, yMax: G/2+8 },
     enemySpawn:  { xMin: G-IW-10, xMax: G-IW-3, yMin: G/2-8, yMax: G/2+8 },
     groundColor: '#3a2010', groundColor2: '#4a2a18',
+    wallHeight: 3.5,
   };
 }
 
@@ -486,6 +490,7 @@ function makeElvenLevel(): LevelDef {
     playerSpawn: { xMin: IW+3, xMax: IW+12, yMin: mid-10, yMax: mid+10 },
     enemySpawn:  { xMin: G-IW-12, xMax: G-IW-3, yMin: mid-10, yMax: mid+10 },
     groundColor: '#152a18', groundColor2: '#1e3820',
+    wallHeight: 3.8,
   };
 }
 
@@ -666,6 +671,7 @@ function makeMedievalLevel(): LevelDef {
     playerSpawn: { xMin: IW+3, xMax: IW+15, yMin: mid-12, yMax: mid+12 },
     enemySpawn:  { xMin: G-IW-15, xMax: G-IW-3, yMin: mid-12, yMax: mid+12 },
     groundColor: '#202428', groundColor2: '#2a2e34',
+    wallHeight: 4.2,
   };
 }
 

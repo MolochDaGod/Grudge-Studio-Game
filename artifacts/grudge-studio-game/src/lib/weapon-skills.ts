@@ -1,6 +1,14 @@
 export type SkillSlot = 1 | 2 | 3 | 4 | 5;
 export type SkillTag = 'damage' | 'heal' | 'buff' | 'debuff' | 'aoe' | 'utility' | 'move' | 'attack' | 'ultimate';
 
+/**
+ * attackType controls how the attacker reaches the target:
+ * - 'normal' (default): standard melee/ranged, requires line-of-sight
+ * - 'jump': leaps over obstacles, ignores LOS check (but still range-limited)
+ * - 'dash': rushes to the target; range is extended by a flat bonus tiles
+ */
+export type AttackType = 'normal' | 'jump' | 'dash';
+
 export interface Skill {
   id: string;
   name: string;
@@ -22,6 +30,10 @@ export interface Skill {
   applyStatus?: 'stunned' | 'poisoned' | 'frozen';
   /** How many turns the status lasts */
   statusDuration?: number;
+  /** How this skill reaches its target. Default: 'normal'. */
+  attackType?: AttackType;
+  /** Extra tiles added to range when attackType is 'dash'. Default 0. */
+  dashBonus?: number;
 }
 
 export interface WeaponSkillTree {
@@ -487,11 +499,11 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           },
           {
             id: 'shadow_strike', name: 'Shadow Strike', icon: '🌑',
-            description: 'Vanish into shadows and reappear behind target for a crit strike.',
-            slot: 2, tier: 'T2', cooldown: 3, range: 2,
+            description: 'Vanish into shadows and reappear behind target for a crit strike. Ignores walls and LOS.',
+            slot: 2, tier: 'T2', cooldown: 3, range: 3,
             tags: ['attack', 'damage'],
-            stats: ['150% DMG', 'guaranteed crit', 'shadow'],
-            dmgMultiplier: 1.5
+            stats: ['150% DMG', 'guaranteed crit', 'shadow', 'ignores LOS'],
+            dmgMultiplier: 1.5, attackType: 'jump' as const
           },
         ]
       },
@@ -921,10 +933,11 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
         skills: [
           {
             id: 'crusaders_charge', name: "Crusader's Charge", icon: '🏇',
-            description: 'Charge an enemy, dealing massive damage with momentum.',
+            description: 'Charge an enemy across a great distance, dealing massive damage with momentum.',
             slot: 4, tier: 'T3', cooldown: 4, range: 2,
             tags: ['attack', 'damage'],
-            stats: ['180% DMG', 'charge momentum', 'holy'],
+            stats: ['180% DMG', 'charge momentum', 'holy', '+6 dash range'],
+            attackType: 'dash' as const, dashBonus: 6,
             dmgMultiplier: 1.8
           },
           {
@@ -1370,18 +1383,18 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
         { id: 'lnc_skewer',  name: 'Skewer',       icon: '🗡️', description: 'Impale. Pin enemy for 1 turn.',      slot: 2, tier: 'T1', cooldown: 2, range: 2, tags: ['attack','debuff'],  stats: ['90% DMG','Pin 1t'],          dmgMultiplier: 0.90, applyStatus: 'stunned', statusDuration: 1 },
       ]},
       { slot: 3, label: 'Utility', sublabel: 'Tactical reach', skills: [
-        { id: 'lnc_vault',   name: 'Vault',       icon: '🦘', description: 'Vault over an obstacle tile.',       slot: 3, tier: 'T2', cooldown: 3, range: 2, tags: ['move','utility'],  stats: ['Teleport 2 tiles'] },
+        { id: 'lnc_vault',   name: 'Vault',       icon: '🦘', description: 'Vault over an obstacle tile. Ignores walls and terrain between attacker and target.', slot: 3, tier: 'T2', cooldown: 3, range: 3, tags: ['move','utility'],  stats: ['Jump 3 tiles', 'ignores walls'], attackType: 'jump' as const },
         { id: 'lnc_guard',   name: 'Guard Stance',icon: '🛡️', description: 'Block with shaft. +30% DEF 2t.',    slot: 3, tier: 'T2', cooldown: 3, range: 0, tags: ['buff'],            stats: ['+30% DEF 2t'],             selfTarget: true },
         { id: 'lnc_line',    name: 'Line Control', icon: '📏', description: 'Zone off a row of tiles.',          slot: 3, tier: 'T2', cooldown: 4, range: 3, tags: ['utility'],        stats: ['Block movement row 1t'] },
       ]},
       { slot: 4, label: 'Special', sublabel: 'Charge attacks', skills: [
-        { id: 'lnc_charge',   name: 'Cavalry Charge', icon: '🐴', description: 'Charge forward 3 tiles and strike.', slot: 4, tier: 'T2', cooldown: 4, range: 3, tags: ['move','attack'],  stats: ['3 move+140% DMG'],   dmgMultiplier: 1.40, moveBonus: 3 },
+        { id: 'lnc_charge',   name: 'Cavalry Charge', icon: '🐴', description: 'Charge forward and strike — range extends greatly during the charge.', slot: 4, tier: 'T2', cooldown: 4, range: 3, tags: ['move','attack'],  stats: ['140% DMG', '+5 dash range'],   dmgMultiplier: 1.40, moveBonus: 3, attackType: 'dash' as const, dashBonus: 5 },
         { id: 'lnc_impale',   name: 'Impale',         icon: '💀', description: 'Pin enemy to ground. Freeze 2t.',    slot: 4, tier: 'T2', cooldown: 4, range: 2, tags: ['attack','debuff'],stats: ['120% DMG','Freeze 2t'], dmgMultiplier: 1.20, applyStatus: 'frozen', statusDuration: 2 },
         { id: 'lnc_blitz',    name: 'Blitz',          icon: '⚡', description: 'Strike and reposition behind.',      slot: 4, tier: 'T2', cooldown: 4, range: 2, tags: ['move','attack'],  stats: ['100% DMG','pass through'],dmgMultiplier: 1.0, moveBonus: 2 },
       ]},
       { slot: 5, label: 'Ultimate', sublabel: 'Polearm master', skills: [
         { id: 'lnc_hurricane', name: 'Hurricane Spin', icon: '🌪️', description: 'Spin and hit all within 2 tiles.',  slot: 5, tier: 'T3', cooldown: 6, range: 2, tags: ['attack','aoe','ultimate'], stats: ['130% DMG all nearby'],  dmgMultiplier: 1.30, aoe: true },
-        { id: 'lnc_dragoon',   name: 'Dragoon Dive',   icon: '🐉', description: 'Leap high and crash down on enemy.',slot: 5, tier: 'T3', cooldown: 6, range: 4, tags: ['attack','ultimate'],        stats: ['180% DMG','leap 4'],     dmgMultiplier: 1.80, moveBonus: 4 },
+        { id: 'lnc_dragoon',   name: 'Dragoon Dive',   icon: '🐉', description: 'Leap high over terrain and crash down on any enemy within 5 tiles. Ignores all obstacles.',slot: 5, tier: 'T3', cooldown: 6, range: 5, tags: ['attack','ultimate'],        stats: ['180% DMG','leap 5','ignores walls'],     dmgMultiplier: 1.80, moveBonus: 4, attackType: 'jump' as const },
         { id: 'lnc_formation', name: 'Formation Call', icon: '📣', description: 'Phalanx: +30% DEF all allies 2t.',  slot: 5, tier: 'T3', cooldown: 7, range: 0, tags: ['buff','ultimate'],          stats: ['+30% DEF all allies 2t'], selfTarget: true },
       ]},
     ],
