@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useGetCharacters } from "@workspace/api-client-react";
 import { CharacterCard } from "@/components/ui/character-card";
 import { WeaponPicker } from "@/components/ui/weapon-picker";
+import { SkillLoadoutModal } from "@/components/ui/skill-loadout-modal";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { motion } from "framer-motion";
@@ -16,7 +17,9 @@ export default function CharacterSelect() {
   const { data: characters, isLoading, error } = useGetCharacters();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingHeroId, setPendingHeroId] = useState<string | null>(null);
+  const [pendingWeaponType, setPendingWeaponType] = useState<string | null>(null);
   const [weaponByCharId, setWeaponByCharId] = useState<Record<string, string>>({});
+  const [loadoutByCharId, setLoadoutByCharId] = useState<Record<string, Record<SkillSlot, string>>>({});
 
   const { initBattle, setAllCharacters, setPlayerSquad, setEquippedSkills } = useGameStore();
 
@@ -30,21 +33,38 @@ export default function CharacterSelect() {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter(x => x !== id));
       setWeaponByCharId(prev => { const n = { ...prev }; delete n[id]; return n; });
+      setLoadoutByCharId(prev => { const n = { ...prev }; delete n[id]; return n; });
       return;
     }
     if (selectedIds.length >= 3) return;
     setPendingHeroId(id);
+    setPendingWeaponType(null);
   };
 
+  // Step 1: weapon chosen → show loadout screen
   const handleWeaponSelect = (weaponType: string) => {
     if (!pendingHeroId) return;
-    setWeaponByCharId(prev => ({ ...prev, [pendingHeroId]: weaponType }));
+    setPendingWeaponType(weaponType);
+  };
+
+  // Step 2a: loadout confirmed → finalize hero entry
+  const handleLoadoutConfirm = (loadout: Record<SkillSlot, string>) => {
+    if (!pendingHeroId || !pendingWeaponType) return;
+    setWeaponByCharId(prev => ({ ...prev, [pendingHeroId]: pendingWeaponType }));
+    setLoadoutByCharId(prev => ({ ...prev, [pendingHeroId]: loadout }));
     setSelectedIds(prev => [...prev, pendingHeroId]);
     setPendingHeroId(null);
+    setPendingWeaponType(null);
+  };
+
+  // Step 2b: go back to weapon picker
+  const handleLoadoutBack = () => {
+    setPendingWeaponType(null);
   };
 
   const handleCancelWeapon = () => {
     setPendingHeroId(null);
+    setPendingWeaponType(null);
   };
 
   const handleStartBattle = () => {
@@ -115,16 +135,23 @@ export default function CharacterSelect() {
 
     playerUnits.forEach((unit, i) => {
       const charId = playerChars[i].id;
-      const weaponType = weaponByCharId[charId];
-      const tree = weaponType ? WEAPON_SKILL_TREES[weaponType] : undefined;
-      if (tree) {
-        const loadout = {} as Record<SkillSlot, string>;
-        for (const slot of tree.slots) {
-          if (slot.skills.length > 0) {
-            loadout[slot.slot as SkillSlot] = slot.skills[0].id;
+      // Use player-chosen loadout first; fall back to default if somehow missing
+      const chosenLoadout = loadoutByCharId[charId];
+      if (chosenLoadout) {
+        setEquippedSkills(unit.id, chosenLoadout);
+      } else {
+        // Fallback: auto-assign first skill per slot
+        const weaponType = weaponByCharId[charId];
+        const tree = weaponType ? WEAPON_SKILL_TREES[weaponType] : undefined;
+        if (tree) {
+          const loadout = {} as Record<SkillSlot, string>;
+          for (const slot of tree.slots) {
+            if (slot.skills.length > 0) {
+              loadout[slot.slot as SkillSlot] = slot.skills[0].id;
+            }
           }
+          setEquippedSkills(unit.id, loadout);
         }
-        setEquippedSkills(unit.id, loadout);
       }
     });
 
@@ -200,7 +227,15 @@ export default function CharacterSelect() {
                       <span className="text-sm">{tree.icon}</span>
                       <span className="text-xs font-display text-primary font-semibold">{tree.displayName}</span>
                       <button
-                        onClick={e => { e.stopPropagation(); setPendingHeroId(char.id); }}
+                        onClick={e => {
+                          e.stopPropagation();
+                          // Remove from party to allow re-selection after new weapon+loadout
+                          setSelectedIds(prev => prev.filter(x => x !== char.id));
+                          setWeaponByCharId(prev => { const n = { ...prev }; delete n[char.id]; return n; });
+                          setLoadoutByCharId(prev => { const n = { ...prev }; delete n[char.id]; return n; });
+                          setPendingHeroId(char.id);
+                          setPendingWeaponType(null);
+                        }}
                         className="ml-auto text-[10px] text-primary/50 hover:text-primary underline"
                       >
                         change
@@ -253,13 +288,27 @@ export default function CharacterSelect() {
         </motion.div>
       </div>
 
-      {pendingHero && (
+      {/* Step 1: Weapon Picker — shown when hero selected but weapon not yet chosen */}
+      {pendingHero && !pendingWeaponType && (
         <WeaponPicker
           heroName={pendingHero.name}
           heroPortrait={`${import.meta.env.BASE_URL}images/chars/${pendingHero.id}.png`}
           weapons={getHeroWeaponOptions(pendingHero.id)}
           onSelect={handleWeaponSelect}
           onCancel={handleCancelWeapon}
+        />
+      )}
+
+      {/* Step 2: Skill Loadout — shown after weapon is chosen, before confirming */}
+      {pendingHero && pendingWeaponType && WEAPON_SKILL_TREES[pendingWeaponType] && (
+        <SkillLoadoutModal
+          heroName={pendingHero.name}
+          heroPortrait={`${import.meta.env.BASE_URL}images/chars/${pendingHero.id}.png`}
+          heroSpecialAbility={pendingHero.specialAbility}
+          heroSpecialAbilityDesc={pendingHero.specialAbilityDescription}
+          weapon={WEAPON_SKILL_TREES[pendingWeaponType]}
+          onConfirm={handleLoadoutConfirm}
+          onBack={handleLoadoutBack}
         />
       )}
     </>
