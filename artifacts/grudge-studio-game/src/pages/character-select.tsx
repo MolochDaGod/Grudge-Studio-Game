@@ -6,10 +6,10 @@ import { SkillLoadoutModal } from "@/components/ui/skill-loadout-modal";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ArrowLeft, Skull, Sword, Shield, Swords, Zap, Heart, ChevronRight, Info, Star } from "lucide-react";
+import { Loader2, ArrowLeft, Skull, Sword, Shield, Clock, Target, Zap, Heart, ChevronRight, Star } from "lucide-react";
 import { CHARACTER_LORE } from "@/lib/lore";
 import { getHeroWeaponOptions } from "@/lib/hero-weapons";
-import { WEAPON_SKILL_TREES, SkillSlot } from "@/lib/weapon-skills";
+import { WEAPON_SKILL_TREES, SkillSlot, SLOT_LABELS, TIER_STYLES, WeaponSkillTree, Skill } from "@/lib/weapon-skills";
 import { getLevelWithEdits } from "@/lib/levels";
 import { cn } from "@/lib/utils";
 import { Character } from "@workspace/api-client-react";
@@ -279,8 +279,8 @@ export default function CharacterSelect() {
   const [, setLocation] = useLocation();
   const { data: characters, isLoading, error } = useGetCharacters();
 
-  // Step state: 'faction' → 'hero'
-  const [step, setStep] = useState<"faction" | "hero">("faction");
+  // Step state: 'faction' → 'hero' → 'forge'
+  const [step, setStep] = useState<"faction" | "hero" | "forge">("faction");
   const [selectedFaction, setSelectedFaction] = useState<string | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -450,18 +450,24 @@ export default function CharacterSelect() {
 
           {/* ── Top nav ─────────────────────────────────────────────────────── */}
           <div className="flex items-center px-6 pt-6 pb-4 gap-4">
-            <FantasyButton variant="ghost" onClick={() => step === 'hero' ? setStep('faction') : setLocation("/")} className="gap-2 shrink-0">
+            <FantasyButton variant="ghost" onClick={() => {
+              if (step === 'forge') setStep('hero');
+              else if (step === 'hero') setStep('faction');
+              else setLocation("/");
+            }} className="gap-2 shrink-0">
               <ArrowLeft className="w-4 h-4" />
-              {step === 'hero' ? 'Back to Factions' : 'Return'}
+              {step === 'forge' ? 'Back to Heroes' : step === 'hero' ? 'Back to Factions' : 'Return'}
             </FantasyButton>
 
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-[11px] font-mono text-white/30">
               <span className={cn(step === 'faction' ? "text-primary font-bold" : "text-white/50")}>1. Choose Faction</span>
               <ChevronRight className="w-3 h-3" />
-              <span className={cn(step === 'hero' ? "text-primary font-bold" : "text-white/25")}>2. Choose Heroes</span>
+              <span className={cn(step === 'hero' ? "text-primary font-bold" : step === 'forge' ? "text-white/50" : "text-white/25")}>2. Choose Heroes</span>
               <ChevronRight className="w-3 h-3" />
-              <span className="text-white/25">3. Choose Level</span>
+              <span className={cn(step === 'forge' ? "text-primary font-bold" : "text-white/25")}>3. Skill Forge</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-white/25">4. Choose Level</span>
             </div>
           </div>
 
@@ -629,10 +635,179 @@ export default function CharacterSelect() {
                 </div>
               </motion.div>
             )}
+
+            {/* ── STEP 3: Skill Forge ───────────────────────────────────────── */}
+            {step === "forge" && activeFaction && (
+              <motion.div
+                key="step-forge"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -24 }}
+                transition={{ duration: 0.3 }}
+                className="flex-1 flex flex-col pb-10 px-6"
+              >
+                {/* Forge header */}
+                <div className="text-center mb-8">
+                  <h2 className="font-display text-4xl font-bold text-glow uppercase tracking-widest">
+                    ⚒ Skill Forge
+                  </h2>
+                  <p className="text-white/40 mt-2 font-serif italic">
+                    Verify your squad's loadout before entering the arena. Each slot is filled and locked.
+                  </p>
+                </div>
+
+                {/* 3 hero columns */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
+                  {selectedIds.map((charId, heroIdx) => {
+                    const char = characters?.find(c => c.id === charId);
+                    if (!char) return null;
+                    const weaponType = weaponByCharId[charId];
+                    const tree = weaponType ? WEAPON_SKILL_TREES[weaponType] : undefined;
+                    const loadout = loadoutByCharId[charId] ?? {};
+
+                    // Find a skill object by id within this tree
+                    const findSkill = (skillId: string): Skill | undefined => {
+                      if (!tree) return undefined;
+                      for (const slotDef of tree.slots) {
+                        const s = slotDef.skills.find(sk => sk.id === skillId);
+                        if (s) return s;
+                      }
+                      return undefined;
+                    };
+
+                    return (
+                      <motion.div
+                        key={charId}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: heroIdx * 0.1 }}
+                        className="flex flex-col rounded-sm border border-white/10 bg-[#09090f] overflow-hidden"
+                      >
+                        {/* Hero header strip */}
+                        <div className="relative h-28 overflow-hidden bg-black/60 shrink-0">
+                          <img
+                            src={`${BASE}images/chars/${char.id}.png`}
+                            alt={char.name}
+                            className="w-full h-full object-cover object-top scale-110"
+                            style={{ filter: "brightness(0.55)" }}
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0"; }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#09090f] to-transparent" />
+                          <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between z-10">
+                            <div>
+                              <div className="font-display font-bold text-white text-glow text-base uppercase leading-tight">
+                                {char.name}
+                              </div>
+                              <div className="text-[10px] text-white/40">{char.race} {char.role}</div>
+                            </div>
+                            {tree && (
+                              <div className="flex items-center gap-1.5 bg-black/60 border border-primary/30 rounded px-2 py-1">
+                                <span className="text-base">{tree.icon}</span>
+                                <span className="text-[11px] font-display font-bold text-primary/80">{tree.displayName}</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Hero index badge */}
+                          <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-primary font-display font-bold text-xs">
+                            {heroIdx + 1}
+                          </div>
+                        </div>
+
+                        {/* Skill slots */}
+                        <div className="flex flex-col divide-y divide-white/5">
+                          {([1, 2, 3, 4, 5] as SkillSlot[]).map(slotNum => {
+                            const slotMeta = SLOT_LABELS[slotNum];
+                            const skillId = loadout[slotNum];
+                            const skill = skillId ? findSkill(skillId) : undefined;
+                            const tier = skill ? (TIER_STYLES[skill.tier] ?? TIER_STYLES.T1) : null;
+
+                            return (
+                              <div
+                                key={slotNum}
+                                className="flex items-start gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                              >
+                                {/* Slot badge */}
+                                <div
+                                  className="w-9 h-9 shrink-0 rounded border flex flex-col items-center justify-center gap-0.5 mt-0.5"
+                                  style={{
+                                    borderColor: slotMeta.color + "55",
+                                    background: slotMeta.color + "0e",
+                                    backgroundImage: `url('${BASE}images/ui/HUD/Action Bar/Slots/ActionBar_MainSlot_Background.png')`,
+                                    backgroundSize: "100% 100%",
+                                  }}
+                                >
+                                  <span className="font-display font-black text-[10px] leading-none" style={{ color: slotMeta.color }}>{slotMeta.roman}</span>
+                                  {skill && <span className="text-sm leading-none">{skill.icon}</span>}
+                                </div>
+
+                                {/* Skill info */}
+                                {skill ? (
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                      <span className="font-display font-bold text-sm text-white leading-tight">{skill.name}</span>
+                                      {tier && (
+                                        <span className="text-[8px] font-bold px-1 py-0.5 rounded uppercase tracking-widest shrink-0"
+                                          style={{ backgroundColor: tier.color + "22", color: tier.color, border: `1px solid ${tier.color}44` }}>
+                                          {tier.label}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-white/45 italic leading-snug line-clamp-2 mb-1">{skill.description}</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {skill.stats.map((s, i) => (
+                                        <span key={i} className="text-[8px] bg-white/6 border border-white/10 rounded px-1 py-0.5 text-white/55 font-mono">{s}</span>
+                                      ))}
+                                      <span className="text-[8px] text-white/25 font-mono flex items-center gap-0.5">
+                                        <Target className="w-2 h-2" />{skill.range}
+                                      </span>
+                                      {skill.cooldown > 0 && skill.cooldown < 999 && (
+                                        <span className="text-[8px] text-orange-400/60 font-mono flex items-center gap-0.5">
+                                          <Clock className="w-2 h-2" />CD {skill.cooldown}
+                                        </span>
+                                      )}
+                                      {skill.cooldown === 999 && (
+                                        <span className="text-[8px] text-yellow-400/70 font-mono flex items-center gap-0.5">
+                                          <Star className="w-2 h-2" />Once
+                                        </span>
+                                      )}
+                                      {skill.aoe && <span className="text-[8px] text-yellow-300/60 font-mono flex items-center gap-0.5"><Zap className="w-2 h-2" />AoE</span>}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex-1 flex items-center h-9">
+                                    <span className="text-[11px] text-white/20 italic">— no skill selected —</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Special ability footer */}
+                        <div className="mt-auto px-4 py-3 border-t border-yellow-600/15 bg-yellow-950/10">
+                          <div className="text-[8px] text-yellow-400/50 uppercase tracking-widest mb-0.5">Class Passive</div>
+                          <div className="font-display font-bold text-xs text-yellow-300/70">{char.specialAbility}</div>
+                          <div className="text-[9px] text-white/25 italic mt-0.5 line-clamp-2">{char.specialAbilityDescription}</div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Enter arena from forge */}
+                <div className="flex flex-col items-center gap-3 mt-10">
+                  <FantasyButton size="lg" onClick={handleStartBattle} className="px-16 gap-2">
+                    <Sword className="w-5 h-5" />
+                    Enter The Arena
+                  </FantasyButton>
+                  <p className="text-[10px] text-white/20 italic">Loadout is final once you enter the arena.</p>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
 
-        {/* ── Bottom bar: selected squad + enter arena ─────────────────────── */}
+        {/* ── Bottom bar: squad preview + go to forge ─────────────────────── */}
         <motion.div
           initial={{ y: 100 }}
           animate={{ y: step === "hero" && selectedIds.length > 0 ? 0 : 100 }}
@@ -679,11 +854,12 @@ export default function CharacterSelect() {
 
             <FantasyButton
               size="lg"
-              onClick={handleStartBattle}
+              onClick={() => setStep('forge')}
               disabled={selectedIds.length !== 3}
               className="w-full sm:w-auto px-12 shrink-0"
             >
-              <Sword className="w-5 h-5 mr-2" /> Enter The Arena
+              <Sword className="w-5 h-5 mr-2" />
+              {selectedIds.length === 3 ? "Review at Skill Forge →" : `Select ${3 - selectedIds.length} more`}
             </FantasyButton>
           </div>
         </motion.div>
