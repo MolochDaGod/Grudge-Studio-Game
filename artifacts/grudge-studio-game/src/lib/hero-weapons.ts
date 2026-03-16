@@ -35,6 +35,7 @@ export const HERO_WEAPON_OPTIONS: Record<string, HeroWeaponOptions> = {
 
   pirate_king:        ['gun',          'sword',       'daggers'],
   sky_captain:        ['gun',          'crossbow',    'bow'],
+  faith_barrier:      ['sword',        'axe',         'spear'],
 };
 
 export function getHeroWeaponOptions(characterId: string): WeaponSkillTree[] {

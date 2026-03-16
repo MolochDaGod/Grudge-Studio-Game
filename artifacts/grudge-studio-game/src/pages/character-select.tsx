@@ -126,6 +126,7 @@ function HeroCard({
   const rglow = RARITY_GLOW[character.rarity] ?? "";
   const lore = CHARACTER_LORE[character.id];
   const classIcon = CLASS_ICON[character.role] ?? "◆";
+  const isFaithBarrier = character.id === "faith_barrier";
 
   return (
     <motion.div
@@ -138,9 +139,20 @@ function HeroCard({
         disabled && !selected ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
         selected
           ? `border-primary ring-2 ring-primary shadow-[0_0_35px_rgba(218,165,32,0.5)] ${rglow}`
-          : `border-white/10 hover:border-white/30 ${rglow}`,
+          : isFaithBarrier
+            ? "border-amber-400/60 shadow-[0_0_18px_rgba(251,191,36,0.25),0_0_36px_rgba(34,211,238,0.12)] hover:border-amber-300/80 hover:shadow-[0_0_28px_rgba(251,191,36,0.45),0_0_52px_rgba(34,211,238,0.22)]"
+            : `border-white/10 hover:border-white/30 ${rglow}`,
       )}
     >
+      {/* FaithBarrier — dual-storm outer glow ring */}
+      {isFaithBarrier && (
+        <div className="absolute inset-0 rounded-sm pointer-events-none z-30"
+          style={{
+            boxShadow: selected
+              ? "inset 0 0 0 2px rgba(251,191,36,0.8), inset 0 0 0 4px rgba(34,211,238,0.25)"
+              : "inset 0 0 0 1.5px rgba(251,191,36,0.45), inset 0 0 0 3px rgba(34,211,238,0.15)",
+          }} />
+      )}
       {/* Rarity bar */}
       <div className="h-0.5 w-full shrink-0" style={{ background: rColor }} />
 
@@ -153,8 +165,19 @@ function HeroCard({
             "w-full h-full object-cover object-top transition-transform duration-700",
             hovered && !disabled ? "scale-110" : "scale-100",
           )}
+          style={isFaithBarrier ? {
+            filter: "contrast(1.15) saturate(0.6) sepia(0.25) brightness(0.9)",
+          } : undefined}
           onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = "0"; }}
         />
+        {/* FaithBarrier — storm overlay (amber top, teal bottom) */}
+        {isFaithBarrier && (
+          <div className="absolute inset-0 pointer-events-none z-[5]"
+            style={{
+              background: "linear-gradient(180deg, rgba(251,191,36,0.08) 0%, transparent 40%, transparent 60%, rgba(34,211,238,0.07) 100%)",
+              mixBlendMode: "overlay",
+            }} />
+        )}
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#07070f] via-[#07070f]/40 to-transparent" />
 
@@ -234,6 +257,17 @@ function HeroCard({
           <div className="text-[8px] text-primary/60 uppercase tracking-widest mb-0.5">Special</div>
           <div className="text-[10px] font-display font-bold text-white/70 truncate">{character.specialAbility}</div>
           {lore && <div className="text-[9px] text-white/35 italic mt-0.5 truncate">"{lore.quote.slice(1, 45)}…"</div>}
+          {/* FaithBarrier — Both Shores witness tag */}
+          {isFaithBarrier && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(251,191,36,0.6), rgba(34,211,238,0.6))" }} />
+              <span className="text-[8px] font-black uppercase tracking-widest"
+                style={{ background: "linear-gradient(90deg, #fbbf24, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                ◈ Creation &amp; End ◈
+              </span>
+              <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, rgba(34,211,238,0.6), rgba(251,191,36,0.6))" }} />
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

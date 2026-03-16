@@ -136,4 +136,9 @@ export const CHARACTER_LORE: Record<string, { title: string; quote: string; back
     quote: '"The ground is for those who\'ve given up dreaming."',
     backstory: 'The first captain of Racalvin\'s pirate crew and the first man in history to pilot a flying machine. John Wayne traded his medals for a compass and never looked back. His ironclad nerve and unshakeable loyalty earned him command of the skies. Unlocked by naming a Human Warrior "Cpt John Wayne." They say he once flew through a god-storm and came out the other side laughing.'
   },
+  'faith_barrier': {
+    title: 'Witness of Both Shores',
+    quote: '"I have seen the first wave. I have seen the last."',
+    backstory: 'No one in Racalvin\'s crew is older than FaithBarrier, and no one asks him how old he truly is. He stood at the edge of the Creation Storms when the world was still being written — and he alone survived the End Falls, the great collapse at the far horizon that men who sail too far stop returning from. He joined Racalvin\'s crew without ceremony, without explanation. He simply appeared on deck one morning with his axe and shield, and nobody told him to leave. His special ability, Both Shores, draws simultaneously on the primal force of creation and the absolute silence of ending — a shockwave that shatters armor and cannot be blocked, dodged, or nullified. FaithBarrier does not tell stories. He is the story.'
+  },
 };

@@ -431,6 +431,22 @@ const CHARACTERS = [
     faction: "Pirates",
     rarity: "legendary",
   },
+  {
+    id: "faith_barrier",
+    name: "Scourge FaithBarrier",
+    race: "Barbarian",
+    role: "Warrior",
+    lore: "The oldest blade in Racalvin's crew and the only living soul who has stood at the edge of the Creation Storms and lived to walk into the End Falls. FaithBarrier does not speak of what he saw. He does not need to. The silence before his strike carries the weight of both.",
+    hp: 270,
+    attack: 33,
+    defense: 26,
+    speed: 44,
+    specialAbility: "Both Shores",
+    specialAbilityDescription: "Legendary unique ultimate — FaithBarrier channels the raw force of Creation and End simultaneously, unleashing a shockwave that shatters armor and cannot be blocked or evaded.",
+    weakness: "Arcane sorcery",
+    faction: "Pirates",
+    rarity: "legendary",
+  },
 ];
 
 router.get("/characters", (_req, res) => {
