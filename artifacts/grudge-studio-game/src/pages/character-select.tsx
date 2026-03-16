@@ -635,17 +635,17 @@ export default function CharacterSelect() {
                 </div>
               </motion.div>
             )}
+          </AnimatePresence>
 
-            {/* ── STEP 3: Skill Forge ───────────────────────────────────────── */}
-            {step === "forge" && activeFaction && (
-              <motion.div
-                key="step-forge"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -24 }}
-                transition={{ duration: 0.3 }}
-                className="flex-1 flex flex-col pb-10 px-6"
-              >
+          {/* ── STEP 3: Skill Forge (outside AnimatePresence for reliable render) */}
+          {step === "forge" && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="w-full flex flex-col pb-16 px-6"
+              style={{ minHeight: "calc(100vh - 80px)" }}
+            >
                 {/* Forge header */}
                 <div className="text-center mb-8">
                   <h2 className="font-display text-4xl font-bold text-glow uppercase tracking-widest">
@@ -804,7 +804,6 @@ export default function CharacterSelect() {
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
         </div>
 
         {/* ── Bottom bar: squad preview + go to forge ─────────────────────── */}
