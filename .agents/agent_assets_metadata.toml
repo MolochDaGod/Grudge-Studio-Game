@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "WYmNs3h6BhM-3q1vNlhe3"
+uri = "file://artifacts/grudge-studio-game/public/images/chars/faith_barrier.png"
+type = "image"
+title = "Scourge FaithBarrier — Character Portrait"
