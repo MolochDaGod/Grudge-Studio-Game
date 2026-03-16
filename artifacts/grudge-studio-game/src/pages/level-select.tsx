@@ -32,7 +32,7 @@ export default function LevelSelect() {
 
   const handleSelectLevel = (levelId: string) => {
     setCurrentLevelId(levelId);
-    setLocation('/skill-tree');
+    setLocation('/battle');
   };
 
   if (phase !== 'battle') {
