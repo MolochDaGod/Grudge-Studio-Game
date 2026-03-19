@@ -10,7 +10,7 @@ import { NatureDecor } from './NatureDecor';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
-export type CameraMode = 'free' | 'third-person' | 'rts';
+export type CameraMode = 'tactical' | 'free' | 'third-person' | 'rts';
 
 export type MapPing = {
   id: string;
@@ -39,8 +39,9 @@ interface BattleSceneProps {
   onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
 }
 
-// ── Triple-mode Camera Controller ────────────────────────────────────────────
-// free        → normal OrbitControls (with optional smooth pan-to-focus)
+// ── Quad-mode Camera Controller ──────────────────────────────────────────────
+// tactical     → isometric-locked (Mario+Rabbids style), Q/E rotates 90°
+// free         → normal OrbitControls (with optional smooth pan-to-focus)
 // third-person → locks behind the active unit, follows turn changes
 // rts          → locks high overhead, top-down strategy view
 function CameraController({
@@ -62,34 +63,81 @@ function CameraController({
 }) {
   const { camera, controls, gl } = useThree() as any;
 
-  // Smooth-pan target for 'free' mode
-  const panTarget = useRef(new THREE.Vector3());
-  const isPanning = useRef(false);
-
-  // Scratch vectors (avoid allocation in useFrame)
-  const _camPos = useRef(new THREE.Vector3());
-  const _lookAt = useRef(new THREE.Vector3());
-
-  // Zoom level for non-free modes: 1.0 = default, scroll wheel adjusts
-  const zoomRef = useRef(1.0);
-  const modeRef = useRef(mode);
+  const panTarget  = useRef(new THREE.Vector3());
+  const isPanning  = useRef(false);
+  const _camPos    = useRef(new THREE.Vector3());
+  const _lookAt    = useRef(new THREE.Vector3());
+  const zoomRef    = useRef(1.0);
+  const modeRef    = useRef(mode);
   useEffect(() => { modeRef.current = mode; }, [mode]);
 
-  // Mouse wheel zoom — only active in RTS / third-person
+  // ── Tactical camera state ─────────────────────────────────────────────────
+  const TACTICAL_POLAR   = Math.PI * 0.30;            // ~54° from vertical — Mario-Rabbids angle
+  const tacticalRadius   = useRef(Math.max(maxDist * 0.55, tileSize * 9));
+  const tacticalAzimuth  = useRef(Math.PI * 0.25);    // start at 45° like MR
+  const tacticalAzTarget = useRef(Math.PI * 0.25);
+  const tacticalPan      = useRef(new THREE.Vector3(centerX, 0, centerZ));
+
+  // Tactical: wheel zoom + Q/E + arrow pan + HUD button events
   useEffect(() => {
+    if (mode !== 'tactical') return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      tacticalRadius.current = THREE.MathUtils.clamp(
+        tacticalRadius.current * (1 + e.deltaY * 0.001),
+        tileSize * 3, maxDist
+      );
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (modeRef.current !== 'tactical') return;
+      if (e.key === 'q' || e.key === 'Q') { tacticalAzTarget.current -= Math.PI / 2; return; }
+      if (e.key === 'e' || e.key === 'E') { tacticalAzTarget.current += Math.PI / 2; return; }
+      const panStep = tileSize * 1.8;
+      const sinA = Math.sin(tacticalAzimuth.current);
+      const cosA = Math.cos(tacticalAzimuth.current);
+      if (e.key === 'ArrowLeft')  { tacticalPan.current.x -= cosA * panStep; tacticalPan.current.z += sinA * panStep; }
+      if (e.key === 'ArrowRight') { tacticalPan.current.x += cosA * panStep; tacticalPan.current.z -= sinA * panStep; }
+      if (e.key === 'ArrowUp')    { tacticalPan.current.x -= sinA * panStep; tacticalPan.current.z -= cosA * panStep; }
+      if (e.key === 'ArrowDown')  { tacticalPan.current.x += sinA * panStep; tacticalPan.current.z += cosA * panStep; }
+    };
+
+    const onRotateEvt = (e: Event) => {
+      const dir = (e as CustomEvent).detail;
+      if (dir === 'left')  tacticalAzTarget.current -= Math.PI / 2;
+      if (dir === 'right') tacticalAzTarget.current += Math.PI / 2;
+    };
+
+    gl.domElement.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('camera-rotate', onRotateEvt);
+    return () => {
+      gl.domElement.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('camera-rotate', onRotateEvt);
+    };
+  }, [mode, tileSize, maxDist, gl.domElement]);
+
+  // Mouse wheel zoom for RTS / third-person (unchanged)
+  useEffect(() => {
+    if (mode === 'tactical') return;
     const canvas = gl.domElement as HTMLCanvasElement;
     const onWheel = (e: WheelEvent) => {
-      if (modeRef.current === 'free') return; // OrbitControls handles it
+      if (modeRef.current === 'free') return;
       e.preventDefault();
       zoomRef.current = Math.max(0.2, Math.min(2.8, zoomRef.current + e.deltaY * 0.0008));
     };
     canvas.addEventListener('wheel', onWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', onWheel);
-  }, [gl.domElement]);
+  }, [gl.domElement, mode]);
 
-  // Pick up new focus whenever it changes
+  // React to focus changes
   useEffect(() => {
-    if (focus) {
+    if (!focus) return;
+    if (modeRef.current === 'tactical') {
+      tacticalPan.current.set(focus[0], 0, focus[2]);
+    } else {
       panTarget.current.set(focus[0], focus[1], focus[2]);
       isPanning.current = true;
     }
@@ -98,8 +146,28 @@ function CameraController({
   useFrame((_, delta) => {
     if (!controls) return;
 
-    if (mode === 'free') {
-      // ── Free orbit: re-enable controls and apply any pending smooth-pan
+    if (mode === 'tactical') {
+      controls.enabled = false;
+
+      // Smooth azimuth rotation
+      const diff = tacticalAzTarget.current - tacticalAzimuth.current;
+      tacticalAzimuth.current += diff * Math.min(1, delta * 5);
+
+      const r    = tacticalRadius.current;
+      const sinP = Math.sin(TACTICAL_POLAR);
+      const cosP = Math.cos(TACTICAL_POLAR);
+      const sinA = Math.sin(tacticalAzimuth.current);
+      const cosA = Math.cos(tacticalAzimuth.current);
+      const pt   = tacticalPan.current;
+
+      _camPos.current.set(pt.x + r * sinP * sinA, pt.y + r * cosP, pt.z + r * sinP * cosA);
+      _lookAt.current.copy(pt);
+
+      camera.position.lerp(_camPos.current, Math.min(1, delta * 4));
+      controls.target.lerp(_lookAt.current, Math.min(1, delta * 4));
+      camera.lookAt(_lookAt.current);
+
+    } else if (mode === 'free') {
       if (!controls.enabled) {
         controls.target.copy(camera.position.clone().add(
           new THREE.Vector3(0, 0, -5).applyQuaternion(camera.quaternion)
@@ -108,14 +176,12 @@ function CameraController({
       }
       if (isPanning.current) {
         const t = controls.target as THREE.Vector3;
-        const dist = t.distanceTo(panTarget.current);
-        if (dist < 0.08) { isPanning.current = false; return; }
+        if (t.distanceTo(panTarget.current) < 0.08) { isPanning.current = false; return; }
         t.lerp(panTarget.current, Math.min(1, delta * 4.5));
         controls.update();
       }
 
     } else if (mode === 'rts') {
-      // ── RTS: overhead bird's-eye, locked, centered on map
       controls.enabled = false;
       isPanning.current = false;
       const rtsY = maxDist * 0.85 * zoomRef.current;
@@ -126,21 +192,15 @@ function CameraController({
       camera.lookAt(_lookAt.current);
 
     } else if (mode === 'third-person') {
-      // ── Third-person: locked behind & above the current unit
       controls.enabled = false;
       isPanning.current = false;
       if (!currentUnit) return;
-
       const [wx, , wz] = tileToWorld(currentUnit.position.x, currentUnit.position.y, tileSize, 0);
       const angle = FACING_ANGLES[currentUnit.facing ?? 2];
-      const fwdX = Math.sin(angle);
-      const fwdZ = Math.cos(angle);
-
       const followDist   = 6 * Math.max(0.3, zoomRef.current);
       const followHeight = 4 * Math.max(0.3, zoomRef.current);
-      _camPos.current.set(wx - fwdX * followDist, followHeight, wz - fwdZ * followDist);
+      _camPos.current.set(wx - Math.sin(angle) * followDist, followHeight, wz - Math.cos(angle) * followDist);
       _lookAt.current.set(wx, 1, wz);
-
       camera.position.lerp(_camPos.current, Math.min(1, delta * 3.5));
       controls.target.lerp(_lookAt.current, Math.min(1, delta * 3.5));
       camera.lookAt(_lookAt.current);

@@ -140,7 +140,7 @@ export default function Battle() {
   const [combatEffects, setCombatEffects] = useState<CombatEffectData[]>([]);
   const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
   const [cameraFocus, setCameraFocus] = useState<[number, number, number] | null>(null);
-  const [cameraMode, setCameraMode] = useState<CameraMode>('free');
+  const [cameraMode, setCameraMode] = useState<CameraMode>('tactical');
   const [showUnitInfo, setShowUnitInfo] = useState(false);
   const [mapPings, setMapPings] = useState<MapPing[]>([]);
 
@@ -150,9 +150,10 @@ export default function Battle() {
   const [contextMenu, setContextMenu] = useState<CtxMenu | null>(null);
 
   const CAMERA_META: Record<CameraMode, { label: string; icon: JSX.Element; next: CameraMode }> = {
-    'free':         { label: 'Free',    icon: <Eye className="w-3.5 h-3.5" />,    next: 'third-person' },
-    'third-person': { label: '3rd',     icon: <User className="w-3.5 h-3.5" />,   next: 'rts' },
-    'rts':          { label: 'RTS',     icon: <Layers className="w-3.5 h-3.5" />, next: 'free' },
+    'tactical':     { label: 'Tactical', icon: <Layers className="w-3.5 h-3.5" />, next: 'third-person' },
+    'free':         { label: 'Free',     icon: <Eye className="w-3.5 h-3.5" />,    next: 'tactical' },
+    'third-person': { label: '3rd',      icon: <User className="w-3.5 h-3.5" />,   next: 'rts' },
+    'rts':          { label: 'RTS',      icon: <Layers className="w-3.5 h-3.5" />, next: 'tactical' },
   };
 
   const handleUnitDoubleClick = (unitId: string) => {
@@ -797,19 +798,35 @@ export default function Battle() {
           </div>
         )}
 
-        {/* Camera mode toggle button */}
-        <div className="shrink-0 flex items-center">
+        {/* Camera mode toggle + tactical rotation buttons */}
+        <div className="shrink-0 flex items-center gap-1">
+          {cameraMode === 'tactical' && (
+            <>
+              <button
+                onClick={() => document.dispatchEvent(new CustomEvent('camera-rotate', { detail: 'left' }))}
+                className="flex items-center justify-center w-7 h-7 rounded border border-amber-600/50 bg-amber-950/50 text-amber-300 hover:bg-amber-900/60 transition-all text-sm font-bold"
+                title="Rotate left (Q)"
+              >⟲</button>
+              <button
+                onClick={() => document.dispatchEvent(new CustomEvent('camera-rotate', { detail: 'right' }))}
+                className="flex items-center justify-center w-7 h-7 rounded border border-amber-600/50 bg-amber-950/50 text-amber-300 hover:bg-amber-900/60 transition-all text-sm font-bold"
+                title="Rotate right (E)"
+              >⟳</button>
+            </>
+          )}
           <button
             onClick={() => setCameraMode(m => CAMERA_META[m].next)}
             className={cn(
               "flex items-center gap-1.5 rounded border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-all",
-              cameraMode === 'third-person'
+              cameraMode === 'tactical'
+                ? "border-amber-600/60 bg-amber-950/60 text-amber-300 shadow-[0_0_8px_rgba(217,119,6,0.3)]"
+                : cameraMode === 'third-person'
                 ? "border-cyan-600/60 bg-cyan-950/60 text-cyan-300 shadow-[0_0_8px_rgba(34,211,238,0.3)]"
                 : cameraMode === 'rts'
                 ? "border-violet-600/60 bg-violet-950/60 text-violet-300 shadow-[0_0_8px_rgba(167,139,250,0.3)]"
                 : "border-white/15 bg-white/5 text-white/45 hover:text-white/70 hover:border-white/30"
             )}
-            title={`Camera: ${cameraMode} — click to cycle (free → 3rd person → RTS)`}
+            title={`Camera: ${cameraMode} — click to cycle`}
           >
             {CAMERA_META[cameraMode].icon}
             {CAMERA_META[cameraMode].label}

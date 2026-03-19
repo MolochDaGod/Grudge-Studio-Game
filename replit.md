@@ -33,7 +33,8 @@ The project is structured as a pnpm workspace monorepo.
 - **Combat Effects:** 12 typed 3D effects (e.g., `fire_projectile`, `physical_slash`, `heal_burst`, `ultimate_nova`) spawned on skill use, timed via `performance.now()`.
 - **Skill Tooltips:** Rich floating panels displaying skill icon, name, tier, description, stats, tags, range, cooldown, and AoE indicator.
 - **Level System:** Four distinct levels (`src/lib/levels.ts`) with unique sizes, obstacle counts, and environmental props (Graveyard, Orc Stronghold, Elven Citadel, Iron Bastion), each with a distinct sky color theme.
-- **Camera:** Perspective, fov=50, isometric-style angle with OrbitControls (limited polar range), PCFShadowMap shadows.
+- **Camera:** Four modes — `tactical` (default, Mario+Rabbids-style isometric lock at ~54° polar, Q/E keys + ⟲⟳ HUD buttons snap-rotate 90°, arrow keys pan, scroll zooms), `free` (full OrbitControls), `third-person` (unit-follow), `rts` (overhead). Camera controlled by `CameraController` in `BattleScene.tsx`.
+- **ToonAdmin Dressing Room:** `/toonadmin` page for hero customization. Left sidebar shows hero roster grouped by faction (from API). Center has a Three.js 3D viewport with portrait billboard, animated particles, accessories (halo, crown, storm ring etc.) and glow rings. Right panel has 5 tabs: Colors (tint/emissive/scale), Effects (fire/magic/storm/lightning particles), Model (GLTF link + animation list), Skills (weapon picker + skill slots), Assets (accessory toggles). All edits persisted to localStorage under key `toon_admin_edits`.
 
 **Technical Implementation:**
 - **Monorepo Structure:** `artifacts/` (deployable apps like `api-server`), `lib/` (shared libraries like `api-spec`, `api-client-react`, `api-zod`, `db`), `scripts/` (utility scripts).

@@ -11,6 +11,7 @@ import Battle from "@/pages/battle";
 import Result from "@/pages/result";
 import Leaderboard from "@/pages/leaderboard";
 import Admin from "@/pages/admin";
+import ToonAdmin from "@/pages/toon-admin";
 import MapEditor from "@/pages/map-editor";
 import NotFound from "@/pages/not-found";
 
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/result" component={Result} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/toonadmin" component={ToonAdmin} />
       <Route path="/map-editor/:levelId" component={MapEditor} />
       <Route component={NotFound} />
     </Switch>
