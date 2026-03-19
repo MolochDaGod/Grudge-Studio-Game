@@ -159,8 +159,25 @@ function CharacterModelInner({
     attachToBone(charScene, rawShield, sw.attachBone, sw.position, sw.rotation, sw.scale);
   }, [charScene, rawShield, config.secondaryWeapon]);
 
-  const targetPos = useRef(new THREE.Vector3(...position));
+  const targetPos    = useRef(new THREE.Vector3(...position));
+  const targetFacing = useRef(facingAngle);
+  const lungeOffset  = useRef(new THREE.Vector3());
+  const _effTarget   = useRef(new THREE.Vector3());
+  const prevAnimRef  = useRef<AnimState>('idle');
+
   useEffect(() => { targetPos.current.set(...position); }, [position]);
+  useEffect(() => { targetFacing.current = facingAngle; }, [facingAngle]);
+
+  // Lunge forward when an attack/cast begins
+  useEffect(() => {
+    const isNowAttack = LOOP_ONCE_STATES.has(animState) && animState !== 'hurt' && animState !== 'emote';
+    const wasIdle     = !LOOP_ONCE_STATES.has(prevAnimRef.current);
+    if (wasIdle && isNowAttack) {
+      const f = targetFacing.current;
+      lungeOffset.current.set(Math.sin(f) * 0.6, 0, Math.cos(f) * 0.6);
+    }
+    prevAnimRef.current = animState;
+  }, [animState]);
 
   const isStunned  = unit.statusEffects.includes('stunned');
   const isPoisoned = unit.statusEffects.includes('poisoned');
@@ -179,7 +196,20 @@ function CharacterModelInner({
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
-    groupRef.current.position.lerp(targetPos.current, 0.12);
+
+    // ── Smooth facing rotation (lerp Y toward targetFacing) ──────────────────
+    groupRef.current.rotation.y = THREE.MathUtils.lerp(
+      groupRef.current.rotation.y,
+      targetFacing.current,
+      1 - Math.exp(-delta * 8),
+    );
+
+    // ── Lunge spring-back (exponential decay toward zero) ─────────────────────
+    lungeOffset.current.multiplyScalar(Math.exp(-delta * 3.8));
+
+    // ── Delta-corrected walk lerp + lunge ─────────────────────────────────────
+    _effTarget.current.copy(targetPos.current).add(lungeOffset.current);
+    groupRef.current.position.lerp(_effTarget.current, 1 - Math.exp(-delta * 5));
 
     if (hurtFlash.current > 0) {
       hurtFlash.current = Math.max(0, hurtFlash.current - delta * 5);
@@ -251,7 +281,7 @@ function CharacterModelInner({
   const ringRad = config.selectionRingRadius ?? Math.max(sx, sz) * 0.58;
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, facingAngle, 0]}>
+    <group ref={groupRef} position={position}>
       <group scale={[sx, sy, sz]}>
         <primitive object={charScene} />
       </group>

@@ -68,8 +68,10 @@ function CameraController({
   const _camPos    = useRef(new THREE.Vector3());
   const _lookAt    = useRef(new THREE.Vector3());
   const zoomRef    = useRef(1.0);
-  const modeRef    = useRef(mode);
+  const modeRef       = useRef(mode);
   useEffect(() => { modeRef.current = mode; }, [mode]);
+  const currentUnitRef = useRef(currentUnit);
+  useEffect(() => { currentUnitRef.current = currentUnit; }, [currentUnit]);
 
   // ── Tactical camera state ─────────────────────────────────────────────────
   const TACTICAL_POLAR   = Math.PI * 0.30;            // ~54° from vertical — Mario-Rabbids angle
@@ -78,7 +80,7 @@ function CameraController({
   const tacticalAzTarget = useRef(Math.PI * 0.25);
   const tacticalPan      = useRef(new THREE.Vector3(centerX, 0, centerZ));
 
-  // Tactical: wheel zoom + Q/E + arrow pan + HUD button events
+  // Tactical: scroll zoom · Z/X 45° rotate · WASD pan · C center · HUD events
   useEffect(() => {
     if (mode !== 'tactical') return;
 
@@ -92,21 +94,34 @@ function CameraController({
 
     const onKey = (e: KeyboardEvent) => {
       if (modeRef.current !== 'tactical') return;
-      if (e.key === 'q' || e.key === 'Q') { tacticalAzTarget.current -= Math.PI / 2; return; }
-      if (e.key === 'e' || e.key === 'E') { tacticalAzTarget.current += Math.PI / 2; return; }
+      // Z/X: 45° rotation
+      if (e.key === 'z' || e.key === 'Z') { tacticalAzTarget.current -= Math.PI / 4; return; }
+      if (e.key === 'x' || e.key === 'X') { tacticalAzTarget.current += Math.PI / 4; return; }
+      // C: center on active unit
+      if (e.key === 'c' || e.key === 'C') {
+        const cu = currentUnitRef.current;
+        if (cu) {
+          const [wx, , wz] = tileToWorld(cu.position.x, cu.position.y, tileSize, 0);
+          tacticalPan.current.set(wx, 0, wz);
+        }
+        return;
+      }
+      // WASD: pan
       const panStep = tileSize * 1.8;
       const sinA = Math.sin(tacticalAzimuth.current);
       const cosA = Math.cos(tacticalAzimuth.current);
-      if (e.key === 'ArrowLeft')  { tacticalPan.current.x -= cosA * panStep; tacticalPan.current.z += sinA * panStep; }
-      if (e.key === 'ArrowRight') { tacticalPan.current.x += cosA * panStep; tacticalPan.current.z -= sinA * panStep; }
-      if (e.key === 'ArrowUp')    { tacticalPan.current.x -= sinA * panStep; tacticalPan.current.z -= cosA * panStep; }
-      if (e.key === 'ArrowDown')  { tacticalPan.current.x += sinA * panStep; tacticalPan.current.z += cosA * panStep; }
+      if (e.key === 'a' || e.key === 'A') { tacticalPan.current.x -= cosA * panStep; tacticalPan.current.z += sinA * panStep; }
+      if (e.key === 'd' || e.key === 'D') { tacticalPan.current.x += cosA * panStep; tacticalPan.current.z -= sinA * panStep; }
+      if (e.key === 'w' || e.key === 'W') { tacticalPan.current.x -= sinA * panStep; tacticalPan.current.z -= cosA * panStep; }
+      if (e.key === 's' || e.key === 'S') { tacticalPan.current.x += sinA * panStep; tacticalPan.current.z += cosA * panStep; }
     };
 
     const onRotateEvt = (e: Event) => {
-      const dir = (e as CustomEvent).detail;
-      if (dir === 'left')  tacticalAzTarget.current -= Math.PI / 2;
-      if (dir === 'right') tacticalAzTarget.current += Math.PI / 2;
+      const data = (e as CustomEvent).detail;
+      const dir    = typeof data === 'string' ? data : data?.dir;
+      const amount = (typeof data === 'object' && data?.amount != null) ? data.amount : Math.PI / 4;
+      if (dir === 'left')  tacticalAzTarget.current -= amount;
+      if (dir === 'right') tacticalAzTarget.current += amount;
     };
 
     gl.domElement.addEventListener('wheel', onWheel, { passive: false });

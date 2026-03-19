@@ -119,6 +119,23 @@ function getSkillAnimState(skill: Skill): AnimState {
   return 'attack1';
 }
 
+// Compute cardinal facing (0=N 1=E 2=S 3=W) from one tile to another
+function calcFacing(from: { x: number; y: number }, to: { x: number; y: number }): 0 | 1 | 2 | 3 {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 1 : 3;
+  return dy >= 0 ? 2 : 0;
+}
+
+// Attack animation duration by skill type (ms)
+function getAtkDuration(skill: Skill): number {
+  if (skill.tags?.includes('ultimate')) return 1600;
+  if (skill.aoe) return 1400;
+  if (skill.range > 2) return 1250;
+  if (skill.tags?.includes('heal') || skill.tags?.includes('buff')) return 1100;
+  return 1050;
+}
+
 export default function Battle() {
   const [, setLocation] = useLocation();
   const { 
@@ -453,12 +470,15 @@ export default function Battle() {
     if (actionMode === 'move' && !unit.hasMoved) {
       const isReachable = reachableTiles.some(t => t.x === x && t.y === y);
       if (isReachable) {
-        updateUnit(unit.id, { position: { x, y }, hasMoved: true });
+        const dist    = Math.abs(x - unit.position.x) + Math.abs(y - unit.position.y);
+        const walkMs  = Math.max(520, dist * 390);
+        const facing  = calcFacing(unit.position, { x, y });
+        updateUnit(unit.id, { position: { x, y }, hasMoved: true, facing });
         setActionMode('idle');
         setReachableTiles([]);
         addLog(`${unit.name} moves to [${x}, ${y}].`);
-        setAnimStates(prev => ({...prev, [unit.id]: 'walk'}));
-        setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 700);
+        setAnimStates(prev => ({ ...prev, [unit.id]: 'walk' }));
+        setTimeout(() => setAnimStates(prev => ({ ...prev, [unit.id]: 'idle' })), walkMs);
       }
     } else if (actionMode.startsWith('skill_') && !unit.hasActed) {
       const slotNum = parseInt(actionMode.split('_')[1]) as SkillSlot;
@@ -485,133 +505,160 @@ export default function Battle() {
       ? Math.max(1, Math.floor((attacker.attack * skill.dmgMultiplier - target.defense * (1 / penFactor)) + Math.floor(Math.random() * 6) - 2))
       : 0;
     const finalDmg = isCrit ? Math.floor(baseDmg * 1.8) : baseDmg;
+    const newHp    = target.hp - finalDmg;
 
-    updateUnit(attacker.id, { hasActed: true });
+    // Immediate game-state changes
+    updateUnit(attacker.id, { hasActed: true, facing: calcFacing(attacker.position, target.position) });
     setActionMode('idle');
     setAttackableTiles([]);
 
-    // Track cooldown
-    if (skill.cooldown > 0 && skill.cooldown !== 999) {
-      setSkillCooldown(attacker.id, skill.id, skill.cooldown);
-    }
-    if (skill.cooldown === 999) {
-      markUltimateUsed(attacker.id);
-      setSkillCooldown(attacker.id, skill.id, 999);
-    }
+    // Cooldown tracking
+    if (skill.cooldown > 0 && skill.cooldown !== 999) setSkillCooldown(attacker.id, skill.id, skill.cooldown);
+    if (skill.cooldown === 999) { markUltimateUsed(attacker.id); setSkillCooldown(attacker.id, skill.id, 999); }
 
-    // Spawn 3D combat effects
-    const fromPos = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
-    const toPos   = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
-    const weaponType = CHARACTER_WEAPON_MAP[attacker.characterId];
-    const effectType  = getEffectType(skill, weaponType);
-    const effectColor = getEffectColor(skill);
-    const travelDur   = skill.tags.includes('ultimate') ? 900 : 650;
-    spawnEffect(effectType, fromPos, toPos, effectColor, travelDur);
-    if (skill.aoe) {
-      spawnEffect('aoe_ring', fromPos, toPos, effectColor, 900);
-    }
-    if (finalDmg > 0 && effectType !== 'impact_flash' && effectType !== 'heal_burst') {
-      setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, effectColor, 400), 380);
-    }
-
-    // Pick appropriate attack animation
-    const atkAnim = getSkillAnimState(skill);
-    setAnimStates(prev => ({...prev, [attacker.id]: atkAnim}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 700);
-
+    // Damage / status resolve immediately (game logic) — visuals follow at hitMs
     if (finalDmg > 0) {
-      updateUnit(target.id, { hp: Math.max(0, target.hp - finalDmg) });
-      const suffix = isCrit ? ' (CRITICAL!)' : '';
+      updateUnit(target.id, { hp: Math.max(0, newHp) });
+      const suffix  = isCrit ? ' (CRITICAL!)' : '';
       const aoeNote = skill.aoe ? ' [AoE]' : '';
       addLog(`${attacker.name} uses ${skill.name}${aoeNote} on ${target.name} for ${finalDmg} dmg!${suffix}`, 'damage');
-
-      const newHp = target.hp - finalDmg;
-      if (newHp <= 0) {
-        addLog(`${target.name} is defeated!`, 'debuff');
-        setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
-      } else {
-        setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
-        setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 500);
-      }
-
-      // Apply status effect on hit
-      if (skill.applyStatus && skill.statusDuration) {
-        applyStatus(target.id, skill.applyStatus, skill.statusDuration);
-        setAnimStates(prev => ({...prev, [target.id]: skill.applyStatus! as AnimState}));
-        addLog(`${target.name} is ${skill.applyStatus}! (${skill.statusDuration} turns)`, 'debuff');
-      }
+      if (newHp <= 0) addLog(`${target.name} is defeated!`, 'debuff');
+    }
+    if (skill.applyStatus && skill.statusDuration) {
+      applyStatus(target.id, skill.applyStatus, skill.statusDuration);
+      addLog(`${target.name} is ${skill.applyStatus}! (${skill.statusDuration} turns)`, 'debuff');
     }
 
+    // Start attack animation
+    const atkAnim   = getSkillAnimState(skill);
+    const atkDurMs  = getAtkDuration(skill);
+    const hitMs     = Math.floor(atkDurMs * 0.38);
+    const travelDur = skill.tags.includes('ultimate') ? 900 : 650;
+    const fromPos   = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
+    const toPos     = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
+    const weaponType  = CHARACTER_WEAPON_MAP[attacker.characterId];
+    const effectType  = getEffectType(skill, weaponType);
+    const effectColor = getEffectColor(skill);
+
+    setAnimStates(prev => ({ ...prev, [attacker.id]: atkAnim }));
+
+    // At impact point: spawn effects + trigger target reaction
     setTimeout(() => {
-      const u = useGameStore.getState().units.find(u => u.id === attacker.id);
-      if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 700);
+      spawnEffect(effectType, fromPos, toPos, effectColor, travelDur);
+      if (skill.aoe) spawnEffect('aoe_ring', fromPos, toPos, effectColor, 900);
+      if (finalDmg > 0 && effectType !== 'impact_flash' && effectType !== 'heal_burst') {
+        setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, effectColor, 380), Math.min(300, Math.floor(travelDur * 0.5)));
+      }
+      // Target visual reaction
+      if (finalDmg > 0 || (skill.applyStatus && skill.statusDuration)) {
+        if (newHp <= 0) {
+          setAnimStates(prev => ({ ...prev, [target.id]: 'dead' }));
+        } else {
+          setAnimStates(prev => ({ ...prev, [target.id]: skill.applyStatus ? skill.applyStatus as AnimState : 'hurt' }));
+          setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 650);
+        }
+      }
+    }, hitMs);
+
+    // Attacker returns to idle then check endTurn
+    setTimeout(() => {
+      setAnimStates(prev => ({ ...prev, [attacker.id]: 'idle' }));
+      setTimeout(() => {
+        const u = useGameStore.getState().units.find(u => u.id === attacker.id);
+        if (u?.hasMoved && u?.hasActed) endTurn();
+      }, 150);
+    }, atkDurMs);
   };
 
   const executeAttack = (attacker: TacticalUnit, target: TacticalUnit) => {
-    const isCrit = Math.random() < 0.1;
-    const damage = calculateDamage(attacker, target, isCrit);
-    
-    updateUnit(target.id, { hp: Math.max(0, target.hp - damage) });
-    updateUnit(attacker.id, { hasActed: true });
+    const isCrit  = Math.random() < 0.1;
+    const damage  = calculateDamage(attacker, target, isCrit);
+    const newHp   = target.hp - damage;
+
+    // Immediate: game state + logs
+    updateUnit(attacker.id, { hasActed: true, facing: calcFacing(attacker.position, target.position) });
+    updateUnit(target.id, { hp: Math.max(0, newHp) });
     setActionMode('idle');
     setAttackableTiles([]);
     addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}`, 'damage');
+    if (newHp <= 0) addLog(`${target.name} is defeated!`, 'debuff');
 
-    // Physical attack effects
-    const fromPos = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
-    const toPos   = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
-    const wt = CHARACTER_WEAPON_MAP[attacker.characterId];
+    // Animation timing
+    const atkDurMs   = 1050;
+    const hitMs      = Math.floor(atkDurMs * 0.38);
+    const fromPos    = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
+    const toPos      = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
+    const wt         = CHARACTER_WEAPON_MAP[attacker.characterId];
     const slashColor = isCrit ? '#ffd700' : '#ffa040';
-    spawnEffect(wt === 'bow' ? 'arrow' : 'physical_slash', fromPos, toPos, slashColor, 450);
-    setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, slashColor, 380), 320);
-    
-    setAnimStates(prev => ({...prev, [attacker.id]: 'attack1'}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 700);
 
-    if (target.hp - damage <= 0) {
-      addLog(`${target.name} is defeated!`, 'debuff');
-      setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
-    } else {
-      setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
-      setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 500);
-    }
-    
+    setAnimStates(prev => ({ ...prev, [attacker.id]: 'attack1' }));
+
     setTimeout(() => {
-      const u = useGameStore.getState().units.find(u => u.id === attacker.id);
-      if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 700);
+      spawnEffect(wt === 'bow' ? 'arrow' : 'physical_slash', fromPos, toPos, slashColor, 420);
+      setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, slashColor, 350), 250);
+      // Target reaction
+      if (newHp <= 0) {
+        setAnimStates(prev => ({ ...prev, [target.id]: 'dead' }));
+      } else {
+        setAnimStates(prev => ({ ...prev, [target.id]: 'hurt' }));
+        setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 650);
+      }
+    }, hitMs);
+
+    setTimeout(() => {
+      setAnimStates(prev => ({ ...prev, [attacker.id]: 'idle' }));
+      setTimeout(() => {
+        const u = useGameStore.getState().units.find(u => u.id === attacker.id);
+        if (u?.hasMoved && u?.hasActed) endTurn();
+      }, 150);
+    }, atkDurMs);
   };
 
   const executeAbility = (attacker: TacticalUnit, target: TacticalUnit) => {
-    const ability = attacker.specialAbility;
-    let damage = 0;
-    updateUnit(attacker.id, { hasActed: true, specialAbilityCooldown: 3 });
+    const ability   = attacker.specialAbility;
+    const atkDurMs  = 1350;
+    const hitMs     = Math.floor(atkDurMs * 0.38);
+    const isHeal    = ability.includes('Heal') || ability === "Death's Embrace";
+
+    // Immediate game state
+    updateUnit(attacker.id, { hasActed: true, specialAbilityCooldown: 3, facing: isHeal ? attacker.facing : calcFacing(attacker.position, target.position) });
     setActionMode('idle');
     setAttackableTiles([]);
-    setAnimStates(prev => ({...prev, [attacker.id]: 'special2'}));
-    setTimeout(() => setAnimStates(prev => ({...prev, [attacker.id]: 'idle'})), 800);
 
-    if (ability.includes("Heal") || ability === "Death's Embrace") {
-       const heal = Math.floor(attacker.attack * 1.5);
-       updateUnit(attacker.id, { hp: Math.min(attacker.maxHp, attacker.hp + heal) });
-       addLog(`${attacker.name} uses ${ability} and heals for ${heal}!`, 'heal');
+    let damage = 0;
+    if (isHeal) {
+      const heal = Math.floor(attacker.attack * 1.5);
+      updateUnit(attacker.id, { hp: Math.min(attacker.maxHp, attacker.hp + heal) });
+      addLog(`${attacker.name} uses ${ability} and heals for ${heal}!`, 'heal');
     } else {
-       damage = calculateDamage(attacker, target) + Math.floor(attacker.attack * 0.5);
-       updateUnit(target.id, { hp: Math.max(0, target.hp - damage) });
-       addLog(`${attacker.name} uses ${ability} on ${target.name} for ${damage} damage!`, 'damage');
-       if (target.hp - damage <= 0) {
-         addLog(`${target.name} is defeated!`, 'debuff');
-         setAnimStates(prev => ({...prev, [target.id]: 'dead'}));
-       } else {
-         setAnimStates(prev => ({...prev, [target.id]: 'hurt'}));
-         setTimeout(() => setAnimStates(prev => ({...prev, [target.id]: 'idle'})), 500);
-       }
+      damage = calculateDamage(attacker, target) + Math.floor(attacker.attack * 0.5);
+      const newHp = target.hp - damage;
+      updateUnit(target.id, { hp: Math.max(0, newHp) });
+      addLog(`${attacker.name} uses ${ability} on ${target.name} for ${damage} damage!`, 'damage');
+      if (newHp <= 0) addLog(`${target.name} is defeated!`, 'debuff');
+
+      setTimeout(() => {
+        const fromPos    = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
+        const toPos      = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
+        spawnEffect('magic_beam', fromPos, toPos, '#ffcc00', 700);
+        setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, '#ffcc00', 380), 350);
+        if (newHp <= 0) {
+          setAnimStates(prev => ({ ...prev, [target.id]: 'dead' }));
+        } else {
+          setAnimStates(prev => ({ ...prev, [target.id]: 'hurt' }));
+          setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 650);
+        }
+      }, hitMs);
     }
+
+    setAnimStates(prev => ({ ...prev, [attacker.id]: 'special2' }));
     setTimeout(() => {
-      const u = useGameStore.getState().units.find(u => u.id === attacker.id);
-      if (u?.hasMoved && u?.hasActed) endTurn();
-    }, 800);
+      setAnimStates(prev => ({ ...prev, [attacker.id]: 'idle' }));
+      setTimeout(() => {
+        const u = useGameStore.getState().units.find(u => u.id === attacker.id);
+        if (u?.hasMoved && u?.hasActed) endTurn();
+      }, 150);
+    }, atkDurMs);
   };
 
   // AI Logic
@@ -647,10 +694,13 @@ export default function Battle() {
           })[0];
 
           if (bestMove) {
-            updateUnit(unit.id, { position: bestMove, hasMoved: true });
+            const dist   = Math.abs(bestMove.x - unit.position.x) + Math.abs(bestMove.y - unit.position.y);
+            const walkMs = Math.max(520, dist * 390);
+            const facing = calcFacing(unit.position, bestMove);
+            updateUnit(unit.id, { position: bestMove, hasMoved: true, facing });
             addLog(`${unit.name} moves.`);
-            setAnimStates(prev => ({...prev, [unit.id]: 'walk'}));
-            setTimeout(() => setAnimStates(prev => ({...prev, [unit.id]: 'idle'})), 600);
+            setAnimStates(prev => ({ ...prev, [unit.id]: 'walk' }));
+            setTimeout(() => setAnimStates(prev => ({ ...prev, [unit.id]: 'idle' })), walkMs);
           } else {
             updateUnit(unit.id, { hasMoved: true });
           }
@@ -803,14 +853,14 @@ export default function Battle() {
           {cameraMode === 'tactical' && (
             <>
               <button
-                onClick={() => document.dispatchEvent(new CustomEvent('camera-rotate', { detail: 'left' }))}
+                onClick={() => document.dispatchEvent(new CustomEvent('camera-rotate', { detail: { dir: 'left', amount: Math.PI / 4 } }))}
                 className="flex items-center justify-center w-7 h-7 rounded border border-amber-600/50 bg-amber-950/50 text-amber-300 hover:bg-amber-900/60 transition-all text-sm font-bold"
-                title="Rotate left (Q)"
+                title="Rotate left 45° (Z)"
               >⟲</button>
               <button
-                onClick={() => document.dispatchEvent(new CustomEvent('camera-rotate', { detail: 'right' }))}
+                onClick={() => document.dispatchEvent(new CustomEvent('camera-rotate', { detail: { dir: 'right', amount: Math.PI / 4 } }))}
                 className="flex items-center justify-center w-7 h-7 rounded border border-amber-600/50 bg-amber-950/50 text-amber-300 hover:bg-amber-900/60 transition-all text-sm font-bold"
-                title="Rotate right (E)"
+                title="Rotate right 45° (X)"
               >⟳</button>
             </>
           )}
