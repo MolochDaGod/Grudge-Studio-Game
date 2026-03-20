@@ -50,14 +50,19 @@ function applyMaterialOverrides(
       const ov = config.materials[mat.name];
       const cloned = mat.clone() as THREE.MeshStandardMaterial;
 
-      // Apply external texture for RPG models that have no embedded texture
-      if (rpgTexture && !cloned.map) {
+      // Apply external texture for RPG models that have no embedded texture.
+      // When we do this we reset the material color to white so the PNG's
+      // baked colours show at full brightness (no tint multiply).
+      const externalTexApplied = !!(rpgTexture && !cloned.map);
+      if (externalTexApplied) {
         cloned.map = rpgTexture;
+        cloned.color.setHex(0xffffff);
         cloned.needsUpdate = true;
       }
 
       if (!ov) return cloned;
-      if (ov.color) {
+      // Skip colour tint when the external PNG is the source of truth
+      if (ov.color && !externalTexApplied) {
         const c = new THREE.Color().setStyle(ov.color);
         c.convertSRGBToLinear();
         cloned.color.copy(c);
