@@ -132,7 +132,8 @@ function CharacterModelInner({
   useEffect(() => {
     if (!actions) return;
     const name = getAnimationName(animState, config);
-    const action = actions[name];
+    // Some GLBs (Quaternius RPG pack) prefix every clip with "CharacterArmature|"
+    const action = actions[name] ?? actions[`CharacterArmature|${name}`];
     if (!action) return;
     Object.values(actions).forEach((a) => { if (a && a !== action) a.fadeOut(0.25); });
     action.timeScale = animState === 'frozen' ? 0.06 : 1.0;

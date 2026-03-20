@@ -836,26 +836,35 @@ export default function ToonAdmin() {
                   <>
                     <div className="w-full h-px bg-white/6" />
                     <div className="space-y-3">
-                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Animations</p>
+                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">
+                        Animations {availableAnims.length > 0 && <span className="text-white/20">({availableAnims.length})</span>}
+                      </p>
                       <Slider label="Playback Speed" value={currentEdit.animSpeed} min={0.1} max={3.0} step={0.05} onChange={v => updateEdit({ animSpeed: v })} />
+                      {availableAnims.length === 0 && (
+                        <p className="text-[9px] text-white/20 italic">Loading animations…</p>
+                      )}
                       <div className="grid grid-cols-2 gap-1">
-                        {IN_GAME_ANIMS.map(name => (
-                          <button
-                            key={name}
-                            onClick={() => updateEdit({ playingAnimation: currentEdit.playingAnimation === name ? 'Idle' : name })}
-                            className={cn(
-                              "flex items-center gap-1.5 px-2 py-1.5 rounded border text-[9px] transition-all text-left",
-                              currentEdit.playingAnimation === name
-                                ? "border-green-500/50 bg-green-950/40 text-green-300"
-                                : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
-                            )}
-                          >
-                            {currentEdit.playingAnimation === name
-                              ? <Pause className="w-2.5 h-2.5 shrink-0" />
-                              : <Play className="w-2.5 h-2.5 shrink-0" />}
-                            <span className="truncate font-mono">{name}</span>
-                          </button>
-                        ))}
+                        {availableAnims.map(name => {
+                          // Strip "CharacterArmature|" prefix for display only
+                          const label = name.replace(/^CharacterArmature\|/, '');
+                          return (
+                            <button
+                              key={name}
+                              onClick={() => updateEdit({ playingAnimation: currentEdit.playingAnimation === name ? 'Idle' : name })}
+                              className={cn(
+                                "flex items-center gap-1.5 px-2 py-1.5 rounded border text-[9px] transition-all text-left",
+                                currentEdit.playingAnimation === name
+                                  ? "border-green-500/50 bg-green-950/40 text-green-300"
+                                  : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
+                              )}
+                            >
+                              {currentEdit.playingAnimation === name
+                                ? <Pause className="w-2.5 h-2.5 shrink-0" />
+                                : <Play className="w-2.5 h-2.5 shrink-0" />}
+                              <span className="truncate font-mono">{label}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </>

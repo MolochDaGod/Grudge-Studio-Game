@@ -339,11 +339,11 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Ranger_Texture: { color: '#c8c0a8', emissive: '#220044', emissiveIntensity: 0.25, roughness: 0.85 },
       Bow_Texture:    { color: '#c0b8a0', roughness: 0.9 },
     },
-    // ranger_rpg animations: Bow_Shoot / Bow_Draw → bow
+    // ranger_rpg animations: Bow_Attack_Shoot / Bow_Attack_Draw → bow
     primaryWeapon: { modelId: 'bow', position: [0,0,0], rotation: [Math.PI/2, Math.PI/2, 0], scale: 19 },
     animMap: {
-      idle2: 'Idle_Weapon', attack1: 'Bow_Shoot', attack2: 'Bow_Shoot',
-      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Draw',
+      idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Attack_Draw',
       stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
       special1: 'Run_Holding', special2: 'Roll',
     },
