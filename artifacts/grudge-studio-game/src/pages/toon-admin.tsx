@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, Suspense, useCallback, Component, ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useTexture, useGLTF, useAnimations, Grid, Stars } from '@react-three/drei';
+import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
 import { useLocation } from 'wouter';
 import { useGetCharacters } from '@workspace/api-client-react';
@@ -24,6 +25,7 @@ interface HeroEdit {
   effectType: 'none' | 'fire' | 'magic' | 'storm' | 'lightning';
   effectIntensity: number;
   linkedModelId: string | null;
+  baseModelId: string | null;
   playingAnimation: string | null;
   animSpeed: number;
   equippedWeapon: string | null;
@@ -41,9 +43,30 @@ interface ModelMeta {
 const DEFAULT_EDIT: HeroEdit = {
   scale: 1.0, colorTint: '#ffffff', emissiveColor: '#000000',
   emissiveIntensity: 0, effectType: 'none', effectIntensity: 0.6,
-  linkedModelId: null, playingAnimation: null, animSpeed: 1.0,
+  linkedModelId: null, baseModelId: null, playingAnimation: null, animSpeed: 1.0,
   equippedWeapon: null, accessories: [], notes: '',
 };
+
+// In-game GLB models available in /public/models/characters/
+const IN_GAME_MODELS = [
+  { id: 'human',       label: 'Human'       },
+  { id: 'elf',         label: 'Elf'         },
+  { id: 'dwarf',       label: 'Dwarf'       },
+  { id: 'orc',         label: 'Orc'         },
+  { id: 'barbarian',   label: 'Barbarian'   },
+  { id: 'undead',      label: 'Undead'      },
+  { id: 'mage',        label: 'Mage'        },
+  { id: 'rogue',       label: 'Rogue'       },
+  { id: 'rogue_rpg',   label: 'Rogue RPG'   },
+  { id: 'warrior_rpg', label: 'Warrior RPG' },
+  { id: 'ranger_rpg',  label: 'Ranger RPG'  },
+  { id: 'wizard_rpg',  label: 'Wizard RPG'  },
+  { id: 'cleric_rpg',  label: 'Cleric RPG'  },
+  { id: 'monk_rpg',    label: 'Monk RPG'    },
+];
+
+// All animations available in the in-game character GLBs
+const IN_GAME_ANIMS = ['Idle','Walk','Run','SwordSlash','Punch','Roll','Jump','Shoot_OneHanded','RecieveHit','Death','Defeat','Victory','SitDown','StandUp','PickUp','Walk_Carry','Run_Carry'];
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const FACTION_GROUPS: Record<string, string[]> = {
@@ -294,13 +317,52 @@ function GltfViewer({
   return <group ref={groupRef}><primitive object={scene} /></group>;
 }
 
-// Main viewport scene
+// ── In-game GLB model viewer ───────────────────────────────────────────────────
+function InGameModelViewer({
+  modelId, playingAnimation, animSpeed, scale,
+}: { modelId: string; playingAnimation: string | null; animSpeed: number; scale: number }) {
+  const url = `${BASE}models/characters/${modelId}.glb`;
+  const { scene: rawScene, animations } = useGLTF(url);
+  const groupRef = useRef<THREE.Group>(null!);
+  const scene = useMemo(() => {
+    const clone = SkeletonUtils.clone(rawScene);
+    // Apply basic white materials for preview
+    clone.traverse(o => {
+      if (o instanceof THREE.Mesh) { o.castShadow = true; o.receiveShadow = true; }
+    });
+    return clone;
+  }, [rawScene]);
+  const { actions } = useAnimations(animations, groupRef);
+
+  useEffect(() => {
+    if (!actions) return;
+    const name = playingAnimation ?? 'Idle';
+    const action = actions[name];
+    if (!action) return;
+    Object.values(actions).forEach(a => a?.fadeOut(0.2));
+    action.setLoop(THREE.LoopRepeat, Infinity);
+    action.reset().fadeIn(0.2).play();
+  }, [playingAnimation, actions]);
+
+  useEffect(() => {
+    if (!actions) return;
+    Object.values(actions).forEach(a => { if (a?.isRunning()) a.timeScale = animSpeed; });
+  }, [animSpeed, actions]);
+
+  return (
+    <group ref={groupRef} scale={[scale, scale, scale]}>
+      <primitive object={scene} />
+    </group>
+  );
+}
+
 function DressingRoomScene({
-  heroId, edit, modelUrl, playingAnimation, animSpeed, onAnimationsLoaded,
+  heroId, edit, modelUrl, baseModelId, playingAnimation, animSpeed, onAnimationsLoaded,
 }: {
   heroId: string;
   edit: HeroEdit;
   modelUrl: string | null;
+  baseModelId: string | null;
   playingAnimation: string | null;
   animSpeed: number;
   onAnimationsLoaded: (names: string[]) => void;
@@ -326,7 +388,16 @@ function DressingRoomScene({
 
       <Stars radius={40} depth={20} count={800} factor={2} fade speed={0.3} />
 
-      {modelUrl ? (
+      {baseModelId ? (
+        <Suspense fallback={null}>
+          <InGameModelViewer
+            modelId={baseModelId}
+            playingAnimation={playingAnimation}
+            animSpeed={animSpeed}
+            scale={edit.scale}
+          />
+        </Suspense>
+      ) : modelUrl ? (
         <Suspense fallback={null}>
           <GltfViewer
             url={modelUrl}
@@ -577,6 +648,16 @@ export default function ToonAdmin() {
 
         {/* ── Center: 3D viewport ───────────────────────────────────────────── */}
         <div className="flex-1 relative">
+          {/* Portrait reference image — shown at natural size in bottom-left corner */}
+          <img
+            src={`${BASE}images/chars/${selectedHeroId}.png`}
+            alt=""
+            aria-hidden
+            className="absolute bottom-10 left-3 h-32 w-auto object-contain object-bottom pointer-events-none select-none rounded"
+            style={{ opacity: 0.28, zIndex: 2 }}
+            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+
           <WebGLErrorBoundary>
           <Canvas
             camera={{ position: [0, 4, 8], fov: 45 }}
@@ -587,6 +668,7 @@ export default function ToonAdmin() {
               heroId={selectedHeroId}
               edit={currentEdit}
               modelUrl={modelUrl}
+              baseModelId={currentEdit.baseModelId}
               playingAnimation={currentEdit.playingAnimation}
               animSpeed={currentEdit.animSpeed}
               onAnimationsLoaded={handleAnimationsLoaded}
@@ -716,68 +798,61 @@ export default function ToonAdmin() {
             {/* ── MODEL tab ─────────────────────────────────────────────────── */}
             {activeTab === 'model' && (
               <>
+                {/* In-game battle model selector */}
                 <div className="space-y-3">
-                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">3D Model Link</p>
-                  <p className="text-[9px] text-white/30 italic">
-                    Link an uploaded GLTF/GLB from the Model Admin (/admin) to this hero. Once linked, the 3D model replaces the portrait sprite in the viewport.
-                  </p>
-                  {models.length === 0 ? (
-                    <div className="rounded border border-white/8 p-3 text-center text-[10px] text-white/25">
-                      No models found. Upload models via <span className="text-amber-400/70">/admin</span>.
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">In-Game Battle Model</p>
+                  <p className="text-[9px] text-white/30 italic">Pick which 3D character model this hero uses in battle.</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={() => updateEdit({ baseModelId: null, playingAnimation: 'Idle' })}
+                      className={cn(
+                        "px-2 py-2 rounded border text-[10px] font-bold transition-all text-left",
+                        !currentEdit.baseModelId
+                          ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
+                          : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
+                      )}
+                    >
+                      ✕ Default
+                    </button>
+                    {IN_GAME_MODELS.map(m => (
                       <button
-                        onClick={() => updateEdit({ linkedModelId: null, playingAnimation: null })}
+                        key={m.id}
+                        onClick={() => updateEdit({ baseModelId: m.id, linkedModelId: null, playingAnimation: 'Idle' })}
                         className={cn(
-                          "w-full text-left px-3 py-2 rounded border text-[10px] transition-all",
-                          !currentEdit.linkedModelId
+                          "px-2 py-2 rounded border text-[10px] font-bold transition-all text-left",
+                          currentEdit.baseModelId === m.id
                             ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
                             : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
                         )}
                       >
-                        ✕ None (use portrait sprite)
+                        {m.label}
                       </button>
-                      {models.filter(m => m.status === 'ready').map(m => (
-                        <button
-                          key={m.id}
-                          onClick={() => updateEdit({ linkedModelId: m.id, playingAnimation: null })}
-                          className={cn(
-                            "w-full text-left px-3 py-2 rounded border text-[10px] transition-all",
-                            currentEdit.linkedModelId === m.id
-                              ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
-                              : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
-                          )}
-                        >
-                          <div className="font-bold text-[11px]">{m.name}</div>
-                          <div className="text-[9px] opacity-50">{m.outputFile}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
 
-                {availableAnims.length > 0 && (
+                {/* Animation player (shown when in-game model is selected) */}
+                {currentEdit.baseModelId && (
                   <>
                     <div className="w-full h-px bg-white/6" />
                     <div className="space-y-3">
-                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Animations ({availableAnims.length})</p>
+                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Animations</p>
                       <Slider label="Playback Speed" value={currentEdit.animSpeed} min={0.1} max={3.0} step={0.05} onChange={v => updateEdit({ animSpeed: v })} />
-                      <div className="space-y-1">
-                        {availableAnims.map(name => (
+                      <div className="grid grid-cols-2 gap-1">
+                        {IN_GAME_ANIMS.map(name => (
                           <button
                             key={name}
-                            onClick={() => updateEdit({ playingAnimation: currentEdit.playingAnimation === name ? null : name })}
+                            onClick={() => updateEdit({ playingAnimation: currentEdit.playingAnimation === name ? 'Idle' : name })}
                             className={cn(
-                              "w-full flex items-center gap-2 px-3 py-2 rounded border text-[10px] transition-all text-left",
+                              "flex items-center gap-1.5 px-2 py-1.5 rounded border text-[9px] transition-all text-left",
                               currentEdit.playingAnimation === name
                                 ? "border-green-500/50 bg-green-950/40 text-green-300"
                                 : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
                             )}
                           >
                             {currentEdit.playingAnimation === name
-                              ? <Pause className="w-3 h-3 shrink-0" />
-                              : <Play className="w-3 h-3 shrink-0" />}
+                              ? <Pause className="w-2.5 h-2.5 shrink-0" />
+                              : <Play className="w-2.5 h-2.5 shrink-0" />}
                             <span className="truncate font-mono">{name}</span>
                           </button>
                         ))}
@@ -786,12 +861,59 @@ export default function ToonAdmin() {
                   </>
                 )}
 
-                {!currentEdit.linkedModelId && (
+                <div className="w-full h-px bg-white/6" />
+
+                {/* Scale */}
+                <div className="space-y-2">
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Scale</p>
+                  <Slider label="Model Scale" value={currentEdit.scale} min={0.4} max={2.5} step={0.05} onChange={v => updateEdit({ scale: v })} />
+                </div>
+
+                {/* External model link (advanced) */}
+                {!currentEdit.baseModelId && (
                   <>
                     <div className="w-full h-px bg-white/6" />
-                    <div className="space-y-2">
-                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Portrait Scale</p>
-                      <Slider label="Scale" value={currentEdit.scale} min={0.4} max={2.5} step={0.05} onChange={v => updateEdit({ scale: v })} />
+                    <div className="space-y-3">
+                      <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">Custom Model Link</p>
+                      <p className="text-[9px] text-white/25 italic">Link an uploaded GLTF/GLB from /admin.</p>
+                      {models.length === 0 ? (
+                        <div className="rounded border border-white/8 p-3 text-center text-[10px] text-white/25">
+                          No models uploaded yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <button
+                            onClick={() => updateEdit({ linkedModelId: null, playingAnimation: null })}
+                            className={cn("w-full text-left px-3 py-2 rounded border text-[10px] transition-all",
+                              !currentEdit.linkedModelId ? "border-amber-500/50 bg-amber-950/40 text-amber-300" : "border-white/10 text-white/40 hover:border-white/20")}
+                          >✕ None</button>
+                          {models.filter(m => m.status === 'ready').map(m => (
+                            <button key={m.id}
+                              onClick={() => updateEdit({ linkedModelId: m.id, playingAnimation: null })}
+                              className={cn("w-full text-left px-3 py-2 rounded border text-[10px] transition-all",
+                                currentEdit.linkedModelId === m.id ? "border-amber-500/50 bg-amber-950/40 text-amber-300" : "border-white/10 text-white/40 hover:border-white/20")}
+                            >
+                              <div className="font-bold text-[11px]">{m.name}</div>
+                              <div className="text-[9px] opacity-50">{m.outputFile}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {availableAnims.length > 0 && (
+                        <div className="space-y-1 mt-2">
+                          <Slider label="Playback Speed" value={currentEdit.animSpeed} min={0.1} max={3.0} step={0.05} onChange={v => updateEdit({ animSpeed: v })} />
+                          {availableAnims.map(name => (
+                            <button key={name}
+                              onClick={() => updateEdit({ playingAnimation: currentEdit.playingAnimation === name ? null : name })}
+                              className={cn("w-full flex items-center gap-2 px-3 py-2 rounded border text-[10px] transition-all text-left",
+                                currentEdit.playingAnimation === name ? "border-green-500/50 bg-green-950/40 text-green-300" : "border-white/10 text-white/40 hover:border-white/20")}
+                            >
+                              {currentEdit.playingAnimation === name ? <Pause className="w-3 h-3 shrink-0" /> : <Play className="w-3 h-3 shrink-0" />}
+                              <span className="truncate font-mono">{name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
