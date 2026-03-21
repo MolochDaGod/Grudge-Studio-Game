@@ -489,17 +489,29 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'human_mage': {
     modelId: 'wizard',
     scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
-    materials: {},
+    materials: {
+      Main:    { color: '#1a1060', roughness: 0.75 },
+      Skin:    { color: '#c08050', roughness: 0.6 },
+      Details: { color: '#2a1880', emissive: '#440088', emissiveIntensity: 0.15 },
+      Grey:    { color: '#0e0c20', roughness: 0.9 },
+      Face:    { color: '#c08050', emissive: '#330066', emissiveIntensity: 0.1 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
     animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'human_ranger': {
-    modelId: 'rogue',
-    scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
-    materials: {},
-    primaryWeapon: WEAPON_DEFAULTS.bow,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
+    modelId: 'ninja_male',
+    scale: [0.72 * 0.92, 0.72 * 1.0, 0.72 * 0.92],
+    materials: {
+      Main:    { color: '#2a3a18', roughness: 0.85 },
+      Skin:    { color: '#b87848', roughness: 0.65 },
+      Details: { color: '#3a4a22', emissive: '#0a1400', emissiveIntensity: 0.04 },
+      Grey:    { color: '#1e2a12', roughness: 0.9 },
+      Face:    { color: '#b87848' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.daggers,
+    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   // ── CRUSADE — BARBARIAN ────────────────────────────────────────────────────
@@ -521,7 +533,12 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'barbarian_worg': {
     modelId: 'barbarian',
     scale: [0.72 * 1.3, 0.72 * 1.05, 0.72 * 1.3],
-    materials: {},
+    materials: {
+      Skin:  { color: '#7a5028', roughness: 0.7 },
+      Face:  { color: '#7a5028', emissive: '#440011', emissiveIntensity: 0.06 },
+      Pants: { color: '#2a1408', roughness: 0.9 },
+      Hair:  { color: '#180808', roughness: 0.95 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
@@ -607,15 +624,21 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Detail:     { color: '#604820', roughness: 0.8 },
       Red:        { color: '#3a2808', roughness: 0.9 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.bow,
+    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
   },
 
   // ── FABLED — ELF ──────────────────────────────────────────────────────────
   'elf_warrior': {
-    modelId: 'elf',
-    scale: [0.72 * 0.95, 0.72 * 1.08, 0.72 * 0.95],
-    materials: {},
+    modelId: 'knight_golden_male',
+    scale: [0.72 * 0.92, 0.72 * 1.08, 0.72 * 0.92],
+    materials: {
+      Armor:      { color: '#c8e0a8', metalness: 0.82, roughness: 0.18 },
+      Armor_Dark: { color: '#1a3010', metalness: 0.6, roughness: 0.4 },
+      Skin:       { color: '#d4c890', roughness: 0.5 },
+      Detail:     { color: '#b8d060', metalness: 0.9, roughness: 0.12 },
+      Red:        { color: '#1a3818', roughness: 0.7 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
@@ -623,15 +646,26 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'elf_worg': {
     modelId: 'elf',
     scale: [0.72 * 0.9, 0.72 * 1.05, 0.72 * 0.9],
-    materials: {},
+    materials: {
+      Skin:  { color: '#d4c890', roughness: 0.5 },
+      Face:  { color: '#d4c890', emissive: '#004400', emissiveIntensity: 0.06 },
+      Pants: { color: '#1a2e10', roughness: 0.85 },
+      Hair:  { color: '#e8d860', roughness: 0.7 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
     animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   'elf_mage': {
-    modelId: 'mage',
-    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
-    materials: {},
+    modelId: 'witch',
+    scale: [0.72 * 0.88, 0.72 * 1.02, 0.72 * 0.88],
+    materials: {
+      Main:    { color: '#1a3818', roughness: 0.75 },
+      Skin:    { color: '#d4c890', roughness: 0.5 },
+      Details: { color: '#2a5025', emissive: '#004422', emissiveIntensity: 0.18 },
+      Grey:    { color: '#0e1e0a', roughness: 0.9 },
+      Face:    { color: '#d4c890', emissive: '#002211', emissiveIntensity: 0.08 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
     animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
@@ -703,7 +737,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Pants: { color: '#1a1a12', roughness: 0.9 },
       Teeth: { color: '#b0a050' },
     },
-    primaryWeapon: WEAPON_DEFAULTS.bow,
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
   },
 
@@ -766,7 +800,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Grey:    { color: '#0c0c18', roughness: 0.95 },
       Face:    { color: '#1a1620', emissive: '#8800cc', emissiveIntensity: 0.5 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.bow,
+    primaryWeapon: WEAPON_DEFAULTS.daggers,
     animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
@@ -791,7 +825,13 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'sky_captain': {
     modelId: 'soldier_male',
     scale: [0.72, 0.72 * 1.02, 0.72],
-    materials: {},
+    materials: {
+      Main:    { color: '#0a1a3a', roughness: 0.7 },
+      Skin:    { color: '#b87848', roughness: 0.65 },
+      Details: { color: '#c8a030', metalness: 0.6, roughness: 0.35 },
+      Grey:    { color: '#182030', roughness: 0.85 },
+      Face:    { color: '#b87848', emissive: '#220800', emissiveIntensity: 0.05 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.sword,
     secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
