@@ -233,7 +233,7 @@ function CameraController({
 const FACING_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 
 // ── Walk speed (tiles per second) ─────────────────────────────────────────────
-const WALK_SPEED = 2.6;
+const WALK_SPEED = 3.5;
 
 function calcWalkFacingAngle(from: GridPos, to: GridPos): number {
   const dx = to.x - from.x;

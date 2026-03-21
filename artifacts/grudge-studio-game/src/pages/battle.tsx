@@ -187,6 +187,8 @@ export default function Battle() {
 
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
   const [walkPaths, setWalkPaths] = useState<Record<string, { x: number; y: number }[]>>({});
+  // Guard: prevent more than one endTurn per turn (stale closures in animation timers)
+  const endTurnFiredRef = useRef(false);
   const [combatEffects, setCombatEffects] = useState<CombatEffectData[]>([]);
   const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
   const [cameraFocus, setCameraFocus] = useState<[number, number, number] | null>(null);
@@ -477,8 +479,13 @@ export default function Battle() {
     }
   }, [phase, currentUnitId, tickCT]);
 
+  // Reset the guard every time the active unit changes
+  useEffect(() => { endTurnFiredRef.current = false; }, [currentUnitId]);
+
   const endTurn = useCallback(() => {
     if (!currentUnitId) return;
+    if (endTurnFiredRef.current) return; // Prevent double endTurn from stale closures
+    endTurnFiredRef.current = true;
     const unit = units.find(u => u.id === currentUnitId);
     if (!unit) return;
     
@@ -730,21 +737,24 @@ export default function Battle() {
     }, atkDurMs);
   };
 
-  // AI Logic — walks the unit tile-by-tile then attacks after walk completes
-  // walkPaths in deps: when the walk finishes, walkPaths[unit.id] is cleared
-  // → effect re-runs → unit.hasMoved=true, not in walkPaths → attack phase
+  // ── AI Logic ────────────────────────────────────────────────────────────────
+  // Fires when the active unit changes, when units change (hasMoved/hasActed),
+  // or when walkPaths clears (walk animation completed).
+  // EVERY code path calls endTurn() explicitly — never relies on the "else" fallback.
+  // The endTurnFiredRef guard prevents double-endTurn from stale animation closures.
   useEffect(() => {
     const unit = units.find(u => u.id === currentUnitId);
     if (!unit || unit.isPlayerControlled || unit.hp <= 0) return;
 
-    // If this unit is still walking, wait for onWalkComplete to clear walkPaths
+    // Still walking — wait for onWalkComplete to clear walkPaths before acting
     if (walkPaths[unit.id]) return;
 
-    // Shorter delay for the attack phase (unit just finished walking)
+    // Delay: give the player time to see the AI "thinking" before its first action,
+    // or a short pause after the walk animation finishes before attacking.
     const delay = unit.hasMoved ? 420 : 1300;
 
     const aiTimer = setTimeout(() => {
-      // Stunned: skip entire turn
+      // ── STUNNED: lose entire turn ────────────────────────────────────────
       if (unit.statusEffects.includes('stunned')) {
         addLog(`${unit.name} is STUNNED and loses their turn!`, 'debuff');
         updateUnit(unit.id, { hasMoved: true, hasActed: true });
@@ -752,63 +762,132 @@ export default function Battle() {
         return;
       }
 
+      // ── MOVE PHASE ───────────────────────────────────────────────────────
       if (!unit.hasMoved) {
         const players = units.filter(u => u.isPlayerControlled && u.hp > 0);
-        if (players.length > 0) {
-          const target = players.sort((a, b) => {
-            const distA = Math.abs(a.position.x - unit.position.x) + Math.abs(a.position.y - unit.position.y);
-            const distB = Math.abs(b.position.x - unit.position.x) + Math.abs(b.position.y - unit.position.y);
-            return distA - distB;
-          })[0];
+        if (players.length === 0) { endTurn(); return; }
 
-          const effectiveMove = unit.statusEffects.includes('frozen') ? 1 : unit.move;
-          const reach = getReachableTiles(unit.position, effectiveMove);
-          const bestMove = reach.sort((a, b) => {
-            const distA = Math.abs(a.x - target.position.x) + Math.abs(a.y - target.position.y);
-            const distB = Math.abs(b.x - target.position.x) + Math.abs(b.y - target.position.y);
-            return distA - distB;
-          })[0];
+        const isRanged = unit.range >= 2;
 
-          if (bestMove) {
-            const startPos = { x: unit.position.x, y: unit.position.y };
-            const facing   = calcFacing(startPos, bestMove);
-            const occupied = new Set<string>();
-            units.forEach(u => { if (u.hp > 0 && u.id !== unit.id) occupied.add(`${u.position.x},${u.position.y}`); });
-            const path = bfsPath(startPos, bestMove, GRID_W, GRID_H, occupied);
-            updateUnit(unit.id, { position: bestMove, hasMoved: true, facing });
-            addLog(`${unit.name} advances.`);
-            setAnimStates(prev => ({ ...prev, [unit.id]: 'walk' }));
-            // Trigger walk animation — AI attack fires when onWalkComplete clears walkPaths
-            setWalkPaths(prev => ({ ...prev, [unit.id]: path }));
+        // Pick best target to move toward.
+        // Priority: (1) a player within attack range after move → pick lowest HP
+        //           (2) otherwise, pick closest player (also prefer lowest HP as tiebreak)
+        const effectiveMove = unit.statusEffects.includes('frozen') ? 1 : unit.move;
+        const reach = getReachableTiles(unit.position, effectiveMove);
+
+        // Check which players we could actually reach and attack from a reachable tile
+        const attackable = players.filter(p => reach.some(tile => {
+          const d = Math.abs(tile.x - p.position.x) + Math.abs(tile.y - p.position.y);
+          return d <= unit.range;
+        }));
+
+        // Sort candidates: attackable ones first (lowest HP), then non-attackable by distance
+        const sortedTargets = [...players].sort((a, b) => {
+          const aAttackable = attackable.includes(a);
+          const bAttackable = attackable.includes(b);
+          if (aAttackable !== bAttackable) return aAttackable ? -1 : 1;
+          // Among attackable: lowest HP first (finishing blow priority)
+          if (aAttackable && bAttackable) return a.hp - b.hp;
+          // Among non-attackable: closest first
+          const dA = Math.abs(a.position.x - unit.position.x) + Math.abs(a.position.y - unit.position.y);
+          const dB = Math.abs(b.position.x - unit.position.x) + Math.abs(b.position.y - unit.position.y);
+          return dA - dB;
+        });
+        const target = sortedTargets[0];
+
+        // Score each reachable tile for tactical value
+        const bestMove = reach.sort((a, b) => {
+          const distA = Math.abs(a.x - target.position.x) + Math.abs(a.y - target.position.y);
+          const distB = Math.abs(b.x - target.position.x) + Math.abs(b.y - target.position.y);
+
+          if (isRanged) {
+            // Ranged units: prefer tiles where we can attack (dist <= range) but NOT adjacent
+            // Ideal: stay at exactly unit.range away; avoid dist <= 1 (melee danger)
+            const idealA = distA <= unit.range && distA >= 2 ? 0 : distA <= 1 ? 2 : 1;
+            const idealB = distB <= unit.range && distB >= 2 ? 0 : distB <= 1 ? 2 : 1;
+            if (idealA !== idealB) return idealA - idealB;
+            // Secondary: prefer tiles closer to exactly unit.range (but stay back)
+            const preferA = Math.abs(distA - unit.range);
+            const preferB = Math.abs(distB - unit.range);
+            return preferA - preferB;
           } else {
-            updateUnit(unit.id, { hasMoved: true });
+            // Melee units: get as close as possible, prefer adjacent (dist === 1)
+            if (distA !== distB) return distA - distB;
+            // Tiebreak: prefer tiles to the rear of the target's facing (flanking bonus)
+            const tf = target.facing ?? 2;
+            const isRearA = (tf === 0 && a.y > target.position.y) || (tf === 1 && a.x < target.position.x) ||
+                            (tf === 2 && a.y < target.position.y) || (tf === 3 && a.x > target.position.x);
+            const isRearB = (tf === 0 && b.y > target.position.y) || (tf === 1 && b.x < target.position.x) ||
+                            (tf === 2 && b.y < target.position.y) || (tf === 3 && b.x > target.position.x);
+            return (isRearB ? 0 : 1) - (isRearA ? 0 : 1);
           }
+        })[0];
+
+        if (bestMove) {
+          const startPos = { x: unit.position.x, y: unit.position.y };
+          const facing = calcFacing(startPos, bestMove);
+          const occupied = new Set<string>();
+          units.forEach(u => { if (u.hp > 0 && u.id !== unit.id) occupied.add(`${u.position.x},${u.position.y}`); });
+          const path = bfsPath(startPos, bestMove, GRID_W, GRID_H, occupied);
+          updateUnit(unit.id, { position: bestMove, hasMoved: true, facing });
+          const moveDesc = isRanged ? `${unit.name} takes position.` : `${unit.name} advances.`;
+          addLog(moveDesc);
+          setAnimStates(prev => ({ ...prev, [unit.id]: 'walk' }));
+          setWalkPaths(prev => ({ ...prev, [unit.id]: path }));
+          // Attack fires when onWalkComplete clears walkPaths → effect re-runs
+        } else {
+          // Nowhere to move — skip move, go straight to attack phase
+          updateUnit(unit.id, { hasMoved: true });
+          // Effect re-runs due to units change → attack phase next
         }
-      } else if (!unit.hasActed) {
-        // Frozen: skip attack
+        return;
+      }
+
+      // ── ATTACK PHASE ─────────────────────────────────────────────────────
+      if (!unit.hasActed) {
+        // Frozen: skip attack, end turn
         if (unit.statusEffects.includes('frozen')) {
           addLog(`${unit.name} is FROZEN and cannot attack!`, 'debuff');
           updateUnit(unit.id, { hasActed: true });
           endTurn();
           return;
         }
-        const currentPos = useGameStore.getState().units.find(u => u.id === currentUnitId)?.position || unit.position;
-        const targets = units.filter(u => u.isPlayerControlled && u.hp > 0 &&
-          (Math.abs(u.position.x - currentPos.x) + Math.abs(u.position.y - currentPos.y)) <= unit.range);
 
-        if (targets.length > 0) {
-          const target = targets[0];
-          if (unit.specialAbilityCooldown === 0) {
+        const currentPos = useGameStore.getState().units.find(u => u.id === unit.id)?.position ?? unit.position;
+        const inRange = units.filter(u =>
+          u.isPlayerControlled && u.hp > 0 &&
+          Math.abs(u.position.x - currentPos.x) + Math.abs(u.position.y - currentPos.y) <= unit.range
+        );
+
+        if (inRange.length > 0) {
+          // Target priority: lowest HP first (finish them off)
+          const target = [...inRange].sort((a, b) => a.hp - b.hp)[0];
+
+          // Use special ability when:
+          //  - off cooldown, AND
+          //  - either target is low HP (< 40%) or ability not wasted on near-full HP
+          const targetHpPct = target.hp / target.maxHp;
+          const useAbility = unit.specialAbilityCooldown === 0 && targetHpPct < 0.7;
+
+          if (useAbility) {
             executeAbility(unit, target);
           } else {
             executeAttack(unit, target);
           }
+          // executeAttack/executeAbility both call endTurn internally — do NOT call it here
         } else {
+          // No targets in range: end turn explicitly (don't rely on the effect's else branch)
+          addLog(`${unit.name} has no targets in range.`);
           updateUnit(unit.id, { hasActed: true });
+          // Short pause so the log is visible, then end turn
+          setTimeout(() => endTurn(), 600);
         }
-      } else {
-        endTurn();
+        return;
       }
+
+      // Both hasMoved and hasActed already true — shouldn't normally reach here,
+      // but if it does (e.g. stunned unit that already had a turn), just end turn.
+      endTurn();
     }, delay);
 
     return () => clearTimeout(aiTimer);
@@ -1230,19 +1309,20 @@ export default function Battle() {
                   setAttackableTiles([]);
                   setReachableTiles(isMove ? [] : getReachableTiles(activeUnit.position, activeUnit.move));
                 }}
-                disabled={activeUnit.hasMoved}
+                disabled={activeUnit.hasMoved || !!walkPaths[activeUnit.id]}
                 variant={actionMode === 'move' ? 'primary' : 'secondary'}
                 className="w-full text-xs h-9"
               >
                 <Move className="w-3 h-3 mr-1.5" />
-                {activeUnit.hasMoved ? 'Moved' : 'Move'}
+                {walkPaths[activeUnit.id] ? 'Walking…' : activeUnit.hasMoved ? 'Moved' : 'Move'}
               </FantasyButton>
               <FantasyButton
                 onClick={endTurn}
+                disabled={!!walkPaths[activeUnit.id]}
                 variant="ghost"
                 className="w-full text-xs h-9 border border-white/10"
               >
-                End Turn
+                {walkPaths[activeUnit.id] ? 'Walking…' : 'End Turn'}
               </FantasyButton>
             </>
           ) : (
