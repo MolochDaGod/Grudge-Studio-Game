@@ -38,6 +38,7 @@ interface BattleSceneProps {
   showUnitInfo?: boolean;
   mapPings?: MapPing[];
   onUnitRightClick?: (unitId: string, screenX: number, screenY: number) => void;
+  onUnitClick?: (unitId: string) => void;
   onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
   walkPaths?: Record<string, GridPos[]>;
   onWalkComplete?: (unitId: string) => void;
@@ -84,8 +85,10 @@ function CameraController({
   const tacticalAzimuth  = useRef(Math.PI * 0.25);    // start at 45° like MR
   const tacticalAzTarget = useRef(Math.PI * 0.25);
   const tacticalPan      = useRef(new THREE.Vector3(centerX, 0, centerZ));
+  // Track which WASD keys are held for continuous smooth panning
+  const heldKeys = useRef<Set<string>>(new Set());
 
-  // Tactical: scroll zoom · Z/X 45° rotate · WASD pan · C center · HUD events
+  // Tactical: scroll zoom · Z/X 45° rotate · WASD pan (held) · C center · HUD events
   useEffect(() => {
     if (mode !== 'tactical') return;
 
@@ -97,12 +100,14 @@ function CameraController({
       );
     };
 
-    const onKey = (e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (modeRef.current !== 'tactical') return;
+      // Skip if focus is in a text input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       // Z/X: 45° rotation
       if (e.key === 'z' || e.key === 'Z') { tacticalAzTarget.current -= Math.PI / 4; return; }
       if (e.key === 'x' || e.key === 'X') { tacticalAzTarget.current += Math.PI / 4; return; }
-      // C: center on active unit
+      // C: re-center on active unit
       if (e.key === 'c' || e.key === 'C') {
         const cu = currentUnitRef.current;
         if (cu) {
@@ -111,14 +116,13 @@ function CameraController({
         }
         return;
       }
-      // WASD: pan
-      const panStep = tileSize * 1.8;
-      const sinA = Math.sin(tacticalAzimuth.current);
-      const cosA = Math.cos(tacticalAzimuth.current);
-      if (e.key === 'a' || e.key === 'A') { tacticalPan.current.x -= cosA * panStep; tacticalPan.current.z += sinA * panStep; }
-      if (e.key === 'd' || e.key === 'D') { tacticalPan.current.x += cosA * panStep; tacticalPan.current.z -= sinA * panStep; }
-      if (e.key === 'w' || e.key === 'W') { tacticalPan.current.x -= sinA * panStep; tacticalPan.current.z -= cosA * panStep; }
-      if (e.key === 's' || e.key === 'S') { tacticalPan.current.x += sinA * panStep; tacticalPan.current.z += cosA * panStep; }
+      // WASD: hold to pan continuously (handled in useFrame)
+      const lower = e.key.toLowerCase();
+      if (['w','a','s','d'].includes(lower)) heldKeys.current.add(lower);
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      heldKeys.current.delete(e.key.toLowerCase());
     };
 
     const onRotateEvt = (e: Event) => {
@@ -130,12 +134,15 @@ function CameraController({
     };
 
     gl.domElement.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
     document.addEventListener('camera-rotate', onRotateEvt);
     return () => {
       gl.domElement.removeEventListener('wheel', onWheel);
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
       document.removeEventListener('camera-rotate', onRotateEvt);
+      heldKeys.current.clear();
     };
   }, [mode, tileSize, maxDist, gl.domElement]);
 
@@ -178,6 +185,15 @@ function CameraController({
       const cosP = Math.cos(TACTICAL_POLAR);
       const sinA = Math.sin(tacticalAzimuth.current);
       const cosA = Math.cos(tacticalAzimuth.current);
+
+      // Continuous WASD pan — smooth camera-relative movement while keys held
+      const panSpeed = tileSize * 9; // world units per second
+      const held = heldKeys.current;
+      if (held.has('a')) { tacticalPan.current.x -= cosA * panSpeed * delta; tacticalPan.current.z += sinA * panSpeed * delta; }
+      if (held.has('d')) { tacticalPan.current.x += cosA * panSpeed * delta; tacticalPan.current.z -= sinA * panSpeed * delta; }
+      if (held.has('w')) { tacticalPan.current.x -= sinA * panSpeed * delta; tacticalPan.current.z -= cosA * panSpeed * delta; }
+      if (held.has('s')) { tacticalPan.current.x += sinA * panSpeed * delta; tacticalPan.current.z += cosA * panSpeed * delta; }
+
       const pt   = tacticalPan.current;
 
       _camPos.current.set(pt.x + r * sinP * sinA, pt.y + r * cosP, pt.z + r * sinP * cosA);
@@ -257,11 +273,12 @@ interface WalkingUnitProps {
   animState: AnimState;
   onDoubleClick?: (unitId: string) => void;
   onRightClick?: (unitId: string, x: number, y: number) => void;
+  onClick?: (unitId: string) => void;
 }
 
 function WalkingUnit({
   unit, tileSize, walkPath, onWalkComplete, onWalkStep,
-  currentUnitId, animState, onDoubleClick, onRightClick,
+  currentUnitId, animState, onDoubleClick, onRightClick, onClick,
 }: WalkingUnitProps) {
   const outerRef = useRef<THREE.Group>(null);
 
@@ -350,6 +367,7 @@ function WalkingUnit({
     <group
       ref={outerRef}
       position={initWorldPos.current}
+      onClick={e => { e.stopPropagation(); onClick?.(unit.id); }}
       onDoubleClick={e => { e.stopPropagation(); onDoubleClick?.(unit.id); }}
       onContextMenu={e => {
         e.stopPropagation();
@@ -629,7 +647,7 @@ export function BattleScene({
   units, level, reachableTiles, attackableTiles,
   currentUnitId, actionMode, onTileClick, animStates,
   combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
-  showUnitInfo = false, mapPings = [], onUnitRightClick, onMapRightClick,
+  showUnitInfo = false, mapPings = [], onUnitRightClick, onUnitClick, onMapRightClick,
   walkPaths = {}, onWalkComplete, onWalkStep,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
@@ -745,6 +763,7 @@ export function BattleScene({
               animState={animStates[unit.id] || 'idle'}
               onDoubleClick={onUnitDoubleClick}
               onRightClick={onUnitRightClick}
+              onClick={onUnitClick}
             />
           ))}
 

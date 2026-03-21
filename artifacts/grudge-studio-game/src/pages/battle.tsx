@@ -195,6 +195,8 @@ export default function Battle() {
   const [cameraMode, setCameraMode] = useState<CameraMode>('tactical');
   const [showUnitInfo, setShowUnitInfo] = useState(false);
   const [mapPings, setMapPings] = useState<MapPing[]>([]);
+  // Unit selected by LMB click for inspection — shown in bottom HUD
+  const [inspectedUnitId, setInspectedUnitId] = useState<string | null>(null);
 
   type CtxMenu =
     | { kind: 'portrait' | 'unit'; unit: TacticalUnit; x: number; y: number }
@@ -216,25 +218,69 @@ export default function Battle() {
     setCameraMode('third-person');
   };
 
-  // Hotkeys: U = toggle unit info rings  |  M = toggle move mode
+  // Block browser's native right-click menu over the whole battle page
+  useEffect(() => {
+    const block = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener('contextmenu', block);
+    return () => document.removeEventListener('contextmenu', block);
+  }, []);
+
+  // Hotkeys:
+  //  U       → toggle unit info rings
+  //  M       → toggle move mode
+  //  1-4     → activate skill slot (like clicking the skill buttons)
+  //  Escape  → cancel current action mode
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
       if (e.key === 'u' || e.key === 'U') {
         setShowUnitInfo(v => !v);
+        return;
       }
+
+      if (e.key === 'Escape') {
+        setActionMode('idle');
+        setAttackableTiles([]);
+        setReachableTiles([]);
+        return;
+      }
+
+      const unit = units.find(u => u.id === currentUnitId);
+      if (!unit || !unit.isPlayerControlled) return;
+
       if (e.key === 'm' || e.key === 'M') {
-        const unit = units.find(u => u.id === currentUnitId);
-        if (!unit || !unit.isPlayerControlled || unit.hasMoved || walkPaths[unit.id]) return;
+        if (unit.hasMoved || walkPaths[unit.id]) return;
         const isMove = actionMode === 'move';
         setActionMode(isMove ? 'idle' : 'move');
         setAttackableTiles([]);
         setReachableTiles(isMove ? [] : getReachableTiles(unit.position, unit.move));
+        return;
+      }
+
+      // 1-4: activate the matching skill slot
+      if (['1','2','3','4'].includes(e.key) && !unit.hasActed && !walkPaths[unit.id]) {
+        const slotIdx = (parseInt(e.key) - 1) as SkillSlot;
+        const slotKey = `skill_${slotIdx}` as const;
+        const loadout = equippedSkills[unit.id] || getDefaultSkillLoadout(unit.characterId);
+        const skillId = loadout[slotIdx];
+        if (!skillId) return;
+        const skill = getSkillById(skillId);
+        if (!skill) return;
+        const isActive = actionMode === slotKey;
+        if (isActive) {
+          setActionMode('idle');
+          setAttackableTiles([]);
+        } else {
+          setActionMode(slotKey);
+          setReachableTiles([]);
+          setAttackableTiles(getAttackableTiles(unit.position, skill.range ?? unit.range, skill));
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [currentUnitId, units, actionMode, walkPaths]);
+  }, [currentUnitId, units, actionMode, walkPaths, equippedSkills]);
 
   // Close context menu when clicking anywhere else
   useEffect(() => {
@@ -270,6 +316,11 @@ export default function Battle() {
   const handlePortraitRightClick = (e: React.MouseEvent, unit: TacticalUnit) => {
     e.preventDefault();
     setContextMenu({ kind: 'portrait', unit, x: e.clientX, y: e.clientY });
+  };
+
+  // Left-click any unit in the 3D scene → inspect it in the bottom HUD
+  const handleUnitClick = (unitId: string) => {
+    setInspectedUnitId(prev => prev === unitId ? null : unitId);
   };
 
   // Expire old effects every 250ms
@@ -906,6 +957,9 @@ export default function Battle() {
   }, [currentUnitId, units, endTurn, addLog]);
 
   const activeUnit = currentUnitId ? units.find(u => u.id === currentUnitId) : null;
+  // The unit shown in the bottom HUD — clicked unit takes priority over the active turn unit
+  const inspectedUnit = (inspectedUnitId ? units.find(u => u.id === inspectedUnitId && u.hp > 0) : null) ?? activeUnit;
+  const isInspecting = inspectedUnit && inspectedUnit.id !== currentUnitId;
 
   // ── Auto-focus camera on unit whose turn it is ───────────────────────────
   useEffect(() => {
@@ -1068,6 +1122,7 @@ export default function Battle() {
           showUnitInfo={showUnitInfo}
           mapPings={mapPings}
           onUnitRightClick={handleUnitRightClick}
+          onUnitClick={handleUnitClick}
           onMapRightClick={handleMapRightClick}
           walkPaths={walkPaths}
           onWalkComplete={onWalkComplete}
@@ -1155,51 +1210,62 @@ export default function Battle() {
       {/* ── BOTTOM HUD ─────────────────────────────────────────────────────── */}
       <div className="absolute bottom-0 left-0 right-0 z-30 h-[130px] bg-[#070710]/97 backdrop-blur-sm border-t border-white/10 flex items-stretch">
 
-        {/* LEFT column: portrait + stats */}
+        {/* LEFT column: portrait + stats (shows clicked/inspected unit, defaults to active unit) */}
         <div className="flex items-center gap-2.5 px-3 border-r border-white/8 shrink-0" style={{ width: 310 }}>
-          {activeUnit ? (
+          {inspectedUnit ? (
             <>
-              {/* Portrait */}
-              <div className="relative h-[104px] w-[60px] shrink-0 rounded overflow-hidden border border-white/15">
+              {/* Portrait with "inspecting" overlay when showing a non-active unit */}
+              <div
+                className={`relative h-[104px] w-[60px] shrink-0 rounded overflow-hidden border cursor-pointer ${
+                  isInspecting ? 'border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.4)]' : 'border-white/15'
+                }`}
+                onClick={() => setInspectedUnitId(null)}
+                title={isInspecting ? 'Click to return to active unit' : ''}
+              >
                 <img
-                  src={`${BASE}images/chars/${activeUnit.characterId}.png`}
-                  alt={activeUnit.name}
+                  src={`${BASE}images/chars/${inspectedUnit.characterId}.png`}
+                  alt={inspectedUnit.name}
                   className="absolute inset-0 w-full h-full object-cover object-top"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }}
                 />
                 <div
                   className="absolute inset-0"
-                  style={{ background: activeUnit.isPlayerControlled ? 'rgba(0,30,0,0.3)' : 'rgba(30,0,0,0.3)' }}
+                  style={{ background: inspectedUnit.isPlayerControlled ? 'rgba(0,30,0,0.3)' : 'rgba(30,0,0,0.3)' }}
                 />
+                {isInspecting && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-amber-600/80 text-[7px] text-white text-center py-0.5 font-bold uppercase tracking-wider">
+                    Inspect
+                  </div>
+                )}
               </div>
 
               {/* Stat column */}
               <div className="flex-1 min-w-0 flex flex-col gap-1">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-display text-sm font-bold text-white truncate">{activeUnit.name}</span>
-                  {activeUnit.isPlayerControlled
+                  <span className="font-display text-sm font-bold text-white truncate">{inspectedUnit.name}</span>
+                  {inspectedUnit.isPlayerControlled
                     ? <span className="text-[8px] shrink-0 px-1 py-0.5 rounded-full bg-emerald-900/60 text-emerald-400 border border-emerald-700/30">Ally</span>
                     : <span className="text-[8px] shrink-0 px-1 py-0.5 rounded-full bg-red-900/60 text-red-400 border border-red-700/30">Enemy</span>
                   }
                 </div>
 
-                <HealthBar current={activeUnit.hp} max={activeUnit.maxHp} label="HP" />
-                <StatBar current={activeUnit.mp ?? 0} max={activeUnit.maxMp ?? 1} label="MP" fillClass="bg-blue-500" borderClass="border-blue-900/50" />
-                <StatBar current={activeUnit.stamina ?? 0} max={activeUnit.maxStamina ?? 1} label="ST" fillClass="bg-orange-500" borderClass="border-orange-900/50" />
-                <ActionBar ct={activeUnit.ct} speed={activeUnit.speed} isActive={activeUnit.id === currentUnitId} />
+                <HealthBar current={inspectedUnit.hp} max={inspectedUnit.maxHp} label="HP" />
+                <StatBar current={inspectedUnit.mp ?? 0} max={inspectedUnit.maxMp ?? 1} label="MP" fillClass="bg-blue-500" borderClass="border-blue-900/50" />
+                <StatBar current={inspectedUnit.stamina ?? 0} max={inspectedUnit.maxStamina ?? 1} label="ST" fillClass="bg-orange-500" borderClass="border-orange-900/50" />
+                <ActionBar ct={inspectedUnit.ct} speed={inspectedUnit.speed} isActive={inspectedUnit.id === currentUnitId} />
 
                 <div className="flex items-center gap-2 text-[9px] font-mono text-white/35">
-                  <span>ATK {activeUnit.attack}</span>
-                  <span>DEF {activeUnit.defense}</span>
-                  <span>MOV {activeUnit.move}</span>
-                  <span>SPD {activeUnit.speed}</span>
-                  {activeUnit.isPlayerControlled && (
+                  <span>ATK {inspectedUnit.attack}</span>
+                  <span>DEF {inspectedUnit.defense}</span>
+                  <span>MOV {inspectedUnit.move}</span>
+                  <span>SPD {inspectedUnit.speed}</span>
+                  {inspectedUnit.id === currentUnitId && inspectedUnit.isPlayerControlled && (
                     <span className="ml-1 flex items-center gap-1">
-                      <button onClick={() => rotateFacing(activeUnit.id, 'ccw')} className="hover:text-white transition-colors" title="Rotate CCW">
+                      <button onClick={() => rotateFacing(inspectedUnit.id, 'ccw')} className="hover:text-white transition-colors" title="Rotate CCW">
                         <RotateCcw className="w-2.5 h-2.5" />
                       </button>
-                      <span className="text-white/60 font-bold w-3 text-center">{['N','E','S','W'][activeUnit.facing ?? 2]}</span>
-                      <button onClick={() => rotateFacing(activeUnit.id, 'cw')} className="hover:text-white transition-colors" title="Rotate CW">
+                      <span className="text-white/60 font-bold w-3 text-center">{['N','E','S','W'][inspectedUnit.facing ?? 2]}</span>
+                      <button onClick={() => rotateFacing(inspectedUnit.id, 'cw')} className="hover:text-white transition-colors" title="Rotate CW">
                         <RotateCw className="w-2.5 h-2.5" />
                       </button>
                     </span>
