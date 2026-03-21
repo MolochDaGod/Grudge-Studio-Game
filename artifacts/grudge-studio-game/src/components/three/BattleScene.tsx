@@ -88,7 +88,7 @@ function CameraController({
   // Track which WASD keys are held for continuous smooth panning
   const heldKeys = useRef<Set<string>>(new Set());
 
-  // Tactical: scroll zoom · Z/X 45° rotate · WASD pan (held) · C center · HUD events
+  // Tactical: scroll zoom · Z/X 45° rotate · WASD pan (held) · C center · HUD events · RMB drag rotate
   useEffect(() => {
     if (mode !== 'tactical') return;
 
@@ -98,6 +98,26 @@ function CameraController({
         tacticalRadius.current * (1 + e.deltaY * 0.001),
         tileSize * 3, maxDist
       );
+    };
+
+    // RMB drag to orbit azimuth
+    let rmbActive = false;
+    let rmbStartX = 0;
+    let rmbStartAz = 0;
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 2) return;
+      rmbActive = true;
+      rmbStartX = e.clientX;
+      rmbStartAz = tacticalAzTarget.current;
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!rmbActive) return;
+      const dx = e.clientX - rmbStartX;
+      tacticalAzTarget.current = rmbStartAz + dx * 0.008;
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button !== 2) rmbActive = false;
+      rmbActive = false;
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -134,11 +154,17 @@ function CameraController({
     };
 
     gl.domElement.addEventListener('wheel', onWheel, { passive: false });
+    gl.domElement.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     document.addEventListener('camera-rotate', onRotateEvt);
     return () => {
       gl.domElement.removeEventListener('wheel', onWheel);
+      gl.domElement.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       document.removeEventListener('camera-rotate', onRotateEvt);
@@ -397,13 +423,13 @@ function UnitMarkers({ units, tileSize }: { units: TacticalUnit[]; tileSize: num
         const borderColor = unit.isPlayerControlled ? '#4488ffaa' : '#ff4444aa';
         return (
           <group key={unit.id + '_marker'}>
-            {/* Glowing team ring under feet */}
+            {/* Glowing team ring around character base */}
             <mesh position={[wx, 0.09, wz]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[0.52, 0.70, 36]} />
+              <ringGeometry args={[0.88, 1.18, 48]} />
               <meshBasicMaterial color={ringColor} transparent opacity={0.82} depthWrite={false} />
             </mesh>
             {/* Floating health bar */}
-            <Html position={[wx, 3.1, wz]} center distanceFactor={16} zIndexRange={[0, 10]}>
+            <Html position={[wx, 4.8, wz]} center distanceFactor={16} zIndexRange={[0, 10]}>
               <div style={{ width: 58, pointerEvents: 'none' }}>
                 <div style={{
                   background: 'rgba(0,0,0,0.88)',

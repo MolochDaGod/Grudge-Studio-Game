@@ -450,6 +450,366 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', cast: 'Jump', special1: 'Run', special2: 'Roll' },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // API CHARACTER IDs — maps game.ts hero ids → unique 3D models/colours
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── CRUSADE — HUMAN ────────────────────────────────────────────────────────
+  'human_warrior': {
+    modelId: 'knight_male',
+    scale: [0.72, 0.72 * 1.05, 0.72],
+    materials: {
+      Armor:      { color: '#a8b8c8', metalness: 0.88, roughness: 0.2 },
+      Armor_Dark: { color: '#0a1a3a', metalness: 0.65, roughness: 0.4 },
+      Skin:       { color: '#c08050', roughness: 0.6 },
+      Detail:     { color: '#d4a017', metalness: 0.88, roughness: 0.15 },
+      Red:        { color: '#1a4a8a', roughness: 0.65 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.sword,
+    secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', block: 'StandUp', special1: 'SwordSlash', special2: 'Jump' },
+  },
+
+  'human_worg': {
+    modelId: 'viking_male',
+    scale: [0.72 * 1.1, 0.72 * 1.05, 0.72 * 1.1],
+    materials: {
+      Skin:  { color: '#8a5828', roughness: 0.65 },
+      Face:  { color: '#8a5828', emissive: '#883300', emissiveIntensity: 0.06 },
+      Pants: { color: '#2a1808', roughness: 0.9 },
+      Main:  { color: '#6a4820', roughness: 0.8 },
+      Light: { color: '#9a7040', roughness: 0.8 },
+      Hair:  { color: '#e8c860', roughness: 0.85 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'human_mage': {
+    modelId: 'wizard',
+    scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
+  },
+
+  'human_ranger': {
+    modelId: 'rogue',
+    scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.bow,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
+  },
+
+  // ── CRUSADE — BARBARIAN ────────────────────────────────────────────────────
+  'barbarian_warrior': {
+    modelId: 'viking_male',
+    scale: [0.72 * 1.25, 0.72 * 1.05, 0.72 * 1.2],
+    materials: {
+      Skin:  { color: '#7a4e28', roughness: 0.7 },
+      Face:  { color: '#7a4e28', emissive: '#0033aa', emissiveIntensity: 0.08 },
+      Pants: { color: '#2a1a10', roughness: 0.9 },
+      Main:  { color: '#3a2010', roughness: 0.88 },
+      Light: { color: '#6a4a28', roughness: 0.85 },
+      Hair:  { color: '#0e0808', roughness: 0.95 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
+  },
+
+  'barbarian_worg': {
+    modelId: 'barbarian',
+    scale: [0.72 * 1.3, 0.72 * 1.05, 0.72 * 1.3],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'barbarian_mage': {
+    modelId: 'witch',
+    scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
+  },
+
+  'barbarian_ranger': {
+    modelId: 'ranger_rpg',
+    scale: [0.0072, 0.0072 * 1.05, 0.0072],
+    textureUrl: 'models/characters/rpg-textures/ranger.png',
+    materials: {},
+    primaryWeapon: { modelId: 'bow', position: [0, 0, 0], rotation: [Math.PI / 2, Math.PI / 2, 0], scale: 19 },
+    animMap: {
+      idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Attack_Draw',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
+      special1: 'Run_Holding', special2: 'Roll',
+    },
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
+
+  // ── FABLED — DWARF ─────────────────────────────────────────────────────────
+  'dwarf_warrior': {
+    modelId: 'dwarf',
+    scale: [0.72 * 1.25, 0.72 * 0.75, 0.72 * 1.25],
+    materials: {
+      Skin:       { color: '#7a4028', roughness: 0.65 },
+      Face:       { color: '#7a4028' },
+      Armor:      { color: '#a8b0b8', metalness: 0.85, roughness: 0.25 },
+      Armor_Dark: { color: '#202428', metalness: 0.9, roughness: 0.2 },
+      Detail:     { color: '#d4a017', emissive: '#884400', emissiveIntensity: 0.12, metalness: 0.7 },
+      Red:        { color: '#0a2a6a', roughness: 0.7 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
+    secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
+  },
+
+  'dwarf_worg': {
+    modelId: 'dwarf',
+    scale: [0.72 * 1.3, 0.72 * 0.72, 0.72 * 1.3],
+    materials: {
+      Skin:       { color: '#5a3820', roughness: 0.7 },
+      Face:       { color: '#5a3820', emissive: '#331100', emissiveIntensity: 0.06 },
+      Armor:      { color: '#4a3010', metalness: 0.5, roughness: 0.8 },
+      Armor_Dark: { color: '#1a1008', metalness: 0.4, roughness: 0.9 },
+      Detail:     { color: '#553300', roughness: 0.85 },
+      Red:        { color: '#4a2010', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
+  },
+
+  'dwarf_mage': {
+    modelId: 'dwarf',
+    scale: [0.72 * 1.2, 0.72 * 0.72, 0.72 * 1.2],
+    materials: {
+      Skin:       { color: '#8a5030', roughness: 0.65 },
+      Face:       { color: '#8a5030', emissive: '#cc4400', emissiveIntensity: 0.15 },
+      Armor:      { color: '#1a0c00', metalness: 0.7, roughness: 0.5 },
+      Armor_Dark: { color: '#0a0600', metalness: 0.8, roughness: 0.4 },
+      Detail:     { color: '#ff5500', emissive: '#ff5500', emissiveIntensity: 0.55, metalness: 0.6 },
+      Red:        { color: '#cc2200', roughness: 0.7 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
+  },
+
+  'dwarf_ranger': {
+    modelId: 'dwarf',
+    scale: [0.72 * 1.1, 0.72 * 0.72, 0.72 * 1.1],
+    materials: {
+      Skin:       { color: '#7a5030', roughness: 0.7 },
+      Face:       { color: '#7a5030' },
+      Armor:      { color: '#2a2820', metalness: 0.5, roughness: 0.7 },
+      Armor_Dark: { color: '#101008', metalness: 0.4, roughness: 0.8 },
+      Detail:     { color: '#604820', roughness: 0.8 },
+      Red:        { color: '#3a2808', roughness: 0.9 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.bow,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
+  },
+
+  // ── FABLED — ELF ──────────────────────────────────────────────────────────
+  'elf_warrior': {
+    modelId: 'elf',
+    scale: [0.72 * 0.95, 0.72 * 1.08, 0.72 * 0.95],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'elf_worg': {
+    modelId: 'elf',
+    scale: [0.72 * 0.9, 0.72 * 1.05, 0.72 * 0.9],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
+  },
+
+  'elf_mage': {
+    modelId: 'mage',
+    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
+  },
+
+  'elf_ranger': {
+    modelId: 'ranger_rpg',
+    scale: [0.0072 * 0.9, 0.0072 * 1.05, 0.0072 * 0.9],
+    textureUrl: 'models/characters/rpg-textures/ranger.png',
+    materials: {
+      Ranger_Texture: { color: '#c8e8b0', emissive: '#006600', emissiveIntensity: 0.05, roughness: 0.75 },
+      Bow_Texture:    { color: '#c0b060', roughness: 0.8 },
+    },
+    primaryWeapon: { modelId: 'bow', position: [0, 0, 0], rotation: [Math.PI / 2, Math.PI / 2, 0], scale: 19 },
+    animMap: {
+      idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
+      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Attack_Draw',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
+      special1: 'Run_Holding', special2: 'Roll',
+    },
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
+
+  // ── LEGION — ORC ──────────────────────────────────────────────────────────
+  'orc_warrior': {
+    modelId: 'orc',
+    scale: [0.72 * 1.3, 0.72 * 1.02, 0.72 * 1.25],
+    materials: {
+      Skin:  { color: '#2e4820', roughness: 0.75 },
+      Face:  { color: '#2e4820' },
+      Pants: { color: '#2a1808', roughness: 0.9 },
+      Teeth: { color: '#c8a050' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'orc_worg': {
+    modelId: 'orc',
+    scale: [0.72 * 1.2, 0.72 * 1.05, 0.72 * 1.2],
+    materials: {
+      Skin:  { color: '#6a1810', emissive: '#440000', emissiveIntensity: 0.12, roughness: 0.8 },
+      Face:  { color: '#6a1810', emissive: '#880000', emissiveIntensity: 0.25 },
+      Pants: { color: '#100606', roughness: 0.9 },
+      Teeth: { color: '#909090', metalness: 0.3 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'orc_mage': {
+    modelId: 'orc',
+    scale: [0.72 * 1.15, 0.72 * 1.05, 0.72 * 1.15],
+    materials: {
+      Skin:  { color: '#28380a', emissive: '#004400', emissiveIntensity: 0.06, roughness: 0.8 },
+      Face:  { color: '#28380a', emissive: '#cc4400', emissiveIntensity: 0.3 },
+      Pants: { color: '#060610', roughness: 0.95 },
+      Teeth: { color: '#303030' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
+  },
+
+  'orc_ranger': {
+    modelId: 'orc',
+    scale: [0.72 * 1.05, 0.72 * 0.98, 0.72 * 1.05],
+    materials: {
+      Skin:  { color: '#4a5828', roughness: 0.72 },
+      Face:  { color: '#4a5828' },
+      Pants: { color: '#1a1a12', roughness: 0.9 },
+      Teeth: { color: '#b0a050' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.bow,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
+  },
+
+  // ── LEGION — UNDEAD ───────────────────────────────────────────────────────
+  'undead_warrior': {
+    modelId: 'knight_male',
+    scale: [0.72 * 1.05, 0.72 * 1.05, 0.72 * 1.05],
+    materials: {
+      Armor:      { color: '#18140c', metalness: 0.6, roughness: 0.85 },
+      Armor_Dark: { color: '#080808', metalness: 0.5, roughness: 0.95 },
+      Skin:       { color: '#d0c8a0', emissive: '#550088', emissiveIntensity: 0.35, roughness: 0.85 },
+      Detail:     { color: '#2a1000', roughness: 0.95 },
+      Red:        { color: '#1a0606', roughness: 0.95 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'undead_worg': {
+    modelId: 'zombie_male',
+    scale: [0.72 * 1.1, 0.72 * 1.05, 0.72 * 1.1],
+    materials: {
+      Clothes:     { color: '#1a1818', roughness: 0.95 },
+      Skin:        { color: '#8a8870', emissive: '#001100', emissiveIntensity: 0.05, roughness: 0.9 },
+      Face:        { color: '#a0a080', emissive: '#336600', emissiveIntensity: 0.35 },
+      Pants:       { color: '#101008', roughness: 0.9 },
+      DarkClothes: { color: '#080808', roughness: 0.95 },
+      Bones:       { color: '#c8c0a0', roughness: 0.8 },
+      Guts:        { color: '#180808' },
+      Brain:       { color: '#1a0808' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Jump', emote: 'Victory' },
+  },
+
+  'undead_mage': {
+    modelId: 'zombie_male',
+    scale: [0.72 * 0.9, 0.72 * 1.05, 0.72 * 0.9],
+    materials: {
+      Clothes:     { color: '#c0c8d0', roughness: 0.8 },
+      Skin:        { color: '#b0a898', emissive: '#220044', emissiveIntensity: 0.05, roughness: 0.9 },
+      Face:        { color: '#c0b8a8', emissive: '#6600cc', emissiveIntensity: 0.5 },
+      Pants:       { color: '#c8cad0', roughness: 0.85 },
+      DarkClothes: { color: '#1a1820', roughness: 0.95 },
+      Bones:       { color: '#d8d0b8', roughness: 0.8 },
+      Guts:        { color: '#080808' },
+      Brain:       { color: '#080808' },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.dark_staff,
+    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump', emote: 'Victory' },
+  },
+
+  'undead_ranger': {
+    modelId: 'ninja_male',
+    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
+    materials: {
+      Main:    { color: '#060610', roughness: 0.95 },
+      Skin:    { color: '#c0b8a0', roughness: 0.9 },
+      Details: { color: '#100010', emissive: '#220055', emissiveIntensity: 0.1 },
+      Grey:    { color: '#0c0c18', roughness: 0.95 },
+      Face:    { color: '#1a1620', emissive: '#8800cc', emissiveIntensity: 0.5 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.bow,
+    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
+  },
+
+  // ── PIRATES ────────────────────────────────────────────────────────────────
+  'pirate_king': {
+    modelId: 'pirate_male',
+    scale: [0.72 * 1.1, 0.72 * 1.08, 0.72 * 1.1],
+    materials: {
+      Clothes: { color: '#1a0808', roughness: 0.8 },
+      Beige:   { color: '#e8d8c0', roughness: 0.85 },
+      Skin:    { color: '#a05828', roughness: 0.7 },
+      Gold:    { color: '#c8900a', metalness: 0.85, roughness: 0.2 },
+      Brown:   { color: '#3a1a08', roughness: 0.88 },
+      Face:    { color: '#a05828', emissive: '#662200', emissiveIntensity: 0.08 },
+      Black:   { color: '#0a0608' },
+      Red:     { color: '#880808', roughness: 0.85 },
+    },
+    primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Roll' },
+  },
+
+  'sky_captain': {
+    modelId: 'soldier_male',
+    scale: [0.72, 0.72 * 1.02, 0.72],
+    materials: {},
+    primaryWeapon: WEAPON_DEFAULTS.sword,
+    secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
+    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+  },
+
+  'faith_barrier': {
+    modelId: 'cleric_rpg',
+    scale: [0.0072, 0.0072 * 1.05, 0.0072],
+    textureUrl: 'models/characters/rpg-textures/cleric.png',
+    materials: {},
+    primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
+    animMap: {
+      attack1: 'SwordSlash', attack2: 'Punch', cast: 'Shoot_OneHanded',
+      stunned: 'RecieveHit', block: 'StandUp', victory: 'Victory',
+      special1: 'Run', special2: 'Jump',
+    },
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
 };
 
 export function getCharacterConfig(characterId: string): CharacterConfig {

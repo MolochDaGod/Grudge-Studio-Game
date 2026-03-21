@@ -134,7 +134,8 @@ function bfsPath(
   end: { x: number; y: number },
   gridW: number,
   gridH: number,
-  occupied: Set<string>
+  occupied: Set<string>,
+  obstacles: Set<string> = new Set(),
 ): { x: number; y: number }[] {
   if (start.x === end.x && start.y === end.y) return [start];
   const queue: { x: number; y: number; path: { x: number; y: number }[] }[] = [
@@ -149,6 +150,7 @@ function bfsPath(
       const key = `${nx},${ny}`;
       if (nx < 0 || ny < 0 || nx >= gridW || ny >= gridH) continue;
       if (visited.has(key)) continue;
+      if (obstacles.has(key)) continue;
       if (occupied.has(key) && !(nx === end.x && ny === end.y)) continue;
       visited.add(key);
       const newPath = [...path, { x: nx, y: ny }];
@@ -156,7 +158,7 @@ function bfsPath(
       queue.push({ x: nx, y: ny, path: newPath });
     }
   }
-  return [start, end]; // fallback: straight line if blocked
+  return [start, end]; // fallback: straight line if fully blocked
 }
 
 // Attack animation duration by skill type (ms)
@@ -577,7 +579,7 @@ export default function Battle() {
         // Build occupied set (all alive units except this one)
         const occupied = new Set<string>();
         units.forEach(u => { if (u.hp > 0 && u.id !== unit.id) occupied.add(`${u.position.x},${u.position.y}`); });
-        const path = bfsPath(startPos, endPos, GRID_W, GRID_H, occupied);
+        const path = bfsPath(startPos, endPos, GRID_W, GRID_H, occupied, level.obstacleTiles);
         // Update game state immediately; animation handled by WalkingUnit
         updateUnit(unit.id, { position: endPos, hasMoved: true, facing });
         setWalkPaths(prev => ({ ...prev, [unit.id]: path }));
@@ -879,7 +881,7 @@ export default function Battle() {
           const facing = calcFacing(startPos, bestMove);
           const occupied = new Set<string>();
           units.forEach(u => { if (u.hp > 0 && u.id !== unit.id) occupied.add(`${u.position.x},${u.position.y}`); });
-          const path = bfsPath(startPos, bestMove, GRID_W, GRID_H, occupied);
+          const path = bfsPath(startPos, bestMove, GRID_W, GRID_H, occupied, level.obstacleTiles);
           updateUnit(unit.id, { position: bestMove, hasMoved: true, facing });
           const moveDesc = isRanged ? `${unit.name} takes position.` : `${unit.name} advances.`;
           addLog(moveDesc);
@@ -1250,7 +1252,7 @@ export default function Battle() {
                 </div>
 
                 <HealthBar current={inspectedUnit.hp} max={inspectedUnit.maxHp} label="HP" />
-                <StatBar current={inspectedUnit.mp ?? 0} max={inspectedUnit.maxMp ?? 1} label="MP" fillClass="bg-blue-500" borderClass="border-blue-900/50" />
+                <StatBar current={inspectedUnit.mana ?? 0} max={inspectedUnit.maxMana ?? 1} label="MP" fillClass="bg-blue-500" borderClass="border-blue-900/50" />
                 <StatBar current={inspectedUnit.stamina ?? 0} max={inspectedUnit.maxStamina ?? 1} label="ST" fillClass="bg-orange-500" borderClass="border-orange-900/50" />
                 <ActionBar ct={inspectedUnit.ct} speed={inspectedUnit.speed} isActive={inspectedUnit.id === currentUnitId} />
 
