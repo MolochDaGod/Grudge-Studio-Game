@@ -127,6 +127,38 @@ function calcFacing(from: { x: number; y: number }, to: { x: number; y: number }
   return dy >= 0 ? 2 : 0;
 }
 
+// BFS path from start → end across the grid, avoiding occupied tiles
+// Returns the full tile sequence (inclusive of start and end)
+function bfsPath(
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  gridW: number,
+  gridH: number,
+  occupied: Set<string>
+): { x: number; y: number }[] {
+  if (start.x === end.x && start.y === end.y) return [start];
+  const queue: { x: number; y: number; path: { x: number; y: number }[] }[] = [
+    { x: start.x, y: start.y, path: [{ x: start.x, y: start.y }] },
+  ];
+  const visited = new Set<string>([`${start.x},${start.y}`]);
+  const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]] as const;
+  while (queue.length > 0) {
+    const { x, y, path } = queue.shift()!;
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx, ny = y + dy;
+      const key = `${nx},${ny}`;
+      if (nx < 0 || ny < 0 || nx >= gridW || ny >= gridH) continue;
+      if (visited.has(key)) continue;
+      if (occupied.has(key) && !(nx === end.x && ny === end.y)) continue;
+      visited.add(key);
+      const newPath = [...path, { x: nx, y: ny }];
+      if (nx === end.x && ny === end.y) return newPath;
+      queue.push({ x: nx, y: ny, path: newPath });
+    }
+  }
+  return [start, end]; // fallback: straight line if blocked
+}
+
 // Attack animation duration by skill type (ms)
 function getAtkDuration(skill: Skill): number {
   if (skill.tags?.includes('ultimate')) return 1600;
@@ -154,6 +186,7 @@ export default function Battle() {
   const GRID_H = level.gridH;
 
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
+  const [walkPaths, setWalkPaths] = useState<Record<string, { x: number; y: number }[]>>({});
   const [combatEffects, setCombatEffects] = useState<CombatEffectData[]>([]);
   const [hoveredSlot, setHoveredSlot] = useState<SkillSlot | null>(null);
   const [cameraFocus, setCameraFocus] = useState<[number, number, number] | null>(null);
@@ -181,15 +214,25 @@ export default function Battle() {
     setCameraMode('third-person');
   };
 
-  // Hotkey handler: U = toggle unit info (rings + health bars)
+  // Hotkeys: U = toggle unit info rings  |  M = toggle move mode
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'u' || e.key === 'U') setShowUnitInfo(v => !v);
+      if (e.key === 'u' || e.key === 'U') {
+        setShowUnitInfo(v => !v);
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        const unit = units.find(u => u.id === currentUnitId);
+        if (!unit || !unit.isPlayerControlled || unit.hasMoved || walkPaths[unit.id]) return;
+        const isMove = actionMode === 'move';
+        setActionMode(isMove ? 'idle' : 'move');
+        setAttackableTiles([]);
+        setReachableTiles(isMove ? [] : getReachableTiles(unit.position, unit.move));
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [currentUnitId, units, actionMode, walkPaths]);
 
   // Close context menu when clicking anywhere else
   useEffect(() => {
@@ -470,15 +513,21 @@ export default function Battle() {
     if (actionMode === 'move' && !unit.hasMoved) {
       const isReachable = reachableTiles.some(t => t.x === x && t.y === y);
       if (isReachable) {
-        const dist    = Math.abs(x - unit.position.x) + Math.abs(y - unit.position.y);
-        const walkMs  = Math.max(520, dist * 390);
-        const facing  = calcFacing(unit.position, { x, y });
-        updateUnit(unit.id, { position: { x, y }, hasMoved: true, facing });
+        const startPos = { x: unit.position.x, y: unit.position.y };
+        const endPos   = { x, y };
+        const facing   = calcFacing(startPos, endPos);
+        // Build occupied set (all alive units except this one)
+        const occupied = new Set<string>();
+        units.forEach(u => { if (u.hp > 0 && u.id !== unit.id) occupied.add(`${u.position.x},${u.position.y}`); });
+        const path = bfsPath(startPos, endPos, GRID_W, GRID_H, occupied);
+        // Update game state immediately; animation handled by WalkingUnit
+        updateUnit(unit.id, { position: endPos, hasMoved: true, facing });
+        setWalkPaths(prev => ({ ...prev, [unit.id]: path }));
         setActionMode('idle');
         setReachableTiles([]);
-        addLog(`${unit.name} moves to [${x}, ${y}].`);
+        addLog(`${unit.name} marches to [${x}, ${y}].`);
         setAnimStates(prev => ({ ...prev, [unit.id]: 'walk' }));
-        setTimeout(() => setAnimStates(prev => ({ ...prev, [unit.id]: 'idle' })), walkMs);
+        // animState reset to 'idle' happens in onWalkComplete
       }
     } else if (actionMode.startsWith('skill_') && !unit.hasActed) {
       const slotNum = parseInt(actionMode.split('_')[1]) as SkillSlot;
@@ -496,6 +545,26 @@ export default function Battle() {
         executeSkill(unit, skill, target);
       }
     }
+  };
+
+  // Called by BattleScene when a unit finishes its walk animation
+  const onWalkComplete = (unitId: string) => {
+    setWalkPaths(prev => {
+      const next = { ...prev };
+      delete next[unitId];
+      return next;
+    });
+    setAnimStates(prev => ({ ...prev, [unitId]: 'idle' }));
+  };
+
+  // Called by BattleScene as a unit enters each tile during its walk
+  // Hook point for traps, zone abilities, and movement-triggered effects
+  const onWalkStep = (unitId: string, tile: { x: number; y: number }) => {
+    const unit = units.find(u => u.id === unitId);
+    if (!unit) return;
+    // Future: check level.traps for this tile and apply effects
+    // Example stub: addLog(`${unit.name} steps on [${tile.x},${tile.y}].`);
+    void tile;
   };
 
   const executeSkill = (attacker: TacticalUnit, skill: Skill, target: TacticalUnit) => {
@@ -661,10 +730,18 @@ export default function Battle() {
     }, atkDurMs);
   };
 
-  // AI Logic
+  // AI Logic — walks the unit tile-by-tile then attacks after walk completes
+  // walkPaths in deps: when the walk finishes, walkPaths[unit.id] is cleared
+  // → effect re-runs → unit.hasMoved=true, not in walkPaths → attack phase
   useEffect(() => {
     const unit = units.find(u => u.id === currentUnitId);
     if (!unit || unit.isPlayerControlled || unit.hp <= 0) return;
+
+    // If this unit is still walking, wait for onWalkComplete to clear walkPaths
+    if (walkPaths[unit.id]) return;
+
+    // Shorter delay for the attack phase (unit just finished walking)
+    const delay = unit.hasMoved ? 420 : 1300;
 
     const aiTimer = setTimeout(() => {
       // Stunned: skip entire turn
@@ -684,7 +761,6 @@ export default function Battle() {
             return distA - distB;
           })[0];
 
-          // Frozen: heavily reduced movement
           const effectiveMove = unit.statusEffects.includes('frozen') ? 1 : unit.move;
           const reach = getReachableTiles(unit.position, effectiveMove);
           const bestMove = reach.sort((a, b) => {
@@ -694,13 +770,16 @@ export default function Battle() {
           })[0];
 
           if (bestMove) {
-            const dist   = Math.abs(bestMove.x - unit.position.x) + Math.abs(bestMove.y - unit.position.y);
-            const walkMs = Math.max(520, dist * 390);
-            const facing = calcFacing(unit.position, bestMove);
+            const startPos = { x: unit.position.x, y: unit.position.y };
+            const facing   = calcFacing(startPos, bestMove);
+            const occupied = new Set<string>();
+            units.forEach(u => { if (u.hp > 0 && u.id !== unit.id) occupied.add(`${u.position.x},${u.position.y}`); });
+            const path = bfsPath(startPos, bestMove, GRID_W, GRID_H, occupied);
             updateUnit(unit.id, { position: bestMove, hasMoved: true, facing });
-            addLog(`${unit.name} moves.`);
+            addLog(`${unit.name} advances.`);
             setAnimStates(prev => ({ ...prev, [unit.id]: 'walk' }));
-            setTimeout(() => setAnimStates(prev => ({ ...prev, [unit.id]: 'idle' })), walkMs);
+            // Trigger walk animation — AI attack fires when onWalkComplete clears walkPaths
+            setWalkPaths(prev => ({ ...prev, [unit.id]: path }));
           } else {
             updateUnit(unit.id, { hasMoved: true });
           }
@@ -714,26 +793,26 @@ export default function Battle() {
           return;
         }
         const currentPos = useGameStore.getState().units.find(u => u.id === currentUnitId)?.position || unit.position;
-        const targets = units.filter(u => u.isPlayerControlled && u.hp > 0 && 
+        const targets = units.filter(u => u.isPlayerControlled && u.hp > 0 &&
           (Math.abs(u.position.x - currentPos.x) + Math.abs(u.position.y - currentPos.y)) <= unit.range);
-        
+
         if (targets.length > 0) {
-           const target = targets[0];
-           if (unit.specialAbilityCooldown === 0) {
-              executeAbility(unit, target);
-           } else {
-              executeAttack(unit, target);
-           }
+          const target = targets[0];
+          if (unit.specialAbilityCooldown === 0) {
+            executeAbility(unit, target);
+          } else {
+            executeAttack(unit, target);
+          }
         } else {
-           updateUnit(unit.id, { hasActed: true });
+          updateUnit(unit.id, { hasActed: true });
         }
       } else {
         endTurn();
       }
-    }, 1300);
+    }, delay);
 
     return () => clearTimeout(aiTimer);
-  }, [currentUnitId, units, endTurn, updateUnit, addLog]);
+  }, [currentUnitId, units, walkPaths, endTurn, updateUnit, addLog]);
 
   // Player stunned: auto-skip their turn after brief delay
   useEffect(() => {
@@ -911,6 +990,9 @@ export default function Battle() {
           mapPings={mapPings}
           onUnitRightClick={handleUnitRightClick}
           onMapRightClick={handleMapRightClick}
+          walkPaths={walkPaths}
+          onWalkComplete={onWalkComplete}
+          onWalkStep={onWalkStep}
         />
       </div>
 

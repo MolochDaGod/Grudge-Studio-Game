@@ -20,6 +20,8 @@ export type MapPing = {
   createdAt: number;
 };
 
+export type GridPos = { x: number; y: number };
+
 interface BattleSceneProps {
   units: TacticalUnit[];
   level: LevelDef;
@@ -37,6 +39,9 @@ interface BattleSceneProps {
   mapPings?: MapPing[];
   onUnitRightClick?: (unitId: string, screenX: number, screenY: number) => void;
   onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
+  walkPaths?: Record<string, GridPos[]>;
+  onWalkComplete?: (unitId: string) => void;
+  onWalkStep?: (unitId: string, tile: GridPos) => void;
 }
 
 // ── Quad-mode Camera Controller ──────────────────────────────────────────────
@@ -226,6 +231,141 @@ function CameraController({
 }
 
 const FACING_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+
+// ── Walk speed (tiles per second) ─────────────────────────────────────────────
+const WALK_SPEED = 2.6;
+
+function calcWalkFacingAngle(from: GridPos, to: GridPos): number {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const f = (Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0)) as 0|1|2|3;
+  return FACING_ANGLES[f];
+}
+
+// ── Per-unit walk animator ─────────────────────────────────────────────────────
+// Wraps CharacterModel with imperative walk animation via useFrame.
+// The outer <group> position is driven frame-by-frame along the walkPath;
+// CharacterModel lives at [0,0,0] relative to that group and handles
+// animation states + facing lerp internally.
+interface WalkingUnitProps {
+  unit: TacticalUnit;
+  tileSize: number;
+  walkPath?: GridPos[];
+  onWalkComplete?: (unitId: string) => void;
+  onWalkStep?: (unitId: string, tile: GridPos) => void;
+  currentUnitId: string | null;
+  animState: AnimState;
+  onDoubleClick?: (unitId: string) => void;
+  onRightClick?: (unitId: string, x: number, y: number) => void;
+}
+
+function WalkingUnit({
+  unit, tileSize, walkPath, onWalkComplete, onWalkStep,
+  currentUnitId, animState, onDoubleClick, onRightClick,
+}: WalkingUnitProps) {
+  const outerRef = useRef<THREE.Group>(null);
+
+  // Stable initial world pos – only used on mount; all subsequent
+  // position changes are done imperatively to avoid R3F prop overrides.
+  const initWorldPos = useRef(
+    tileToWorld(unit.position.x, unit.position.y, tileSize) as [number, number, number]
+  );
+
+  type WS = {
+    path: GridPos[];
+    stepIdx: number;
+    stepT: number;
+    fromVec: THREE.Vector3;
+    toVec: THREE.Vector3;
+    active: boolean;
+  };
+  const wsRef = useRef<WS | null>(null);
+
+  const [facingAngle, setFacingAngle] = useState(FACING_ANGLES[unit.facing ?? 2]);
+
+  // Sync facing from store when idle (not walking)
+  useEffect(() => {
+    if (wsRef.current?.active) return;
+    setFacingAngle(FACING_ANGLES[unit.facing ?? 2]);
+  }, [unit.facing]);
+
+  // Start / cancel walk when walkPath prop changes
+  useEffect(() => {
+    if (!walkPath || walkPath.length < 2) {
+      if (wsRef.current) wsRef.current.active = false;
+      return;
+    }
+    const [sx, sy, sz] = tileToWorld(walkPath[0].x, walkPath[0].y, tileSize);
+    const [tx, ty, tz] = tileToWorld(walkPath[1].x, walkPath[1].y, tileSize);
+    wsRef.current = {
+      path: walkPath,
+      stepIdx: 0,
+      stepT: 0,
+      fromVec: new THREE.Vector3(sx, sy, sz),
+      toVec: new THREE.Vector3(tx, ty, tz),
+      active: true,
+    };
+    // Snap group to walk starting tile immediately (before first frame renders)
+    if (outerRef.current) outerRef.current.position.set(sx, sy, sz);
+    setFacingAngle(calcWalkFacingAngle(walkPath[0], walkPath[1]));
+  }, [walkPath, tileSize]);
+
+  useFrame((_, delta) => {
+    const ws = wsRef.current;
+    if (!ws || !ws.active || !outerRef.current) return;
+
+    ws.stepT += delta * WALK_SPEED;
+
+    if (ws.stepT >= 1) {
+      ws.stepT -= 1;
+      // Land exactly on current target tile
+      outerRef.current.position.copy(ws.toVec);
+      ws.stepIdx++;
+
+      // Fire tile-entry event (traps, abilities)
+      const arrivedTile = ws.path[ws.stepIdx];
+      if (arrivedTile) onWalkStep?.(unit.id, arrivedTile);
+
+      if (ws.stepIdx >= ws.path.length - 1) {
+        ws.active = false;
+        onWalkComplete?.(unit.id);
+        return;
+      }
+
+      // Advance to next step
+      ws.fromVec.copy(ws.toVec);
+      const next = ws.path[ws.stepIdx + 1];
+      const [nx, ny, nz] = tileToWorld(next.x, next.y, tileSize);
+      ws.toVec.set(nx, ny, nz);
+
+      // Update character facing to match movement direction
+      setFacingAngle(calcWalkFacingAngle(arrivedTile, next));
+    } else {
+      // Sub-tile lerp between current step's from→to positions
+      outerRef.current.position.lerpVectors(ws.fromVec, ws.toVec, ws.stepT);
+    }
+  });
+
+  return (
+    <group
+      ref={outerRef}
+      position={initWorldPos.current}
+      onDoubleClick={e => { e.stopPropagation(); onDoubleClick?.(unit.id); }}
+      onContextMenu={e => {
+        e.stopPropagation();
+        onRightClick?.(unit.id, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
+      }}
+    >
+      <CharacterModel
+        unit={unit}
+        position={[0, 0, 0]}
+        facingAngle={facingAngle}
+        isSelected={currentUnitId === unit.id}
+        animState={animState}
+      />
+    </group>
+  );
+}
 
 // ── Unit team rings + floating health bars ────────────────────────────────────
 function UnitMarkers({ units, tileSize }: { units: TacticalUnit[]; tileSize: number }) {
@@ -490,6 +630,7 @@ export function BattleScene({
   currentUnitId, actionMode, onTileClick, animStates,
   combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
   showUnitInfo = false, mapPings = [], onUnitRightClick, onMapRightClick,
+  walkPaths = {}, onWalkComplete, onWalkStep,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
   const currentUnit = units.find(u => u.id === currentUnitId) ?? null;
@@ -592,31 +733,20 @@ export function BattleScene({
           {/* Craftpix Stylized Nature — trees, rocks, bushes ringing the map border */}
           <NatureDecor gridW={gridW} gridH={gridH} tileSize={tileSize} />
 
-          {units.map(unit => {
-            const worldPos = tileToWorld(unit.position.x, unit.position.y, tileSize);
-            const facingAngle = FACING_ANGLES[unit.facing ?? 2];
-            return (
-              <group
-                key={unit.id}
-                onDoubleClick={e => {
-                  e.stopPropagation();
-                  onUnitDoubleClick?.(unit.id);
-                }}
-                onContextMenu={e => {
-                  e.stopPropagation();
-                  onUnitRightClick?.(unit.id, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
-                }}
-              >
-                <CharacterModel
-                  unit={unit}
-                  position={worldPos}
-                  facingAngle={facingAngle}
-                  isSelected={currentUnitId === unit.id}
-                  animState={animStates[unit.id] || 'idle'}
-                />
-              </group>
-            );
-          })}
+          {units.map(unit => (
+            <WalkingUnit
+              key={unit.id}
+              unit={unit}
+              tileSize={tileSize}
+              walkPath={walkPaths[unit.id]}
+              onWalkComplete={onWalkComplete}
+              onWalkStep={onWalkStep}
+              currentUnitId={currentUnitId}
+              animState={animStates[unit.id] || 'idle'}
+              onDoubleClick={onUnitDoubleClick}
+              onRightClick={onUnitRightClick}
+            />
+          ))}
 
           {showUnitInfo && <UnitMarkers units={units} tileSize={tileSize} />}
           {mapPings.length > 0 && <PingMarkers pings={mapPings} tileSize={tileSize} />}
