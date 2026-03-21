@@ -51,9 +51,33 @@ export const DEFAULT_ANIM_MAP: Record<AnimState, string> = {
   special2: 'Jump',
 };
 
+export type ModelId =
+  // Original fantasy pack
+  | 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage'
+  // RPG Characters pack
+  | 'warrior_rpg' | 'ranger_rpg' | 'rogue_rpg' | 'wizard_rpg' | 'cleric_rpg' | 'monk_rpg'
+  // Ultimate Animated Character Pack (Nov 2019)
+  | 'blue_soldier_female' | 'blue_soldier_male'
+  | 'casual2_female' | 'casual2_male' | 'casual3_female' | 'casual3_male'
+  | 'casual_bald' | 'casual_female' | 'casual_male'
+  | 'chef_female' | 'chef_male'
+  | 'cowboy_female' | 'cowboy_male'
+  | 'doctor_female_old' | 'doctor_female_young' | 'doctor_male_old' | 'doctor_male_young'
+  | 'goblin_female' | 'goblin_male'
+  | 'kimono_female' | 'kimono_male'
+  | 'knight_golden_female' | 'knight_golden_male' | 'knight_male'
+  | 'ninja_female' | 'ninja_male' | 'ninja_sand' | 'ninja_sand_female'
+  | 'old_classy_female' | 'old_classy_male'
+  | 'pirate_female' | 'pirate_male'
+  | 'soldier_female' | 'soldier_male'
+  | 'suit_female' | 'suit_male'
+  | 'viking_female' | 'viking_male'
+  | 'witch' | 'wizard'
+  | 'worker_female' | 'worker_male'
+  | 'zombie_female' | 'zombie_male';
+
 export interface CharacterConfig {
-  modelId: 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage'
-         | 'warrior_rpg' | 'ranger_rpg' | 'rogue_rpg' | 'wizard_rpg' | 'cleric_rpg' | 'monk_rpg';
+  modelId: ModelId;
   scale: [number, number, number];
   materials: Record<string, MaterialOverride>;
   primaryWeapon: WeaponConfig;
@@ -449,6 +473,51 @@ export const ALL_MODEL_URLS = [
   '/models/characters/wizard_rpg.glb',
   '/models/characters/cleric_rpg.glb',
   '/models/characters/monk_rpg.glb',
+  // Ultimate Animated Character Pack (Nov 2019) — loaded on demand
+  '/models/characters/blue_soldier_female.glb',
+  '/models/characters/blue_soldier_male.glb',
+  '/models/characters/casual2_female.glb',
+  '/models/characters/casual2_male.glb',
+  '/models/characters/casual3_female.glb',
+  '/models/characters/casual3_male.glb',
+  '/models/characters/casual_bald.glb',
+  '/models/characters/casual_female.glb',
+  '/models/characters/casual_male.glb',
+  '/models/characters/chef_female.glb',
+  '/models/characters/chef_male.glb',
+  '/models/characters/cowboy_female.glb',
+  '/models/characters/cowboy_male.glb',
+  '/models/characters/doctor_female_old.glb',
+  '/models/characters/doctor_female_young.glb',
+  '/models/characters/doctor_male_old.glb',
+  '/models/characters/doctor_male_young.glb',
+  '/models/characters/goblin_female.glb',
+  '/models/characters/goblin_male.glb',
+  '/models/characters/kimono_female.glb',
+  '/models/characters/kimono_male.glb',
+  '/models/characters/knight_golden_female.glb',
+  '/models/characters/knight_golden_male.glb',
+  '/models/characters/knight_male.glb',
+  '/models/characters/ninja_female.glb',
+  '/models/characters/ninja_male.glb',
+  '/models/characters/ninja_sand.glb',
+  '/models/characters/ninja_sand_female.glb',
+  '/models/characters/old_classy_female.glb',
+  '/models/characters/old_classy_male.glb',
+  '/models/characters/pirate_female.glb',
+  '/models/characters/pirate_male.glb',
+  '/models/characters/soldier_female.glb',
+  '/models/characters/soldier_male.glb',
+  '/models/characters/suit_female.glb',
+  '/models/characters/suit_male.glb',
+  '/models/characters/viking_female.glb',
+  '/models/characters/viking_male.glb',
+  '/models/characters/witch.glb',
+  '/models/characters/wizard.glb',
+  '/models/characters/worker_female.glb',
+  '/models/characters/worker_male.glb',
+  '/models/characters/zombie_female.glb',
+  '/models/characters/zombie_male.glb',
   '/models/weapons/greataxe.glb',
   '/models/weapons/fire_staff.glb',
   '/models/weapons/dark_staff.glb',

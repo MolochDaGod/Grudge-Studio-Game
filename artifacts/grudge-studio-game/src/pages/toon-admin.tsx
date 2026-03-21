@@ -48,21 +48,73 @@ const DEFAULT_EDIT: HeroEdit = {
 };
 
 // In-game GLB models available in /public/models/characters/
-const IN_GAME_MODELS = [
-  { id: 'human',       label: 'Human'       },
-  { id: 'elf',         label: 'Elf'         },
-  { id: 'dwarf',       label: 'Dwarf'       },
-  { id: 'orc',         label: 'Orc'         },
-  { id: 'barbarian',   label: 'Barbarian'   },
-  { id: 'undead',      label: 'Undead'      },
-  { id: 'mage',        label: 'Mage'        },
-  { id: 'rogue',       label: 'Rogue'       },
-  { id: 'rogue_rpg',   label: 'Rogue RPG'   },
-  { id: 'warrior_rpg', label: 'Warrior RPG' },
-  { id: 'ranger_rpg',  label: 'Ranger RPG'  },
-  { id: 'wizard_rpg',  label: 'Wizard RPG'  },
-  { id: 'cleric_rpg',  label: 'Cleric RPG'  },
-  { id: 'monk_rpg',    label: 'Monk RPG'    },
+// `section` marks a new category header when its value changes
+const IN_GAME_MODELS: { id: string; label: string; section?: string }[] = [
+  // ── Fantasy originals ──────────────────────────────────────────────────────
+  { id: 'human',              label: 'Human',             section: 'Fantasy' },
+  { id: 'elf',                label: 'Elf'               },
+  { id: 'dwarf',              label: 'Dwarf'             },
+  { id: 'orc',                label: 'Orc'               },
+  { id: 'barbarian',          label: 'Barbarian'         },
+  { id: 'undead',             label: 'Undead'            },
+  { id: 'mage',               label: 'Mage'              },
+  { id: 'rogue',              label: 'Rogue'             },
+  // ── RPG Characters pack ────────────────────────────────────────────────────
+  { id: 'warrior_rpg',        label: 'Warrior RPG',       section: 'RPG Pack' },
+  { id: 'ranger_rpg',         label: 'Ranger RPG'        },
+  { id: 'rogue_rpg',          label: 'Rogue RPG'         },
+  { id: 'wizard_rpg',         label: 'Wizard RPG'        },
+  { id: 'cleric_rpg',         label: 'Cleric RPG'        },
+  { id: 'monk_rpg',           label: 'Monk RPG'          },
+  // ── Knights & Warriors ─────────────────────────────────────────────────────
+  { id: 'knight_male',        label: 'Knight',            section: 'Warriors' },
+  { id: 'knight_golden_male', label: 'Golden Knight M'   },
+  { id: 'knight_golden_female',label:'Golden Knight F'   },
+  { id: 'blue_soldier_male',  label: 'Blue Soldier M'    },
+  { id: 'blue_soldier_female',label: 'Blue Soldier F'    },
+  { id: 'soldier_male',       label: 'Soldier M'         },
+  { id: 'soldier_female',     label: 'Soldier F'         },
+  { id: 'viking_male',        label: 'Viking M'          },
+  { id: 'viking_female',      label: 'Viking F'          },
+  // ── Rogues & Shadows ───────────────────────────────────────────────────────
+  { id: 'ninja_male',         label: 'Ninja M',           section: 'Rogues' },
+  { id: 'ninja_female',       label: 'Ninja F'           },
+  { id: 'ninja_sand',         label: 'Sand Ninja M'      },
+  { id: 'ninja_sand_female',  label: 'Sand Ninja F'      },
+  { id: 'pirate_male',        label: 'Pirate M'          },
+  { id: 'pirate_female',      label: 'Pirate F'          },
+  // ── Casters & Mystic ───────────────────────────────────────────────────────
+  { id: 'wizard',             label: 'Wizard',            section: 'Casters' },
+  { id: 'witch',              label: 'Witch'             },
+  // ── Monsters ──────────────────────────────────────────────────────────────
+  { id: 'goblin_male',        label: 'Goblin M',          section: 'Monsters' },
+  { id: 'goblin_female',      label: 'Goblin F'          },
+  { id: 'zombie_male',        label: 'Zombie M'          },
+  { id: 'zombie_female',      label: 'Zombie F'          },
+  // ── Civilians & NPCs ──────────────────────────────────────────────────────
+  { id: 'casual_male',        label: 'Casual M',          section: 'Civilians' },
+  { id: 'casual_female',      label: 'Casual F'          },
+  { id: 'casual2_male',       label: 'Casual 2 M'        },
+  { id: 'casual2_female',     label: 'Casual 2 F'        },
+  { id: 'casual3_male',       label: 'Casual 3 M'        },
+  { id: 'casual3_female',     label: 'Casual 3 F'        },
+  { id: 'casual_bald',        label: 'Casual Bald'       },
+  { id: 'kimono_male',        label: 'Kimono M'          },
+  { id: 'kimono_female',      label: 'Kimono F'          },
+  { id: 'old_classy_male',    label: 'Old Classy M'      },
+  { id: 'old_classy_female',  label: 'Old Classy F'      },
+  { id: 'suit_male',          label: 'Suit M'            },
+  { id: 'suit_female',        label: 'Suit F'            },
+  { id: 'chef_male',          label: 'Chef M'            },
+  { id: 'chef_female',        label: 'Chef F'            },
+  { id: 'cowboy_male',        label: 'Cowboy M'          },
+  { id: 'cowboy_female',      label: 'Cowboy F'          },
+  { id: 'doctor_male_young',  label: 'Doctor M Young'    },
+  { id: 'doctor_female_young',label: 'Doctor F Young'    },
+  { id: 'doctor_male_old',    label: 'Doctor M Old'      },
+  { id: 'doctor_female_old',  label: 'Doctor F Old'      },
+  { id: 'worker_male',        label: 'Worker M'          },
+  { id: 'worker_female',      label: 'Worker F'          },
 ];
 
 // All animations available in the in-game character GLBs
@@ -802,32 +854,52 @@ export default function ToonAdmin() {
                 <div className="space-y-3">
                   <p className="text-[10px] text-white/30 uppercase tracking-widest font-bold">In-Game Battle Model</p>
                   <p className="text-[9px] text-white/30 italic">Pick which 3D character model this hero uses in battle.</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      onClick={() => updateEdit({ baseModelId: null, playingAnimation: 'Idle' })}
-                      className={cn(
-                        "px-2 py-2 rounded border text-[10px] font-bold transition-all text-left",
-                        !currentEdit.baseModelId
-                          ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
-                          : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
-                      )}
-                    >
-                      ✕ Default
-                    </button>
-                    {IN_GAME_MODELS.map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => updateEdit({ baseModelId: m.id, linkedModelId: null, playingAnimation: 'Idle' })}
-                        className={cn(
-                          "px-2 py-2 rounded border text-[10px] font-bold transition-all text-left",
-                          currentEdit.baseModelId === m.id
-                            ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
-                            : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
-                        )}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
+                  {/* Default (no override) button */}
+                  <button
+                    onClick={() => updateEdit({ baseModelId: null, playingAnimation: 'Idle' })}
+                    className={cn(
+                      "w-full px-2 py-1.5 rounded border text-[10px] font-bold transition-all text-left",
+                      !currentEdit.baseModelId
+                        ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
+                        : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
+                    )}
+                  >
+                    ✕ None (use hero default)
+                  </button>
+                  {/* Sectioned, scrollable model grid */}
+                  <div className="overflow-y-auto max-h-52 pr-0.5 space-y-2">
+                    {(() => {
+                      const sections: { title: string; models: typeof IN_GAME_MODELS }[] = [];
+                      IN_GAME_MODELS.forEach(m => {
+                        if (m.section || sections.length === 0) {
+                          sections.push({ title: m.section ?? '', models: [] });
+                        }
+                        sections[sections.length - 1].models.push(m);
+                      });
+                      return sections.map(sec => (
+                        <div key={sec.title}>
+                          {sec.title && (
+                            <p className="text-[8px] text-white/25 uppercase tracking-widest font-bold mb-1">{sec.title}</p>
+                          )}
+                          <div className="grid grid-cols-2 gap-1">
+                            {sec.models.map(m => (
+                              <button
+                                key={m.id}
+                                onClick={() => updateEdit({ baseModelId: m.id, linkedModelId: null, playingAnimation: 'Idle' })}
+                                className={cn(
+                                  "px-2 py-1.5 rounded border text-[10px] font-bold transition-all text-left",
+                                  currentEdit.baseModelId === m.id
+                                    ? "border-amber-500/50 bg-amber-950/40 text-amber-300"
+                                    : "border-white/10 text-white/40 hover:border-white/20 hover:text-white/70"
+                                )}
+                              >
+                                {m.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
 
