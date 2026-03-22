@@ -24,7 +24,7 @@ const FACTIONS = [
     subtitle: "Holy Warriors of Mankind",
     description: "Champions of justice and glory — knights, battle-mages and barbarian berserkers fighting under the banner of righteousness.",
     races: ["Human", "Barbarian"],
-    emoji: "⚔️",
+    emblem: `${import.meta.env.BASE_URL}images/emblems/crusade.png`,
     accent: "#3b82f6",
     bg: "from-blue-950 via-[#0c1428] to-[#07091a]",
     border: "border-blue-700/50",
@@ -34,7 +34,6 @@ const FACTIONS = [
     activeBorder: "border-blue-500",
     badgeBg: "bg-blue-950/60 border-blue-700/50 text-blue-300",
     tagText: "text-blue-400",
-    art: "🛡️",
   },
   {
     id: "Fabled",
@@ -42,7 +41,7 @@ const FACTIONS = [
     subtitle: "Ancient Legends",
     description: "Races bound by age-old legend — dwarven forge-masters and elven bladedancers wielding mastery of craft, nature and arcane arts.",
     races: ["Dwarf", "Elf"],
-    emoji: "✨",
+    emblem: `${import.meta.env.BASE_URL}images/emblems/fabled.png`,
     accent: "#a855f7",
     bg: "from-purple-950 via-[#110b1e] to-[#07050f]",
     border: "border-purple-700/50",
@@ -52,7 +51,6 @@ const FACTIONS = [
     activeBorder: "border-purple-500",
     badgeBg: "bg-purple-950/60 border-purple-700/50 text-purple-300",
     tagText: "text-purple-400",
-    art: "🌿",
   },
   {
     id: "Legion",
@@ -60,7 +58,7 @@ const FACTIONS = [
     subtitle: "Iron Horde of Darkness",
     description: "Ruthless conquerors driven by power and dark sorcery — orc warchiefs and undead necromancers who bend the world to their will.",
     races: ["Orc", "Undead"],
-    emoji: "☠️",
+    emblem: `${import.meta.env.BASE_URL}images/emblems/legion.png`,
     accent: "#ef4444",
     bg: "from-red-950 via-[#1a0808] to-[#0a0404]",
     border: "border-red-700/50",
@@ -70,7 +68,6 @@ const FACTIONS = [
     activeBorder: "border-red-500",
     badgeBg: "bg-red-950/60 border-red-700/50 text-red-300",
     tagText: "text-red-400",
-    art: "⚡",
   },
   {
     id: "Pirates",
@@ -78,7 +75,7 @@ const FACTIONS = [
     subtitle: "Rogues of the Open Sea",
     description: "Outcasts and renegades sailing beyond the law — secret heroes with unmatched cunning, explosive firepower and unpredictable tricks.",
     races: ["Barbarian", "Human"],
-    emoji: "⚓",
+    emblem: `${import.meta.env.BASE_URL}images/emblems/pirates.png`,
     accent: "#f59e0b",
     bg: "from-amber-950 via-[#1a1008] to-[#0a0800]",
     border: "border-amber-600/50",
@@ -88,7 +85,6 @@ const FACTIONS = [
     activeBorder: "border-amber-500",
     badgeBg: "bg-amber-950/60 border-amber-600/50 text-amber-300",
     tagText: "text-amber-400",
-    art: "🏴‍☠️",
     secret: true,
   },
 ];
@@ -510,15 +506,21 @@ export default function CharacterSelect() {
                           "hover:scale-[1.02] hover:-translate-y-1",
                         )}
                       >
-                        {/* Big art emoji behind */}
-                        <div className="absolute -right-4 -top-4 text-[9rem] opacity-[0.07] select-none pointer-events-none group-hover:opacity-[0.12] transition-opacity">
-                          {faction.art}
-                        </div>
+                        {/* Large ghost emblem — top right */}
+                        <img
+                          src={faction.emblem}
+                          alt=""
+                          className="absolute -right-4 -top-4 w-48 h-48 object-contain opacity-[0.08] select-none pointer-events-none group-hover:opacity-[0.16] transition-opacity"
+                        />
 
                         <div className="relative z-10 p-6 flex flex-col gap-4" style={{ minHeight: 320 }}>
-                          {/* Icon + name */}
+                          {/* Emblem icon + name */}
                           <div>
-                            <div className="text-5xl mb-3">{faction.emoji}</div>
+                            <img
+                              src={faction.emblem}
+                              alt={faction.name}
+                              className="w-14 h-14 object-contain mb-3 drop-shadow-lg"
+                            />
                             <div className="font-display text-2xl font-bold text-white uppercase tracking-wide leading-tight">
                               {faction.name}
                             </div>
@@ -580,11 +582,9 @@ export default function CharacterSelect() {
               >
                 {/* Faction header banner */}
                 <div className={cn("relative px-6 py-5 mb-6 border-b overflow-hidden", `bg-gradient-to-r ${activeFaction.bg}`, activeFaction.border.replace("border", "border-b"))}>
-                  <div className="absolute right-0 top-0 bottom-0 flex items-center pr-8 text-[8rem] opacity-[0.07] select-none pointer-events-none">
-                    {activeFaction.art}
-                  </div>
+                  <img src={activeFaction.emblem} alt="" className="absolute right-0 top-0 bottom-0 h-full w-40 object-contain object-right opacity-[0.08] select-none pointer-events-none" />
                   <div className="relative z-10 flex items-center gap-4">
-                    <span className="text-4xl">{activeFaction.emoji}</span>
+                    <img src={activeFaction.emblem} alt={activeFaction.name} className="w-12 h-12 object-contain drop-shadow-lg flex-shrink-0" />
                     <div>
                       <h2 className="font-display text-2xl font-bold text-white uppercase tracking-wide">
                         {activeFaction.name}
