@@ -262,7 +262,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'brother-maltheus': {
     // Portrait: Undead necromancer priest — skull face, purple glowing eyes, pristine white priestly robes, spellbook
     modelId: 'zombie_male',
-    scale: [0.72 * 0.88, 0.72 * 1.05, 0.72 * 0.88],
+    scale: [0.72 * 0.90, 0.72 * 0.90, 0.72 * 0.90],
     materials: {
       Clothes:     { color: '#e8eaf0', roughness: 0.8 },
       Skin:        { color: '#b0a898', emissive: '#330066', emissiveIntensity: 0.05, roughness: 0.9 },
@@ -280,7 +280,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'skeleton-undead': {
     // Portrait: Armored skeleton knight — dark rusted plate armor, glowing orange eye slit, ragged red cloth
     modelId: 'knight_male',
-    scale: [0.72 * 1.0, 0.72 * 1.05, 0.72 * 1.0],
+    scale: [0.72 * 1.0, 0.72 * 1.0, 0.72 * 1.0],
     materials: {
       Armor:      { color: '#14120e', metalness: 0.6, roughness: 0.9 },
       Armor_Dark: { color: '#080808', metalness: 0.5, roughness: 0.95 },
@@ -295,7 +295,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'hollow-zealot': {
     // Portrait: Skeleton priest — golden skull face glowing halo, gold/cream priestly robes, rosary, sword
     modelId: 'zombie_male',
-    scale: [0.72 * 1.0, 0.72 * 1.05, 0.72 * 1.0],
+    scale: [0.72 * 1.0, 0.72 * 1.0, 0.72 * 1.0],
     materials: {
       Clothes:     { color: '#c8a840', roughness: 0.75 },
       Skin:        { color: '#c8b060', emissive: '#8a6000', emissiveIntensity: 0.08, roughness: 0.85 },
@@ -313,7 +313,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'grave-shade': {
     // Portrait: Hooded skull-faced shadow assassin — all black robes, purple glowing eyes, daggers on back, void-fire hands
     modelId: 'ninja_male',
-    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
+    scale: [0.72 * 0.9, 0.72 * 0.9, 0.72 * 0.9],
     materials: {
       Main:    { color: '#060606', roughness: 0.95 },
       Skin:    { color: '#c8c0a0', roughness: 0.9 },
@@ -328,7 +328,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'saltbone-corsair': {
     // Portrait: Skeleton pirate captain — navy blue officer coat, gold trim, skull face, purple glowing eyes, daggers
     modelId: 'pirate_male',
-    scale: [0.72 * 0.95, 0.72 * 1.0, 0.72 * 0.95],
+    scale: [0.72 * 0.95, 0.72 * 0.95, 0.72 * 0.95],
     materials: {
       Clothes: { color: '#060c22', roughness: 0.85 },
       Beige:   { color: '#d8d0c0', roughness: 0.9 },
@@ -380,7 +380,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'elven-archer': {
     // Portrait: Graceful elf, silver braided hair, green+gold leaf armor, longbow — RPG pack for bow animations
     modelId: 'ranger_rpg',
-    scale: [0.0072 * 0.9, 0.0072 * 1.05, 0.0072 * 0.9],
+    scale: [0.0072, 0.0072, 0.0072],
     textureUrl: 'models/characters/rpg-textures/ranger.png',
     materials: {
       Ranger_Texture: { color: '#c8e8b0', emissive: '#006600', emissiveIntensity: 0.05, roughness: 0.75 },
@@ -458,7 +458,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   // ── CRUSADE — HUMAN ────────────────────────────────────────────────────────
   'human_warrior': {
     modelId: 'knight_male',
-    scale: [0.72, 0.72 * 1.05, 0.72],
+    scale: [0.72, 0.72, 0.72],
     materials: {
       Armor:      { color: '#a8b8c8', metalness: 0.88, roughness: 0.2 },
       Armor_Dark: { color: '#0a1a3a', metalness: 0.65, roughness: 0.4 },
@@ -488,7 +488,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'human_mage': {
     modelId: 'wizard',
-    scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
+    scale: [0.72 * 0.95, 0.72 * 0.95, 0.72 * 0.95],
     materials: {
       Main:    { color: '#1a1060', roughness: 0.75 },
       Skin:    { color: '#c08050', roughness: 0.6 },
@@ -502,7 +502,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'human_ranger': {
     modelId: 'ninja_male',
-    scale: [0.72 * 0.92, 0.72 * 1.0, 0.72 * 0.92],
+    scale: [0.72 * 0.92, 0.72 * 0.92, 0.72 * 0.92],
     materials: {
       Main:    { color: '#2a3a18', roughness: 0.85 },
       Skin:    { color: '#b87848', roughness: 0.65 },
@@ -545,7 +545,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'barbarian_mage': {
     modelId: 'witch',
-    scale: [0.72 * 0.95, 0.72, 0.72 * 0.95],
+    scale: [0.72 * 0.95, 0.72 * 0.95, 0.72 * 0.95],
     materials: {},
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
     animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
@@ -553,7 +553,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'barbarian_ranger': {
     modelId: 'ranger_rpg',
-    scale: [0.0072, 0.0072 * 1.05, 0.0072],
+    scale: [0.0072, 0.0072, 0.0072],
     textureUrl: 'models/characters/rpg-textures/ranger.png',
     materials: {},
     primaryWeapon: { modelId: 'bow', position: [0, 0, 0], rotation: [Math.PI / 2, Math.PI / 2, 0], scale: 19 },
@@ -631,7 +631,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   // ── FABLED — ELF ──────────────────────────────────────────────────────────
   'elf_warrior': {
     modelId: 'knight_golden_male',
-    scale: [0.72 * 0.92, 0.72 * 1.08, 0.72 * 0.92],
+    scale: [0.72 * 0.95, 0.72 * 0.95, 0.72 * 0.95],
     materials: {
       Armor:      { color: '#c8e0a8', metalness: 0.82, roughness: 0.18 },
       Armor_Dark: { color: '#1a3010', metalness: 0.6, roughness: 0.4 },
@@ -645,7 +645,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'elf_worg': {
     modelId: 'ninja_female',
-    scale: [0.72 * 0.88, 0.72 * 1.02, 0.72 * 0.88],
+    scale: [0.72 * 0.90, 0.72 * 0.90, 0.72 * 0.90],
     materials: {
       Skin:   { color: '#d4c890', roughness: 0.5 },
       Armor:  { color: '#0e2208', metalness: 0.5, roughness: 0.55 },
@@ -658,7 +658,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'elf_mage': {
     modelId: 'witch',
-    scale: [0.72 * 0.88, 0.72 * 1.02, 0.72 * 0.88],
+    scale: [0.72 * 0.88, 0.72 * 0.88, 0.72 * 0.88],
     materials: {
       Main:    { color: '#1a3818', roughness: 0.75 },
       Skin:    { color: '#d4c890', roughness: 0.5 },
@@ -672,7 +672,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'elf_ranger': {
     modelId: 'ranger_rpg',
-    scale: [0.0072 * 0.9, 0.0072 * 1.05, 0.0072 * 0.9],
+    scale: [0.0072, 0.0072, 0.0072],
     textureUrl: 'models/characters/rpg-textures/ranger.png',
     materials: {
       Ranger_Texture: { color: '#c8e8b0', emissive: '#006600', emissiveIntensity: 0.05, roughness: 0.75 },
@@ -775,7 +775,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'undead_mage': {
     modelId: 'zombie_male',
-    scale: [0.72 * 0.9, 0.72 * 1.05, 0.72 * 0.9],
+    scale: [0.72 * 0.9, 0.72 * 0.9, 0.72 * 0.9],
     materials: {
       Clothes:     { color: '#c0c8d0', roughness: 0.8 },
       Skin:        { color: '#b0a898', emissive: '#220044', emissiveIntensity: 0.05, roughness: 0.9 },
@@ -792,7 +792,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'undead_ranger': {
     modelId: 'ninja_male',
-    scale: [0.72 * 0.9, 0.72 * 1.0, 0.72 * 0.9],
+    scale: [0.72 * 0.9, 0.72 * 0.9, 0.72 * 0.9],
     materials: {
       Main:    { color: '#060610', roughness: 0.95 },
       Skin:    { color: '#c0b8a0', roughness: 0.9 },
@@ -824,7 +824,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'sky_captain': {
     modelId: 'soldier_male',
-    scale: [0.72, 0.72 * 1.02, 0.72],
+    scale: [0.72, 0.72, 0.72],
     materials: {
       Main:    { color: '#0a1a3a', roughness: 0.7 },
       Skin:    { color: '#b87848', roughness: 0.65 },
@@ -839,7 +839,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'faith_barrier': {
     modelId: 'cleric_rpg',
-    scale: [0.0072, 0.0072 * 1.05, 0.0072],
+    scale: [0.0072, 0.0072, 0.0072],
     textureUrl: 'models/characters/rpg-textures/cleric.png',
     materials: {},
     primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
