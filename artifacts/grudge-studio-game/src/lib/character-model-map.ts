@@ -531,12 +531,12 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   },
 
   'barbarian_worg': {
-    modelId: 'barbarian',
-    scale: [0.72 * 1.3, 0.72 * 1.05, 0.72 * 1.3],
+    modelId: 'viking_male',
+    scale: [0.72 * 1.15, 0.72 * 1.05, 0.72 * 1.15],
     materials: {
-      Skin:  { color: '#7a5028', roughness: 0.7 },
-      Face:  { color: '#7a5028', emissive: '#440011', emissiveIntensity: 0.06 },
-      Pants: { color: '#2a1408', roughness: 0.9 },
+      Skin:  { color: '#7a4520', roughness: 0.7 },
+      Armor: { color: '#2a1808', roughness: 0.9 },
+      Detail:{ color: '#5c3010', roughness: 0.85 },
       Hair:  { color: '#180808', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
@@ -644,13 +644,13 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   },
 
   'elf_worg': {
-    modelId: 'elf',
-    scale: [0.72 * 0.9, 0.72 * 1.05, 0.72 * 0.9],
+    modelId: 'ninja_female',
+    scale: [0.72 * 0.88, 0.72 * 1.02, 0.72 * 0.88],
     materials: {
-      Skin:  { color: '#d4c890', roughness: 0.5 },
-      Face:  { color: '#d4c890', emissive: '#004400', emissiveIntensity: 0.06 },
-      Pants: { color: '#1a2e10', roughness: 0.85 },
-      Hair:  { color: '#e8d860', roughness: 0.7 },
+      Skin:   { color: '#d4c890', roughness: 0.5 },
+      Armor:  { color: '#0e2208', metalness: 0.5, roughness: 0.55 },
+      Detail: { color: '#3a6020', emissive: '#1a4010', emissiveIntensity: 0.12, metalness: 0.6 },
+      Hair:   { color: '#c8c050', roughness: 0.65 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
     animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },

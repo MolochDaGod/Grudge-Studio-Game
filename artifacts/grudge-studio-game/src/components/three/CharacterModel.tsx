@@ -429,12 +429,12 @@ export function CharacterModel(props: CharacterModelProps) {
 
 // Preload all assets
 const modelIds = [
-  // Quaternius Fantasy Pack
-  'orc', 'elf', 'human', 'barbarian', 'undead', 'dwarf', 'rogue', 'mage',
+  // Quaternius Fantasy Pack — only models actively used in battle configs
+  'orc', 'dwarf',
   // Quaternius RPG Characters Pack
   'warrior_rpg', 'ranger_rpg', 'rogue_rpg', 'wizard_rpg', 'cleric_rpg', 'monk_rpg',
   // Ultimate Animated Character Pack — characters used in battle
-  'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male',
+  'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
   'pirate_male', 'zombie_male', 'soldier_male', 'wizard', 'witch',
   'casual_bald', 'goblin_male',
 ];

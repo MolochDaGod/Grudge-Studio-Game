@@ -497,12 +497,12 @@ export default function Battle() {
     let nextUnit = null;
     let newUnits = [...units];
 
-    // Find unit with >= 100 CT
+    // Find unit with >= 100 CT already
     nextUnit = aliveUnits.find(u => u.ct >= 100);
 
     if (!nextUnit) {
-      // Advance time until someone hits 100
-      let maxTicks = 100;
+      // Advance time until someone hits 100, then persist all CT gains
+      let maxTicks = 200;
       while (!nextUnit && maxTicks > 0) {
         newUnits = newUnits.map(u => {
           if (u.hp <= 0) return u;
@@ -511,6 +511,8 @@ export default function Battle() {
         nextUnit = newUnits.find(u => u.hp > 0 && u.ct >= 100);
         maxTicks--;
       }
+      // Commit every unit's accumulated CT so progress carries across turns
+      newUnits.forEach(u => { if (u.hp > 0) updateUnit(u.id, { ct: u.ct }); });
     }
 
     // Sort to predict turn order
