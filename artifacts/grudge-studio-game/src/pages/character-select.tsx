@@ -339,7 +339,12 @@ export default function CharacterSelect() {
     setPlayerSquad(selectedIds);
     const level = getLevelWithEdits(currentLevelId);
     const playerChars = characters.filter(c => selectedIds.includes(c.id));
-    const possibleEnemies = characters.filter(c => !selectedIds.includes(c.id));
+
+    // Pick an enemy faction that is different from the player's faction
+    const allFactionIds = [...new Set(characters.map(c => c.faction))];
+    const otherFactions = allFactionIds.filter(f => f !== selectedFaction);
+    const enemyFaction = otherFactions[Math.floor(Math.random() * otherFactions.length)];
+    const possibleEnemies = characters.filter(c => c.faction === enemyFaction);
     const enemyChars = [...possibleEnemies].sort(() => 0.5 - Math.random()).slice(0, 3);
 
     let unitIdCounter = 1;
