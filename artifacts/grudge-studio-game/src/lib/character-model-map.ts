@@ -190,7 +190,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'magma-orc-destroyer': {
     // Portrait: Huge dark orc, lava-cracked skin, glowing orange eyes, molten stone armor
     modelId: 'orc',
-    scale: [0.72 * 1.6, 0.72 * 1.1, 0.72 * 1.4],
+    scale: [0.72 * 1.35, 0.72 * 1.1, 0.72 * 1.35],
     materials: {
       Skin:  { color: '#3a0c00', emissive: '#dd2200', emissiveIntensity: 0.45, roughness: 0.9 },
       Face:  { color: '#3a0c00', emissive: '#ff1100', emissiveIntensity: 0.35 },
@@ -204,7 +204,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'orcish-warrior': {
     // Portrait: Classic green orc, silver plate armor with fur trim, ornate axe
     modelId: 'orc',
-    scale: [0.72 * 1.25, 0.72 * 1.0, 0.72 * 1.2],
+    scale: [0.72 * 1.22, 0.72 * 1.0, 0.72 * 1.22],
     materials: {
       Skin:  { color: '#2e4820', roughness: 0.75 },
       Face:  { color: '#2e4820' },
@@ -232,7 +232,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'warlord-garnok': {
     // Portrait: Powerful orc warlord, pinkish-red skin, heavy dark gold-trim armor, skull decorations, topknot
     modelId: 'orc',
-    scale: [0.72 * 1.55, 0.72 * 1.12, 0.72 * 1.4],
+    scale: [0.72 * 1.45, 0.72 * 1.12, 0.72 * 1.45],
     materials: {
       Skin:  { color: '#7a2820', roughness: 0.7 },
       Face:  { color: '#7a2820' },
@@ -364,7 +364,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'human-barbarian': {
     // Portrait: Muscular human barbarian — blue warpaint stripes, dark braided hair, fur-trim leather, greatsword
     modelId: 'viking_male',
-    scale: [0.72 * 1.2, 0.72 * 1.02, 0.72 * 1.15],
+    scale: [0.72 * 1.18, 0.72 * 1.02, 0.72 * 1.18],
     materials: {
       Skin:  { color: '#7a4e28', roughness: 0.7 },
       Face:  { color: '#7a4e28', emissive: '#0033aa', emissiveIntensity: 0.08 },
@@ -401,7 +401,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'dwarven-forge-master': {
     // Portrait: Short stocky dwarf, huge braided red beard, runic silver plate armor, glowing forge hammer
     modelId: 'dwarf',
-    scale: [0.72 * 1.3, 0.72 * 0.72, 0.72 * 1.3],
+    scale: [0.72 * 1.08, 0.72 * 0.90, 0.72 * 1.08],
     materials: {
       Skin:       { color: '#8a4428', roughness: 0.65 },
       Face:       { color: '#9a5438' },
@@ -517,7 +517,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   // ── CRUSADE — BARBARIAN ────────────────────────────────────────────────────
   'barbarian_warrior': {
     modelId: 'viking_male',
-    scale: [0.72 * 1.25, 0.72 * 1.05, 0.72 * 1.2],
+    scale: [0.72 * 1.22, 0.72 * 1.05, 0.72 * 1.22],
     materials: {
       Skin:  { color: '#7a4e28', roughness: 0.7 },
       Face:  { color: '#7a4e28', emissive: '#0033aa', emissiveIntensity: 0.08 },
@@ -569,7 +569,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   // ── FABLED — DWARF ─────────────────────────────────────────────────────────
   'dwarf_warrior': {
     modelId: 'dwarf',
-    scale: [0.72 * 1.25, 0.72 * 0.75, 0.72 * 1.25],
+    scale: [0.72 * 1.06, 0.72 * 0.90, 0.72 * 1.06],
     materials: {
       Skin:       { color: '#7a4028', roughness: 0.65 },
       Face:       { color: '#7a4028' },
@@ -585,7 +585,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'dwarf_worg': {
     modelId: 'dwarf',
-    scale: [0.72 * 1.3, 0.72 * 0.72, 0.72 * 1.3],
+    scale: [0.72 * 1.08, 0.72 * 0.90, 0.72 * 1.08],
     materials: {
       Skin:       { color: '#5a3820', roughness: 0.7 },
       Face:       { color: '#5a3820', emissive: '#331100', emissiveIntensity: 0.06 },
@@ -600,7 +600,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'dwarf_mage': {
     modelId: 'dwarf',
-    scale: [0.72 * 1.2, 0.72 * 0.72, 0.72 * 1.2],
+    scale: [0.72 * 1.05, 0.72 * 0.88, 0.72 * 1.05],
     materials: {
       Skin:       { color: '#8a5030', roughness: 0.65 },
       Face:       { color: '#8a5030', emissive: '#cc4400', emissiveIntensity: 0.15 },
@@ -615,7 +615,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
 
   'dwarf_ranger': {
     modelId: 'dwarf',
-    scale: [0.72 * 1.1, 0.72 * 0.72, 0.72 * 1.1],
+    scale: [0.72 * 1.0, 0.72 * 0.88, 0.72 * 1.0],
     materials: {
       Skin:       { color: '#7a5030', roughness: 0.7 },
       Face:       { color: '#7a5030' },
@@ -691,7 +691,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   // ── LEGION — ORC ──────────────────────────────────────────────────────────
   'orc_warrior': {
     modelId: 'orc',
-    scale: [0.72 * 1.3, 0.72 * 1.02, 0.72 * 1.25],
+    scale: [0.72 * 1.28, 0.72 * 1.02, 0.72 * 1.28],
     materials: {
       Skin:  { color: '#2e4820', roughness: 0.75 },
       Face:  { color: '#2e4820' },
