@@ -156,7 +156,7 @@ function SkillTooltip({ skill, tierLabel, tierColor }: { skill: Skill; tierLabel
     attack: 'text-red-400', utility: 'text-cyan-400', move: 'text-sky-400',
   };
   return (
-    <div className="absolute bottom-full left-0 right-0 mb-2 z-50 pointer-events-none">
+    <div className="absolute bottom-full mb-2 z-50 pointer-events-none" style={{ width: 240, left: '50%', transform: 'translateX(-50%)' }}>
       <div className="bg-[#0d0d14] border border-primary/60 rounded-lg shadow-2xl p-3 text-left">
         {/* Header */}
         <div className="flex items-start gap-2 mb-1.5">
