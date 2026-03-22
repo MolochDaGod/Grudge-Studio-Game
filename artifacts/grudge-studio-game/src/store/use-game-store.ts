@@ -32,6 +32,8 @@ export interface TacticalUnit {
   rarity: string;
   statusEffects: string[];
   statusDurations: Record<string, number>;
+  /** Turns of immunity remaining per status type (prevents infinite stun-lock) */
+  statusImmunities: Record<string, number>;
   hasMoved: boolean;
   hasActed: boolean;
 }
@@ -143,9 +145,10 @@ export const useGameStore = create<GameState>((set) => ({
   setReachableTiles: (tiles) => set({ reachableTiles: tiles }),
   setAttackableTiles: (tiles) => set({ attackableTiles: tiles }),
   
-  addLog: (text, type = 'info') => set((state) => ({ 
-    combatLog: [...state.combatLog, { id: logCounter++, text, type }]
-  })),
+  addLog: (text, type = 'info') => set((state) => {
+    const next = [...state.combatLog, { id: logCounter++, text, type }];
+    return { combatLog: next.length > 50 ? next.slice(-50) : next };
+  }),
   
   setResult: (result, score, characterUsed) => set({ battleResult: result, score, characterUsed, phase: 'result' }),
 
@@ -176,6 +179,9 @@ export const useGameStore = create<GameState>((set) => ({
   applyStatus: (unitId, effect, duration) => set((state) => {
     const unit = state.units.find(u => u.id === unitId);
     if (!unit) return state;
+    // Respect immunity — skip if unit has remaining immunity turns for this status
+    const immune = (unit.statusImmunities ?? {})[effect];
+    if (immune && immune > 0) return state;
     const newDurs = { ...unit.statusDurations, [effect]: duration };
     const effects = Array.from(new Set([...unit.statusEffects, effect]));
     return { units: state.units.map(u => u.id === unitId ? { ...u, statusEffects: effects, statusDurations: newDurs } : u) };
@@ -186,10 +192,18 @@ export const useGameStore = create<GameState>((set) => ({
     if (!unit) return state;
     const newDurs: Record<string, number> = {};
     const active: string[] = [];
+    const newImmunities = { ...(unit.statusImmunities ?? {}) };
     for (const [effect, dur] of Object.entries(unit.statusDurations)) {
       if (dur > 1) { newDurs[effect] = dur - 1; active.push(effect); }
+      else { newImmunities[effect] = 1; } // Grant 1-turn immunity on expiry
     }
-    return { units: state.units.map(u => u.id === unitId ? { ...u, statusEffects: active, statusDurations: newDurs } : u) };
+    // Tick down existing immunities
+    for (const key of Object.keys(newImmunities)) {
+      if (!Object.prototype.hasOwnProperty.call(unit.statusDurations, key)) {
+        newImmunities[key] = Math.max(0, (newImmunities[key] ?? 0) - 1);
+      }
+    }
+    return { units: state.units.map(u => u.id === unitId ? { ...u, statusEffects: active, statusDurations: newDurs, statusImmunities: newImmunities } : u) };
   }),
 
   setCurrentLevelId: (id) => set({ currentLevelId: id }),

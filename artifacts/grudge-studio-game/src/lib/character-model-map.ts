@@ -76,12 +76,22 @@ export type ModelId =
   | 'worker_female' | 'worker_male'
   | 'zombie_female' | 'zombie_male';
 
+export interface AccessoryConfig {
+  modelId: string;
+  bone: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: number;
+}
+
 export interface CharacterConfig {
   modelId: ModelId;
   scale: [number, number, number];
   materials: Record<string, MaterialOverride>;
   primaryWeapon: WeaponConfig;
   secondaryWeapon?: SecondaryWeaponConfig;
+  /** Extra bone-attached accessories (helmets, shoulder pads, capes, etc.) */
+  accessoryAttachments?: AccessoryConfig[];
   /** Per-character overrides for the DEFAULT_ANIM_MAP */
   animMap?: Partial<Record<AnimState, string>>;
   /** World-space Y for name label (override for models with unusual native scale) */

@@ -1,12 +1,14 @@
 import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Sky, Html } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
 import { CharacterModel, AnimState } from './CharacterModel';
 import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
 import { CombatEffectsLayer, CombatEffectData } from './CombatEffects';
 import { NatureDecor } from './NatureDecor';
+import { SceneErrorBoundary } from './ErrorBoundary';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
@@ -690,6 +692,7 @@ export function BattleScene({
   React.useMemo(() => preloadLevelProps(level.props), [level.id]);
 
   return (
+    <SceneErrorBoundary>
     <Canvas
       style={{ width: '100%', height: '100%' }}
       camera={{ position: [centerX, camHeight, centerZ + camDist], fov: 50 }}
@@ -799,6 +802,13 @@ export function BattleScene({
           <CombatEffectsLayer effects={combatEffects} />
         </group>
       </Suspense>
+
+      {/* Post-processing: Bloom makes emissive materials & combat effects glow */}
+      <EffectComposer>
+        <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.4} intensity={0.4} mipmapBlur />
+        <Vignette offset={0.3} darkness={0.55} />
+      </EffectComposer>
     </Canvas>
+    </SceneErrorBoundary>
   );
 }

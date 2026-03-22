@@ -5,7 +5,8 @@ import * as THREE from 'three';
 export type EffectType =
   | 'fire_projectile' | 'dark_projectile' | 'ice_projectile' | 'arrow'
   | 'physical_slash'  | 'heal_burst'       | 'aoe_ring'       | 'ultimate_nova'
-  | 'status_stun'     | 'status_poison'    | 'status_freeze'  | 'impact_flash';
+  | 'status_stun'     | 'status_poison'    | 'status_freeze'  | 'impact_flash'
+  | 'magic_beam';
 
 export interface CombatEffectData {
   id: string;
@@ -260,6 +261,60 @@ function UltimateNova({ effect }: EffectProps) {
   );
 }
 
+// ── Magic beam: sustained laser/beam from caster → target ─────────────────────
+function MagicBeam({ effect }: EffectProps) {
+  const groupRef = useRef<THREE.Group>(null!);
+  const beamRef  = useRef<THREE.Mesh>(null!);
+  const glowRef  = useRef<THREE.Mesh>(null!);
+  const color = useMemo(() => new THREE.Color(effect.color), [effect.color]);
+
+  const from = useMemo(() => new THREE.Vector3(...effect.from), []);
+  const to   = useMemo(() => new THREE.Vector3(...effect.to),   []);
+  const mid  = useMemo(() => from.clone().lerp(to, 0.5), [from, to]);
+  const dist = useMemo(() => from.distanceTo(to), [from, to]);
+  const dir  = useMemo(() => to.clone().sub(from).normalize(), [from, to]);
+
+  // Compute rotation so the cylinder stretches from → to
+  const quaternion = useMemo(() => {
+    const q = new THREE.Quaternion();
+    q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    return q;
+  }, [dir]);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
+    const opacity = t < 0.7 ? 0.85 : 0.85 * (1 - (t - 0.7) / 0.3);
+    const pulse = 1 + 0.15 * Math.sin(t * Math.PI * 8);
+    if (beamRef.current) {
+      (beamRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, opacity);
+      beamRef.current.scale.set(pulse, 1, pulse);
+    }
+    if (glowRef.current) {
+      (glowRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, opacity * 0.35);
+      glowRef.current.scale.set(pulse * 1.6, 1, pulse * 1.6);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[mid.x, mid.y + 0.8, mid.z]} quaternion={quaternion}>
+      {/* Core beam */}
+      <mesh ref={beamRef}>
+        <cylinderGeometry args={[0.06, 0.06, dist, 6]} />
+        <meshBasicMaterial color={effect.color} transparent opacity={0.85} />
+      </mesh>
+      {/* Outer glow */}
+      <mesh ref={glowRef}>
+        <cylinderGeometry args={[0.16, 0.16, dist, 6]} />
+        <meshBasicMaterial color={effect.color} transparent opacity={0.3} />
+      </mesh>
+      {/* Impact point light */}
+      <pointLight color={effect.color} intensity={4} distance={5} decay={2}
+        position={[0, dist / 2, 0]} />
+    </group>
+  );
+}
+
 // ── Status effect burst ───────────────────────────────────────────────────────
 function StatusBurst({ effect }: EffectProps) {
   const refs = useRef<THREE.Mesh[]>([]);
@@ -327,6 +382,8 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
           case 'status_poison':
           case 'status_freeze':
             return <StatusBurst key={key} effect={effect} />;
+          case 'magic_beam':
+            return <MagicBeam key={key} effect={effect} />;
           default:
             return null;
         }
