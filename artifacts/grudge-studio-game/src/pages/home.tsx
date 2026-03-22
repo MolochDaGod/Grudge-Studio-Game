@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { motion } from "framer-motion";
-import { Sword, Trophy, ShieldQuestion } from "lucide-react";
+import { Sword, Trophy } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -171,22 +171,48 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 max-w-4xl text-left relative z-20"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-24 max-w-4xl text-left relative z-20 w-full"
         >
-          <div className="bg-glass p-6 rounded-sm backdrop-blur-sm">
-            <ShieldQuestion className="w-8 h-8 text-primary mb-4" />
-            <h3 className="font-display text-lg font-bold mb-2">Rich Lore</h3>
-            <p className="text-muted-foreground text-sm">Command 27 unique heroes across 4 factions — Crusade, Fabled, Legion, and the secret Pirates. Each hero carries deep lore and a legendary purpose.</p>
+          {/* Rich Lore */}
+          <div className="relative rounded-sm overflow-hidden border border-white/10 group" style={{ minHeight: 220 }}>
+            <img
+              src={`${BASE}images/tile-lore.png`}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105 select-none pointer-events-none"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
+            <div className="relative z-10 p-6 flex flex-col justify-end h-full" style={{ minHeight: 220 }}>
+              <h3 className="font-display text-lg font-bold mb-2 text-white drop-shadow-lg uppercase tracking-wide">Rich Lore</h3>
+              <p className="text-white/70 text-sm leading-relaxed">Command 27 unique heroes across 4 factions — Crusade, Fabled, Legion, and the secret Pirates. Each hero carries deep lore and a legendary purpose.</p>
+            </div>
           </div>
-          <div className="bg-glass p-6 rounded-sm backdrop-blur-sm">
-            <Sword className="w-8 h-8 text-destructive mb-4" />
-            <h3 className="font-display text-lg font-bold mb-2">Turn-based Combat</h3>
-            <p className="text-muted-foreground text-sm">Strategic tactical battles with unique special abilities, weapon loadouts, status effects, and terrain positioning.</p>
+
+          {/* Turn-based Combat */}
+          <div className="relative rounded-sm overflow-hidden border border-white/10 group" style={{ minHeight: 220 }}>
+            <img
+              src={`${BASE}images/tile-combat.png`}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105 select-none pointer-events-none"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
+            <div className="relative z-10 p-6 flex flex-col justify-end h-full" style={{ minHeight: 220 }}>
+              <h3 className="font-display text-lg font-bold mb-2 text-white drop-shadow-lg uppercase tracking-wide">Turn-based Combat</h3>
+              <p className="text-white/70 text-sm leading-relaxed">Strategic tactical battles with unique special abilities, weapon loadouts, status effects, and terrain positioning.</p>
+            </div>
           </div>
-          <div className="bg-glass p-6 rounded-sm backdrop-blur-sm">
-            <Trophy className="w-8 h-8 text-yellow-500 mb-4" />
-            <h3 className="font-display text-lg font-bold mb-2">Eternal Glory</h3>
-            <p className="text-muted-foreground text-sm">Defeat your enemies, claim victory, and etch your name onto the global leaderboard.</p>
+
+          {/* Eternal Glory */}
+          <div className="relative rounded-sm overflow-hidden border border-white/10 group" style={{ minHeight: 220 }}>
+            <img
+              src={`${BASE}images/tile-glory.png`}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105 select-none pointer-events-none"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
+            <div className="relative z-10 p-6 flex flex-col justify-end h-full" style={{ minHeight: 220 }}>
+              <h3 className="font-display text-lg font-bold mb-2 text-white drop-shadow-lg uppercase tracking-wide">Eternal Glory</h3>
+              <p className="text-white/70 text-sm leading-relaxed">Defeat your enemies, claim victory, and etch your name onto the global leaderboard.</p>
+            </div>
           </div>
         </motion.div>
 
