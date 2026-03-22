@@ -844,9 +844,12 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     materials: {},
     primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
     animMap: {
-      attack1: 'SwordSlash', attack2: 'Punch', cast: 'Shoot_OneHanded',
-      stunned: 'RecieveHit', block: 'StandUp', victory: 'Victory',
-      special1: 'Run', special2: 'Jump',
+      // cleric_rpg clips: Attack_Idle, Death, Idle, Idle_Weapon, PickUp, Punch,
+      //   RecieveHit, RecieveHit_Attacking, Roll, Run, Run_Weapon, Spell1, Spell2, Staff_Attack, Walk
+      attack1: 'Staff_Attack', attack2: 'Punch', attack3: 'Roll',
+      cast: 'Spell1', special1: 'Spell2', special2: 'Roll',
+      stunned: 'RecieveHit', block: 'Idle_Weapon',
+      victory: 'Idle_Weapon', idle2: 'Idle_Weapon',
     },
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },

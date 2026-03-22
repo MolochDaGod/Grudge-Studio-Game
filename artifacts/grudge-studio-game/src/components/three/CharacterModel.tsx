@@ -427,16 +427,16 @@ export function CharacterModel(props: CharacterModelProps) {
   return <CharacterModelInner {...props} config={config} rpgTexture={null} />;
 }
 
-// Preload all assets
+// Preload all assets — only models actually used in CHARACTER_CONFIGS
 const modelIds = [
-  // Quaternius Fantasy Pack — only models actively used in battle configs
+  // Quaternius Fantasy Pack
   'orc', 'dwarf',
-  // Quaternius RPG Characters Pack
-  'warrior_rpg', 'ranger_rpg', 'rogue_rpg', 'wizard_rpg', 'cleric_rpg', 'monk_rpg',
-  // Ultimate Animated Character Pack — characters used in battle
+  // Quaternius RPG Characters Pack (actively used)
+  'ranger_rpg', 'cleric_rpg',
+  // Ultimate Animated Character Pack
   'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
   'pirate_male', 'zombie_male', 'soldier_male', 'wizard', 'witch',
-  'casual_bald', 'goblin_male',
+  'casual_bald',
 ];
 const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
                  'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
