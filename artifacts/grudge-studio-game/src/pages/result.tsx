@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useGameStore } from "@/store/use-game-store";
+import { useAuthStore } from "@/store/use-auth-store";
 import { useSubmitScore } from "@workspace/api-client-react";
+import { submitCombatLog } from "@/lib/grudge-api";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
@@ -25,6 +27,8 @@ export default function Result() {
 
   const isWin = battleResult === 'win';
 
+  const { isAuthenticated, grudgeId } = useAuthStore();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!playerName.trim()) {
@@ -32,6 +36,7 @@ export default function Result() {
       return;
     }
 
+    // Submit to local API (existing)
     submitScore(
       {
         data: {
@@ -52,6 +57,16 @@ export default function Result() {
         }
       }
     );
+
+    // Also submit to Grudge backend if authenticated
+    if (isAuthenticated && grudgeId) {
+      submitCombatLog({
+        attacker_id: grudgeId,
+        defender_id: 'ai_opponent',
+        outcome: isWin ? 'win' : 'loss',
+        combat_data: { score, characterUsed, playerName: playerName.trim() },
+      }).catch(() => { /* backend offline — silently fail */ });
+    }
   };
 
   const handlePlayAgain = () => {

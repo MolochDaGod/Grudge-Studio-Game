@@ -195,6 +195,19 @@ function CharacterModelInner({
     if (animState === 'hurt') hurtFlash.current = 1.0;
   }, [animState]);
 
+  // Cache mesh+material refs on first render to avoid per-frame scene traversal
+  const cachedMeshes = useRef<Array<{ mesh: THREE.Mesh; mat: THREE.MeshStandardMaterial; matName: string }>>([]);
+  useEffect(() => {
+    const meshes: typeof cachedMeshes.current = [];
+    charScene.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        const mat = obj.material as THREE.MeshStandardMaterial;
+        if (mat?.emissive) meshes.push({ mesh: obj, mat, matName: mat.name });
+      }
+    });
+    cachedMeshes.current = meshes;
+  }, [charScene]);
+
   const isDead  = unit.hp <= 0 || animState === 'dead';
   const hpPct   = unit.hp / unit.maxHp;
   const hpColor = hpPct > 0.5 ? '#00ff88' : hpPct > 0.2 ? '#ffdd00' : '#ff3300';
@@ -210,59 +223,45 @@ function CharacterModelInner({
       1 - Math.exp(-delta * 8),
     );
 
-    // ── Lunge spring-back (exponential decay toward zero) ─────────────────────
+    // ── Lunge spring-back (exponential decay toward zero) ───────────────────
     lungeOffset.current.multiplyScalar(Math.exp(-delta * 3.8));
 
-    // ── Delta-corrected walk lerp + lunge ─────────────────────────────────────
+    // ── Delta-corrected walk lerp + lunge ─────────────────────────────
     _effTarget.current.copy(targetPos.current).add(lungeOffset.current);
     groupRef.current.position.lerp(_effTarget.current, 1 - Math.exp(-delta * 5));
 
+    // ── Material tinting (using cached refs, no traversal) ─────────────────
+    const cms = cachedMeshes.current;
     if (hurtFlash.current > 0) {
       hurtFlash.current = Math.max(0, hurtFlash.current - delta * 5);
-      charScene.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
-          const mat = obj.material as THREE.MeshStandardMaterial;
-          if (mat?.emissive) {
-            mat.emissive.setRGB(hurtFlash.current * 0.8, 0, 0);
-            mat.emissiveIntensity = (config.materials[mat.name]?.emissiveIntensity ?? 0) + hurtFlash.current;
-          }
-        }
-      });
+      for (const { mat, matName } of cms) {
+        mat.emissive.setRGB(hurtFlash.current * 0.8, 0, 0);
+        mat.emissiveIntensity = (config.materials[matName]?.emissiveIntensity ?? 0) + hurtFlash.current;
+      }
     }
 
     if (hurtFlash.current <= 0) {
       if (isFrozen) {
-        charScene.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            const mat = obj.material as THREE.MeshStandardMaterial;
-            if (mat?.emissive) { mat.emissive.setRGB(0.05, 0.12, 0.45); mat.emissiveIntensity = 0.25; }
-          }
-        });
+        for (const { mat } of cms) {
+          mat.emissive.setRGB(0.05, 0.12, 0.45); mat.emissiveIntensity = 0.25;
+        }
       } else if (isPoisoned) {
-        charScene.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            const mat = obj.material as THREE.MeshStandardMaterial;
-            if (mat?.emissive) { mat.emissive.setRGB(0.0, 0.3, 0.04); mat.emissiveIntensity = 0.2 + 0.12 * Math.sin(poisonPhase.current); }
-          }
-        });
+        for (const { mat } of cms) {
+          mat.emissive.setRGB(0.0, 0.3, 0.04); mat.emissiveIntensity = 0.2 + 0.12 * Math.sin(poisonPhase.current);
+        }
       } else {
-        charScene.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            const mat = obj.material as THREE.MeshStandardMaterial;
-            if (mat?.emissive) {
-              const ov = config.materials[mat.name];
-              if (ov?.emissive) {
-                const base = new THREE.Color().setStyle(ov.emissive);
-                base.convertSRGBToLinear();
-                mat.emissive.copy(base);
-                mat.emissiveIntensity = ov.emissiveIntensity ?? 0;
-              } else {
-                mat.emissive.setRGB(0, 0, 0);
-                mat.emissiveIntensity = 0;
-              }
-            }
+        for (const { mat, matName } of cms) {
+          const ov = config.materials[matName];
+          if (ov?.emissive) {
+            const base = new THREE.Color().setStyle(ov.emissive);
+            base.convertSRGBToLinear();
+            mat.emissive.copy(base);
+            mat.emissiveIntensity = ov.emissiveIntensity ?? 0;
+          } else {
+            mat.emissive.setRGB(0, 0, 0);
+            mat.emissiveIntensity = 0;
           }
-        });
+        }
       }
     }
 

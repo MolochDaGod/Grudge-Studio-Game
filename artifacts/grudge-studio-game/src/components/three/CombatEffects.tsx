@@ -1,5 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
 
 export type EffectType =
@@ -215,6 +216,15 @@ function HealBurst({ effect }: EffectProps) {
         <sphereGeometry args={[0.45, 8, 8]} />
         <meshBasicMaterial color="#00ff88" transparent opacity={0.15} />
       </mesh>
+      {/* Rising sparkles for heal effect */}
+      <Sparkles
+        count={18}
+        scale={1.5}
+        size={3}
+        speed={1.8}
+        color="#00ff88"
+        position={[target.x, target.y + 0.5, target.z]}
+      />
     </>
   );
 }

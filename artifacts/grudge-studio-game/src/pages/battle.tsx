@@ -541,8 +541,16 @@ export default function Battle() {
   };
 
   const executeAttack = (attacker: TacticalUnit, target: TacticalUnit) => {
-    const isCrit  = Math.random() < 0.1;
-    const damage  = calculateDamage(attacker, target, isCrit);
+    // ── Phase 3B: Counter-attack / Block system ──────────────────────────
+    const front = isFrontAttack(attacker, target);
+    const rear  = !front;
+    // Front attacks: 25% chance to block (reduce damage by 50%)
+    const blocked = front && Math.random() < 0.25;
+    // Rear attacks: +25% crit chance stacked on base 10%
+    const critChance = rear ? 0.35 : 0.1;
+    const isCrit  = Math.random() < critChance;
+    let damage  = calculateDamage(attacker, target, isCrit);
+    if (blocked) damage = Math.max(1, Math.floor(damage * 0.5));
     const newHp   = target.hp - damage;
 
     // Immediate: game state + logs
@@ -550,7 +558,8 @@ export default function Battle() {
     updateUnit(target.id, { hp: Math.max(0, newHp) });
     setActionMode('idle');
     setAttackableTiles([]);
-    addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}`, 'damage');
+    const blockSuffix = blocked ? ' [BLOCKED!]' : '';
+    addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}${blockSuffix}${rear ? ' (backstab)' : ''}`, 'damage');
     if (newHp <= 0) addLog(`${target.name} is defeated!`, 'debuff');
 
     // Animation timing
@@ -569,6 +578,10 @@ export default function Battle() {
       // Target reaction
       if (newHp <= 0) {
         setAnimStates(prev => ({ ...prev, [target.id]: 'dead' }));
+      } else if (blocked) {
+        // Show block animation briefly
+        setAnimStates(prev => ({ ...prev, [target.id]: 'block' }));
+        setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 800);
       } else {
         setAnimStates(prev => ({ ...prev, [target.id]: 'hurt' }));
         setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 650);
@@ -737,7 +750,7 @@ export default function Battle() {
         return;
       }
 
-      // ── ATTACK PHASE ─────────────────────────────────────────────────────
+      // ── ATTACK PHASE (AI Skill System) ────────────────────────────────────
       if (!unit.hasActed) {
         // Frozen: skip attack, end turn
         if (unit.statusEffects.includes('frozen')) {
@@ -754,26 +767,72 @@ export default function Battle() {
         );
 
         if (inRange.length > 0) {
-          // Target priority: lowest HP first (finish them off)
           const target = [...inRange].sort((a, b) => a.hp - b.hp)[0];
 
-          // Use special ability when:
-          //  - off cooldown, AND
-          //  - either target is low HP (< 40%) or ability not wasted on near-full HP
+          // ── AI Skill Scoring: pick the best skill to use ──────────────
+          const loadout = equippedSkills[unit.id] || getDefaultSkillLoadout(unit.characterId);
+          const cdMap = skillCooldowns[unit.id] || {};
+          const unitHpPct = unit.hp / unit.maxHp;
           const targetHpPct = target.hp / target.maxHp;
-          const useAbility = unit.specialAbilityCooldown === 0 && targetHpPct < 0.7;
 
-          if (useAbility) {
-            executeAbility(unit, target);
-          } else {
-            executeAttack(unit, target);
+          let bestSkill: Skill | null = null;
+          let bestScore = -1;
+
+          for (const slot of [1, 2, 3, 4, 5] as const) {
+            const skillId = loadout[slot];
+            if (!skillId) continue;
+            const cd = cdMap[skillId] || 0;
+            if (cd > 0) continue; // on cooldown
+            const skill = getSkillById(skillId);
+            if (!skill) continue;
+            // Check range
+            const dist = Math.abs(currentPos.x - target.position.x) + Math.abs(currentPos.y - target.position.y);
+            const effectiveRange = skill.attackType === 'dash' ? (skill.range + (skill.dashBonus ?? 0)) : skill.range;
+            if (dist > effectiveRange) continue;
+
+            let score = 10; // base
+            // Damage multiplier score
+            if (skill.dmgMultiplier) score += skill.dmgMultiplier * 20;
+            // AoE bonus when 2+ enemies clustered
+            if (skill.aoe) {
+              const clustered = inRange.length;
+              score += clustered >= 2 ? 25 : 5;
+            }
+            // Status effect bonus vs high-threat targets
+            if (skill.applyStatus === 'stunned') score += 18;
+            if (skill.applyStatus === 'frozen')  score += 15;
+            if (skill.applyStatus === 'poisoned') score += 10;
+            // Ultimate: use when target is low or many enemies in range
+            if (skill.tags.includes('ultimate')) {
+              if (targetHpPct < 0.3 || inRange.length >= 3) score += 40;
+              else score -= 30; // save it
+            }
+            // Heal: prioritize when self HP is low
+            if (skill.tags.includes('heal')) {
+              if (unitHpPct < 0.4) score += 35;
+              else score -= 20; // don't waste heals at full HP
+            }
+            // Armor pen bonus vs high-defense targets
+            if (skill.armorPen && target.defense > 15) score += skill.armorPen * 0.3;
+
+            if (score > bestScore) { bestScore = score; bestSkill = skill; }
           }
-          // executeAttack/executeAbility both call endTurn internally — do NOT call it here
+
+          // Use the best skill if it beats a basic attack (score > 15)
+          if (bestSkill && bestScore > 15) {
+            executeSkill(unit, bestSkill, target);
+          } else {
+            // Fallback: special ability or basic attack
+            const useAbility = unit.specialAbilityCooldown === 0 && targetHpPct < 0.7;
+            if (useAbility) {
+              executeAbility(unit, target);
+            } else {
+              executeAttack(unit, target);
+            }
+          }
         } else {
-          // No targets in range: end turn explicitly (don't rely on the effect's else branch)
           addLog(`${unit.name} has no targets in range.`);
           updateUnit(unit.id, { hasActed: true });
-          // Short pause so the log is visible, then end turn
           setTimeout(() => endTurn(), 600);
         }
         return;

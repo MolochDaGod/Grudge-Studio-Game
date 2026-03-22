@@ -3,9 +3,29 @@ import { Link } from "wouter";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { Trophy, ArrowLeft, Loader2, Skull } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuthStore } from "@/store/use-auth-store";
+import { getLeaderboard as getGrudgeLeaderboard } from "@/lib/grudge-api";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Leaderboard() {
-  const { data: leaderboard, isLoading, error } = useGetLeaderboard();
+  const { isAuthenticated } = useAuthStore();
+
+  // Try Grudge backend leaderboard first (when authenticated), fall back to local
+  const grudgeLb = useQuery({
+    queryKey: ['grudge-leaderboard'],
+    queryFn: () => getGrudgeLeaderboard(25),
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
+  const localLb = useGetLeaderboard();
+
+  // Use Grudge backend data if available, otherwise local
+  const leaderboard = grudgeLb.data
+    ? grudgeLb.data.map((e, i) => ({ id: i, playerName: e.name, score: e.kills * 100, characterUsed: '-', ...e }))
+    : localLb.data;
+  const isLoading = grudgeLb.isLoading || localLb.isLoading;
+  const error = grudgeLb.error && localLb.error;
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 relative">
