@@ -124,9 +124,9 @@ function CameraController({
       if (modeRef.current !== 'tactical') return;
       // Skip if focus is in a text input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      // Z/X: 45° rotation
-      if (e.key === 'z' || e.key === 'Z') { tacticalAzTarget.current -= Math.PI / 4; return; }
-      if (e.key === 'x' || e.key === 'X') { tacticalAzTarget.current += Math.PI / 4; return; }
+      // Q/E or Z/X: 45° rotation around the centre pivot (no distance change)
+      if (e.key === 'q' || e.key === 'Q' || e.key === 'z' || e.key === 'Z') { tacticalAzTarget.current -= Math.PI / 4; return; }
+      if (e.key === 'e' || e.key === 'E' || e.key === 'x' || e.key === 'X') { tacticalAzTarget.current += Math.PI / 4; return; }
       // C: re-center on active unit
       if (e.key === 'c' || e.key === 'C') {
         const cu = currentUnitRef.current;
