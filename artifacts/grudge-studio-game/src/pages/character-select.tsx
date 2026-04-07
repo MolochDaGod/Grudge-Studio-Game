@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useGetCharacters } from "@workspace/api-client-react";
 import { WeaponPicker } from "@/components/ui/weapon-picker";
 import { SkillLoadoutModal } from "@/components/ui/skill-loadout-modal";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { useGameStore, TacticalUnit } from "@/store/use-game-store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ArrowLeft, Skull, Sword, Shield, Clock, Target, Zap, Heart, ChevronRight, Star } from "lucide-react";
+import { ArrowLeft, Sword, Shield, Clock, Target, Zap, Heart, ChevronRight, Star } from "lucide-react";
 import { CHARACTER_LORE } from "@/lib/lore";
 import { getHeroWeaponOptions } from "@/lib/hero-weapons";
 import { WEAPON_SKILL_TREES, SkillSlot, SLOT_LABELS, TIER_STYLES, WeaponSkillTree, Skill } from "@/lib/weapon-skills";
 import { getLevelWithEdits } from "@/lib/levels";
 import { cn } from "@/lib/utils";
-import { Character } from "@workspace/api-client-react";
+import { CHARACTERS as LOCAL_CHARACTERS, type GameCharacter } from "@/lib/characters";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -111,7 +110,7 @@ function HeroCard({
   disabled,
   equipped,
 }: {
-  character: Character;
+  character: GameCharacter;
   selected: boolean;
   onClick: () => void;
   disabled: boolean;
@@ -273,7 +272,8 @@ function HeroCard({
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function CharacterSelect() {
   const [, setLocation] = useLocation();
-  const { data: characters, isLoading, error } = useGetCharacters();
+  // Use embedded character data — no API dependency
+  const characters = LOCAL_CHARACTERS;
 
   // Step state: 'faction' → 'hero' → 'forge'
   const [step, setStep] = useState<"faction" | "hero" | "forge">("faction");
@@ -288,10 +288,10 @@ export default function CharacterSelect() {
   const { initBattle, setAllCharacters, setPlayerSquad, setEquippedSkills, currentLevelId } = useGameStore();
 
   useEffect(() => {
-    if (characters) setAllCharacters(characters);
+    setAllCharacters(characters as any);
   }, [characters, setAllCharacters]);
 
-  const charList = Array.isArray(characters) ? characters : [];
+  const charList = characters;
   const factionChars = charList.filter(c => c.faction === selectedFaction);
 
   const handleFactionSelect = (factionId: string) => {
@@ -336,7 +336,7 @@ export default function CharacterSelect() {
   };
 
   const handleStartBattle = () => {
-    if (selectedIds.length !== 3 || !Array.isArray(characters) || characters.length === 0) return;
+    if (selectedIds.length !== 3 || characters.length === 0) return;
     setPlayerSquad(selectedIds);
     const level = getLevelWithEdits(currentLevelId);
     const playerChars = characters.filter(c => selectedIds.includes(c.id));
@@ -422,25 +422,7 @@ export default function CharacterSelect() {
   const pendingHero = pendingHeroId ? characters?.find(c => c.id === pendingHeroId) : null;
   const activeFaction = FACTIONS.find(f => f.id === selectedFaction);
 
-  // ── Loading / Error ──────────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="font-display text-xl animate-pulse">Summoning Champions...</p>
-      </div>
-    );
-  }
-  if (error || !characters || !Array.isArray(characters)) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-destructive">
-        <Skull className="w-16 h-16" />
-        <h2 className="font-display text-3xl">The archives are sealed</h2>
-        <p className="text-white/40 text-sm">Could not load characters from the server.</p>
-        <FantasyButton onClick={() => window.location.reload()}>Retry</FantasyButton>
-      </div>
-    );
-  }
+  // Characters are embedded — always available, no loading/error states needed
 
   return (
     <>

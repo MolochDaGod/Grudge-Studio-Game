@@ -47,13 +47,13 @@ export interface AuthResult {
 
 /** Discord OAuth — redirect browser to this URL, callback returns JWT */
 export function getDiscordOAuthUrl(redirectUri?: string): string {
-  const rd = redirectUri ?? window.location.origin + '/login/callback';
-  return `${GRUDGE_ID_URL}/auth/discord?redirect_uri=${encodeURIComponent(rd)}`;
+  const rd = redirectUri ?? window.location.origin + '/login';
+  return `${GRUDGE_ID_URL}/auth/discord?return=${encodeURIComponent(rd)}`;
 }
 
-/** Web3Auth wallet login */
+/** Wallet login (Solana/Web3Auth) */
 export async function loginWithWallet(idToken: string, wallet: string): Promise<AuthResult> {
-  const result = await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/web3auth`, {
+  const result = await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/wallet`, {
     method: 'POST',
     body: JSON.stringify({ idToken, wallet }),
   });
@@ -71,11 +71,20 @@ export async function loginWithDiscordCode(code: string): Promise<AuthResult> {
   return result;
 }
 
+/** Guest login — creates an anonymous session */
+export async function loginAsGuestBackend(): Promise<AuthResult> {
+  const result = await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/guest`, {
+    method: 'POST',
+  });
+  setToken(result.token);
+  return result;
+}
+
 /** Puter bridge auth */
 export async function loginWithPuterBridge(puterSession: string): Promise<AuthResult> {
-  const result = await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/puter-bridge`, {
+  const result = await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/login`, {
     method: 'POST',
-    body: JSON.stringify({ session: puterSession }),
+    body: JSON.stringify({ provider: 'puter', session: puterSession }),
   });
   setToken(result.token);
   return result;
@@ -85,9 +94,20 @@ export async function loginWithPuterBridge(puterSession: string): Promise<AuthRe
 export async function verifyToken(): Promise<AuthResult | null> {
   if (!_token) return null;
   try {
-    return await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/verify`);
+    return await apiFetch<AuthResult>(`${GRUDGE_ID_URL}/auth/verify`, {
+      method: 'POST',
+    });
   } catch {
     setToken(null);
+    return null;
+  }
+}
+
+/** Get current identity profile */
+export async function getIdentityProfile(): Promise<{ grudge_id: string; display_name: string; roles: string[] } | null> {
+  try {
+    return await apiFetch(`${GRUDGE_ID_URL}/identity/me`);
+  } catch {
     return null;
   }
 }
