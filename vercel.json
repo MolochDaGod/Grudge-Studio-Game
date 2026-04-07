@@ -1,4 +1,5 @@
 {
+  "framework": null,
   "buildCommand": "pnpm --filter @workspace/grudge-studio-game run build",
   "outputDirectory": "artifacts/grudge-studio-game/dist",
   "routes": [
