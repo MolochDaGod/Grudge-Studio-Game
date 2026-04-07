@@ -2,6 +2,7 @@ import { TacticalUnit } from '@/store/use-game-store';
 import { AnimState } from '@/components/three/CharacterModel';
 import { EffectType } from '@/components/three/CombatEffects';
 import { Skill } from '@/lib/weapon-skills';
+import { getCoverAgainst, CoverInfo } from '@/lib/cover-system';
 
 // ── Facing helpers ────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ export function calculateDamage(
   attacker: TacticalUnit,
   defender: TacticalUnit,
   isCrit = false,
+  obstacles?: Set<string>,
 ): number {
   const facingMult = facingDefenseMultiplier(attacker, defender);
   const effectiveDef = facingMult > 1
@@ -63,7 +65,23 @@ export function calculateDamage(
     attacker.attack - effectiveDef + Math.floor(Math.random() * 6) - 2,
   );
   if (isCrit) damage = Math.floor(damage * 2);
+  // Apply cover reduction if obstacles provided
+  if (obstacles) {
+    const cover = getCoverAgainst(attacker.position, defender.position, obstacles);
+    if (cover.isProtected) {
+      damage = Math.max(1, Math.floor(damage * cover.damageMultiplier));
+    }
+  }
   return damage;
+}
+
+/** Get cover info between attacker and defender (convenience re-export) */
+export function getCombatCover(
+  attacker: TacticalUnit,
+  defender: TacticalUnit,
+  obstacles: Set<string>,
+): CoverInfo {
+  return getCoverAgainst(attacker.position, defender.position, obstacles);
 }
 
 // ── Effect mapping ────────────────────────────────────────────────────────────

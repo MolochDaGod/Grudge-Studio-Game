@@ -22,8 +22,9 @@ import { getLevelWithEdits, LevelDef, hasLineOfSight } from "@/lib/levels";
 import {
   calcFacing, facingDefenseMultiplier, isFrontAttack,
   calculateDamage, getEffectColor, getEffectType,
-  getSkillAnimState, getAtkDuration, bfsPath,
+  getSkillAnimState, getAtkDuration, bfsPath, getCombatCover,
 } from "@/lib/combat-engine";
+import { getCoverAgainst, type CoverInfo } from "@/lib/cover-system";
 
 const BASE = import.meta.env.BASE_URL;
 const UI = (path: string) => `${BASE}images/ui/${path}`;
@@ -276,6 +277,10 @@ export default function Battle() {
     const effectiveDef = facingMult > 1 ? Math.floor(target.defense * 0.5) : target.defense;
     const critChance = front ? 0.10 : 0.35;
 
+    // Cover check
+    const cover = getCoverAgainst(attacker.position, target.position, level.obstacleTiles);
+    const coverMult = cover.isProtected ? cover.damageMultiplier : 1.0;
+
     if (isSkillMode) {
       const slotNum = parseInt(actionMode.replace('skill', '')) as 1 | 2 | 3 | 4 | 5;
       const loadout = equippedSkills[attacker.id] || getDefaultSkillLoadout(attacker.characterId);
@@ -283,19 +288,19 @@ export default function Battle() {
       const skill = skillId ? getSkillById(skillId) : null;
       if (!skill || skill.dmgMultiplier === undefined) return null;
       const penFactor = 1 + (skill.armorPen || 0) / 100;
-      const base = Math.max(1, Math.floor(attacker.attack * skill.dmgMultiplier - effectiveDef * (1 / penFactor)));
+      const base = Math.max(1, Math.floor((attacker.attack * skill.dmgMultiplier - effectiveDef * (1 / penFactor)) * coverMult));
       const lo = Math.max(1, base - 2);
       const hi = base + 3;
       const critHi = Math.floor(hi * 1.8);
-      return { lo, hi, critHi, critChance, isLethal: hi >= target.hp, isCritLethal: critHi >= target.hp, front, skill };
+      return { lo, hi, critHi, critChance, isLethal: hi >= target.hp, isCritLethal: critHi >= target.hp, front, skill, cover };
     }
 
     // Basic attack
-    const base = Math.max(1, Math.floor(attacker.attack * 1.0 - effectiveDef));
+    const base = Math.max(1, Math.floor((attacker.attack * 1.0 - effectiveDef) * coverMult));
     const lo = Math.max(1, base - 2);
     const hi = base + 3;
     const critHi = Math.floor(hi * 1.75);
-    return { lo, hi, critHi, critChance, isLethal: hi >= target.hp, isCritLethal: critHi >= target.hp, front, skill: null };
+    return { lo, hi, critHi, critChance, isLethal: hi >= target.hp, isCritLethal: critHi >= target.hp, front, skill: null, cover };
   }, [hoveredUnitId, currentUnitId, units, actionMode, equippedSkills]);
 
   const getReachableTiles = (start: {x: number, y: number}, maxMove: number) => {
@@ -521,8 +526,11 @@ export default function Battle() {
     const critChance = _front ? 0.10 : 0.35;
     const isCrit = Math.random() < critChance;
     const penFactor = 1 + (skill.armorPen || 0) / 100;
+    // Cover reduction
+    const cover = getCoverAgainst(attacker.position, target.position, level.obstacleTiles);
+    const coverMult = cover.isProtected ? cover.damageMultiplier : 1.0;
     const baseDmg = skill.dmgMultiplier !== undefined
-      ? Math.max(1, Math.floor((attacker.attack * skill.dmgMultiplier - target.defense * (1 / penFactor)) + Math.floor(Math.random() * 6) - 2))
+      ? Math.max(1, Math.floor(((attacker.attack * skill.dmgMultiplier - target.defense * (1 / penFactor)) + Math.floor(Math.random() * 6) - 2) * coverMult))
       : 0;
     const finalDmg = isCrit ? Math.floor(baseDmg * 1.8) : baseDmg;
     const newHp    = target.hp - finalDmg;
@@ -654,7 +662,7 @@ export default function Battle() {
     // Rear attacks: +25% crit chance stacked on base 10%
     const critChance = rear ? 0.35 : 0.1;
     const isCrit  = Math.random() < critChance;
-    let damage  = calculateDamage(attacker, target, isCrit);
+    let damage  = calculateDamage(attacker, target, isCrit, level.obstacleTiles);
     if (blocked) damage = Math.max(1, Math.floor(damage * 0.5));
     const newHp   = target.hp - damage;
 
@@ -1252,7 +1260,7 @@ style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
       </div>
 {/* Damage range */ }
 <div className="flex flex-col items-center" >
-  <div className="text-[9px] text-white/30 uppercase tracking-widest" > Damage </div>
+  <div className="text-[9px] text-white/30 uppercase tracking-widest">Damage</div>
     < div className = "text-base font-bold font-display text-orange-300 leading-none" >
       { attackPreview.lo }–{ attackPreview.hi }
 </div>
@@ -1264,21 +1272,28 @@ style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
                   ↑{ attackPreview.critHi }
 </div>
   </div>
-{/* Lethal indicator */ }
-{
-  (attackPreview.isLethal || attackPreview.isCritLethal) && (
-    <div className={
-    cn(
-      "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
-      attackPreview.isLethal
-        ? "border-red-500/70 bg-red-950/70 text-red-300"
-        : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
-    )
-  }>
-    { attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill' }
-    </div>
-              )
-}
+{/* Cover indicator */}
+{attackPreview.cover?.isProtected && (
+  <div className={cn(
+    "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
+    attackPreview.cover.label === 'heavy'
+      ? "border-cyan-500/60 bg-cyan-950/60 text-cyan-300"
+      : "border-teal-500/50 bg-teal-950/50 text-teal-300"
+  )}>
+    🛡 {attackPreview.cover.label === 'heavy' ? 'Heavy Cover' : 'Half Cover'}
+  </div>
+)}
+{/* Lethal indicator */}
+{(attackPreview.isLethal || attackPreview.isCritLethal) && (
+  <div className={cn(
+    "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
+    attackPreview.isLethal
+      ? "border-red-500/70 bg-red-950/70 text-red-300"
+      : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
+  )}>
+    {attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill'}
+  </div>
+)}
 </div>
   </motion.div>
         )}

@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
@@ -43,6 +46,7 @@
     "@radix-ui/react-tooltip": "^1.2.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@react-three/postprocessing": "^3.0.4",
     "@tanstack/react-query": "catalog:",
     "@types/three": "^0.183.1",
     "@workspace/api-client-react": "workspace:*",
