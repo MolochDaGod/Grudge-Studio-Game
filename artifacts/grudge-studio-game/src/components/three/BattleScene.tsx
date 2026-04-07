@@ -41,10 +41,56 @@ interface BattleSceneProps {
   mapPings?: MapPing[];
   onUnitRightClick?: (unitId: string, screenX: number, screenY: number) => void;
   onUnitClick?: (unitId: string) => void;
+  onUnitHover?: (unitId: string) => void;
+  onUnitUnhover?: (unitId: string) => void;
   onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
   walkPaths?: Record<string, GridPos[]>;
   onWalkComplete?: (unitId: string) => void;
   onWalkStep?: (unitId: string, tile: GridPos) => void;
+}
+
+// ── Camera Shaker ─────────────────────────────────────────────────────────────
+// Listens for 'camera-shake' CustomEvents dispatched from battle logic.
+// Event detail: { intensity?: number; duration?: number }
+function CameraShaker() {
+  const { camera } = useThree();
+  const shakeRef = useRef<{ intensity: number; duration: number; elapsed: number } | null>(null);
+  const originRef = useRef(new THREE.Vector3());
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail ?? {};
+      shakeRef.current = {
+        intensity: detail.intensity ?? 0.18,
+        duration: detail.duration ?? 320,
+        elapsed: 0,
+      };
+      originRef.current.copy(camera.position);
+    };
+    window.addEventListener('camera-shake', handler);
+    return () => window.removeEventListener('camera-shake', handler);
+  }, [camera]);
+
+  useFrame((_, delta) => {
+    const s = shakeRef.current;
+    if (!s) return;
+    s.elapsed += delta * 1000;
+    if (s.elapsed >= s.duration) {
+      camera.position.copy(originRef.current);
+      shakeRef.current = null;
+      return;
+    }
+    const progress = s.elapsed / s.duration;
+    const decay = 1 - progress;
+    const amp = s.intensity * decay;
+    camera.position.set(
+      originRef.current.x + (Math.random() * 2 - 1) * amp,
+      originRef.current.y + (Math.random() * 2 - 1) * amp * 0.5,
+      originRef.current.z + (Math.random() * 2 - 1) * amp,
+    );
+  });
+
+  return null;
 }
 
 // ── Quad-mode Camera Controller ──────────────────────────────────────────────
@@ -278,6 +324,12 @@ const FACING_ANGLES = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 
 // ── Walk speed (tiles per second) ─────────────────────────────────────────────
 const WALK_SPEED = 3.5;
+const SNEAK_SPEED = 1.8;   // slow, cautious
+const RUN_SPEED = 6.5;   // fast sprint
+// ── Footstep Y-bob amplitude (tiles) ──────────────────────────────────────────
+const WALK_BOB = 0.08;
+const RUN_BOB = 0.14;
+const SNEAK_BOB = 0.04;
 
 function calcWalkFacingAngle(from: GridPos, to: GridPos): number {
   const dx = to.x - from.x;
@@ -302,11 +354,14 @@ interface WalkingUnitProps {
   onDoubleClick?: (unitId: string) => void;
   onRightClick?: (unitId: string, x: number, y: number) => void;
   onClick?: (unitId: string) => void;
+  onHover?: (unitId: string) => void;
+  onUnhover?: (unitId: string) => void;
 }
 
 function WalkingUnit({
   unit, tileSize, walkPath, onWalkComplete, onWalkStep,
   currentUnitId, animState, onDoubleClick, onRightClick, onClick,
+  onHover, onUnhover,
 }: WalkingUnitProps) {
   const outerRef = useRef<THREE.Group>(null);
 
@@ -326,6 +381,25 @@ function WalkingUnit({
   };
   const wsRef = useRef<WS | null>(null);
 
+  // ── Melee dash state ─────────────────────────────────────────────────────────
+  type DashState = {
+    from: THREE.Vector3;    // home tile world pos
+    to: THREE.Vector3;      // 80% of the way to target tile
+    startTime: number;      // performance.now() when dash started
+    forwardMs: number;      // ms to reach impact point
+    holdMs: number;         // ms to linger at impact
+    returnMs: number;       // ms to return home
+  };
+  const dashRef = useRef<DashState | null>(null);
+  const _dashPos = useRef(new THREE.Vector3());
+
+  // Stable ref to animState so useFrame (closure) always reads the latest value
+  const animStateRef = useRef(animState);
+  useEffect(() => { animStateRef.current = animState; }, [animState]);
+
+  // Reusable temp vector for bob calculation (avoids per-frame allocation)
+  const _walkPos = useRef(new THREE.Vector3());
+
   const [facingAngle, setFacingAngle] = useState(FACING_ANGLES[unit.facing ?? 2]);
 
   // Sync facing from store when idle (not walking)
@@ -333,6 +407,41 @@ function WalkingUnit({
     if (wsRef.current?.active) return;
     setFacingAngle(FACING_ANGLES[unit.facing ?? 2]);
   }, [unit.facing]);
+
+  // ── Listen for melee dash events from battle.tsx ────────────────────────────
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const evt = e as CustomEvent<{
+        unitId: string;
+        targetX: number;
+        targetZ: number;
+        forwardMs: number;
+        holdMs: number;
+        returnMs: number;
+      }>;
+      if (evt.detail.unitId !== unit.id) return;
+      if (!outerRef.current) return;
+      if (wsRef.current?.active) return; // don't dash while walking
+      const home = outerRef.current.position.clone();
+      const toDir = new THREE.Vector3(
+        evt.detail.targetX - home.x,
+        0,
+        evt.detail.targetZ - home.z,
+      );
+      const dist = toDir.length();
+      const dashTarget = home.clone().addScaledVector(toDir.normalize(), dist * 0.82);
+      dashRef.current = {
+        from: home.clone(),
+        to: dashTarget,
+        startTime: performance.now(),
+        forwardMs: evt.detail.forwardMs,
+        holdMs: evt.detail.holdMs,
+        returnMs: evt.detail.returnMs,
+      };
+    };
+    window.addEventListener('unit-dash', handler);
+    return () => window.removeEventListener('unit-dash', handler);
+  }, [unit.id]);
 
   // Start / cancel walk when walkPath prop changes
   useEffect(() => {
@@ -356,10 +465,40 @@ function WalkingUnit({
   }, [walkPath, tileSize]);
 
   useFrame((_, delta) => {
+    // ── Melee dash takes priority over idle; never fires during a walk ──────────
+    const dash = dashRef.current;
+    if (dash && outerRef.current && !wsRef.current?.active) {
+      const elapsed = performance.now() - dash.startTime;
+      const totalMs = dash.forwardMs + dash.holdMs + dash.returnMs;
+      if (elapsed >= totalMs) {
+        outerRef.current.position.copy(dash.from);
+        dashRef.current = null;
+      } else if (elapsed < dash.forwardMs) {
+        // Rush forward with ease-in-out
+        const t = elapsed / dash.forwardMs;
+        const eased = t * t * (3 - 2 * t);
+        _dashPos.current.lerpVectors(dash.from, dash.to, eased);
+        outerRef.current.position.copy(_dashPos.current);
+      } else if (elapsed < dash.forwardMs + dash.holdMs) {
+        // Hold at impact point
+        outerRef.current.position.copy(dash.to);
+      } else {
+        // Spring back with ease-out cubic
+        const t = (elapsed - dash.forwardMs - dash.holdMs) / dash.returnMs;
+        const eased = 1 - Math.pow(1 - Math.min(1, t), 3);
+        _dashPos.current.lerpVectors(dash.to, dash.from, eased);
+        outerRef.current.position.copy(_dashPos.current);
+      }
+      return; // skip walk logic entirely during dash
+    }
+
     const ws = wsRef.current;
     if (!ws || !ws.active || !outerRef.current) return;
 
-    ws.stepT += delta * WALK_SPEED;
+    const spd = animStateRef.current === 'run' ? RUN_SPEED
+      : animStateRef.current === 'sneak' ? SNEAK_SPEED
+        : WALK_SPEED;
+    ws.stepT += delta * spd;
 
     if (ws.stepT >= 1) {
       ws.stepT -= 1;
@@ -386,8 +525,13 @@ function WalkingUnit({
       // Update character facing to match movement direction
       setFacingAngle(calcWalkFacingAngle(arrivedTile, next));
     } else {
-      // Sub-tile lerp between current step's from→to positions
-      outerRef.current.position.lerpVectors(ws.fromVec, ws.toVec, ws.stepT);
+      // Sub-tile lerp + footstep Y-bob (half-sine arch peaks at mid-step)
+      _walkPos.current.lerpVectors(ws.fromVec, ws.toVec, ws.stepT);
+      const bob = animStateRef.current === 'run' ? RUN_BOB
+        : animStateRef.current === 'sneak' ? SNEAK_BOB
+          : WALK_BOB;
+      _walkPos.current.y += Math.abs(Math.sin(ws.stepT * Math.PI)) * bob;
+      outerRef.current.position.copy(_walkPos.current);
     }
   });
 
@@ -401,6 +545,8 @@ function WalkingUnit({
         e.stopPropagation();
         onRightClick?.(unit.id, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
       }}
+onPointerEnter = { e => { e.stopPropagation(); onHover?.(unit.id); }}
+onPointerLeave = { e => { e.stopPropagation(); onUnhover?.(unit.id); }}
     >
       <CharacterModel
         unit={unit}
@@ -409,6 +555,13 @@ function WalkingUnit({
         isSelected={currentUnitId === unit.id}
         animState={animState}
       />
+
+  { animState === 'hide' && (
+    <mesh position={ [0, 0.06, 0] } rotation = { [-Math.PI / 2, 0, 0]} >
+      <ringGeometry args={ [0.92, 1.26, 48] } />
+        < meshBasicMaterial color = "#6600cc" transparent opacity = { 0.62} depthWrite = { false} />
+          </mesh>
+      )}
     </group>
   );
 }
@@ -675,7 +828,8 @@ export function BattleScene({
   units, level, reachableTiles, attackableTiles,
   currentUnitId, actionMode, onTileClick, animStates,
   combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
-  showUnitInfo = false, mapPings = [], onUnitRightClick, onUnitClick, onMapRightClick,
+  showUnitInfo = false, mapPings = [], onUnitRightClick, onUnitClick,
+  onUnitHover, onUnitUnhover, onMapRightClick,
   walkPaths = {}, onWalkComplete, onWalkStep,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
@@ -735,6 +889,7 @@ export function BattleScene({
       <pointLight position={[10, 15, centerZ * 2 - 10]}      color="#44ccaa" intensity={0.8} distance={tileSize * 20} />
       <pointLight position={[centerX * 2 - 10, 15, centerZ * 2 - 10]} color="#ff4422" intensity={0.8} distance={tileSize * 20} />
 
+        <CameraShaker />
       <OrbitControls
         makeDefault
         target={[centerX, 0, centerZ]}
@@ -793,6 +948,8 @@ export function BattleScene({
               onDoubleClick={onUnitDoubleClick}
               onRightClick={onUnitRightClick}
               onClick={onUnitClick}
+              onHover = { onUnitHover }
+              onUnhover = { onUnitUnhover }
             />
           ))}
 

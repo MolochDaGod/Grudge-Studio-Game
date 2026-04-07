@@ -195,18 +195,39 @@ function CharacterModelInner({
     if (animState === 'hurt') hurtFlash.current = 1.0;
   }, [animState]);
 
-  // Cache mesh+material refs on first render to avoid per-frame scene traversal
+  // Cache mesh+material refs on first render to avoid per-frame scene traversal.
+  // We keep ALL MeshStandardMaterial meshes (emissive + opacity both need them).
   const cachedMeshes = useRef<Array<{ mesh: THREE.Mesh; mat: THREE.MeshStandardMaterial; matName: string }>>([]);
   useEffect(() => {
     const meshes: typeof cachedMeshes.current = [];
     charScene.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {
         const mat = obj.material as THREE.MeshStandardMaterial;
-        if (mat?.emissive) meshes.push({ mesh: obj, mat, matName: mat.name });
+        if (mat?.isMeshStandardMaterial) meshes.push({ mesh: obj, mat, matName: mat.name });
       }
     });
     cachedMeshes.current = meshes;
   }, [charScene]);
+
+  // Stealth transparency — set material opacity based on hide/sneak state
+  useEffect(() => {
+    const isHide = animState === 'hide';
+    const isSneak = animState === 'sneak';
+    const transparent = isHide || isSneak;
+    const opacity = isHide ? 0.32 : isSneak ? 0.65 : 1.0;
+    cachedMeshes.current.forEach(({ mat }) => {
+      mat.transparent = transparent;
+      mat.opacity = opacity;
+      mat.needsUpdate = true;
+    });
+    return () => {
+      cachedMeshes.current.forEach(({ mat }) => {
+        mat.transparent = false;
+        mat.opacity = 1.0;
+        mat.needsUpdate = true;
+      });
+    };
+  }, [animState]);
 
   const isDead  = unit.hp <= 0 || animState === 'dead';
   const hpPct   = unit.hp / unit.maxHp;
@@ -434,8 +455,8 @@ const modelIds = [
   'ranger_rpg', 'cleric_rpg',
   // Ultimate Animated Character Pack
   'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
-  'pirate_male', 'zombie_male', 'soldier_male', 'wizard', 'witch',
-  'casual_bald',
+  'pirate_male', 'zombie_male', 'zombie_female', 'soldier_male', 'wizard', 'witch',
+  'casual_bald', 'goblin_male', 'kimono_female',
 ];
 const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
                  'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];

@@ -21,7 +21,7 @@ export interface SecondaryWeaponConfig extends WeaponConfig {
 
 export type AnimState =
   | 'idle' | 'idle2' | 'emote'
-  | 'walk'
+  | 'walk' | 'run' | 'sneak' | 'hide'
   | 'attack1' | 'attack2' | 'attack3' | 'attack4'
   | 'cast'
   | 'hurt' | 'stunned' | 'poisoned' | 'block' | 'frozen'
@@ -35,6 +35,9 @@ export const DEFAULT_ANIM_MAP: Record<AnimState, string> = {
   idle2:    'SitDown',
   emote:    'PickUp',
   walk:     'Walk',
+  run: 'Run',
+  sneak: 'Walk',      // slower Walk at half speed; visual crouch applied by CharacterModel
+  hide: 'SitDown',   // crouched idle; opacity dimmed by CharacterModel
   attack1:  'SwordSlash',
   attack2:  'Punch',
   attack3:  'Roll',
@@ -541,13 +544,15 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   },
 
   'barbarian_worg': {
-    modelId: 'viking_male',
-    scale: [0.72 * 1.15, 0.72 * 1.05, 0.72 * 1.15],
+    // Goblin berserker scout — green-skinned, bone-armor, dual axes
+    modelId: 'goblin_male',
+    scale: [0.72 * 1.05, 0.72 * 1.0, 0.72 * 1.05],
     materials: {
-      Skin:  { color: '#7a4520', roughness: 0.7 },
-      Armor: { color: '#2a1808', roughness: 0.9 },
-      Detail:{ color: '#5c3010', roughness: 0.85 },
-      Hair:  { color: '#180808', roughness: 0.95 },
+      Main: { color: '#1a2e08', roughness: 0.85 },
+      Skin: { color: '#3a6010', roughness: 0.7 },
+      Details: { color: '#2a1800', emissive: '#110500', emissiveIntensity: 0.06 },
+      Grey: { color: '#1e1a10', roughness: 0.9 },
+      Face: { color: '#3a6010', emissive: '#1a3000', emissiveIntensity: 0.06 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
@@ -667,14 +672,15 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   },
 
   'elf_mage': {
-    modelId: 'witch',
-    scale: [0.72 * 0.88, 0.72 * 0.88, 0.72 * 0.88],
+    // Elven sorceress in an elegant silk kimono; cool moonlit palette, arcane glow
+    modelId: 'kimono_female',
+    scale: [0.72 * 0.90, 0.72 * 0.90, 0.72 * 0.90],
     materials: {
-      Main:    { color: '#1a3818', roughness: 0.75 },
-      Skin:    { color: '#d4c890', roughness: 0.5 },
-      Details: { color: '#2a5025', emissive: '#004422', emissiveIntensity: 0.18 },
-      Grey:    { color: '#0e1e0a', roughness: 0.9 },
-      Face:    { color: '#d4c890', emissive: '#002211', emissiveIntensity: 0.08 },
+      Main: { color: '#1a3028', roughness: 0.7 },
+      Skin: { color: '#d4c890', roughness: 0.45 },
+      Details: { color: '#2a4838', emissive: '#004433', emissiveIntensity: 0.22 },
+      Grey: { color: '#0c1a14', roughness: 0.88 },
+      Face: { color: '#d4c890', emissive: '#004422', emissiveIntensity: 0.1 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
     animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
@@ -739,16 +745,18 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   },
 
   'orc_ranger': {
-    modelId: 'orc',
-    scale: [0.72 * 1.05, 0.72 * 0.98, 0.72 * 1.05],
+    // Goblin jungle scout — lighter build, camouflage rags, daggers
+    modelId: 'goblin_male',
+    scale: [0.72 * 0.95, 0.72 * 0.92, 0.72 * 0.95],
     materials: {
-      Skin:  { color: '#4a5828', roughness: 0.72 },
-      Face:  { color: '#4a5828' },
-      Pants: { color: '#1a1a12', roughness: 0.9 },
-      Teeth: { color: '#b0a050' },
+      Main: { color: '#28380a', roughness: 0.88 },
+      Skin: { color: '#4a6a18', roughness: 0.72 },
+      Details: { color: '#1a2c08', emissive: '#0a1800', emissiveIntensity: 0.04 },
+      Grey: { color: '#202816', roughness: 0.92 },
+      Face: { color: '#4a6a18', emissive: '#1a2800', emissiveIntensity: 0.04 },
     },
-    primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
+    primaryWeapon: WEAPON_DEFAULTS.daggers,
+    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   // ── LEGION — UNDEAD ───────────────────────────────────────────────────────
@@ -801,14 +809,18 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   },
 
   'undead_ranger': {
-    modelId: 'ninja_male',
-    scale: [0.72 * 0.9, 0.72 * 0.9, 0.72 * 0.9],
+    // Undead female assassin — rotting flesh, necrotic purple glow, daggers
+    modelId: 'zombie_female',
+    scale: [0.72 * 0.88, 0.72 * 0.88, 0.72 * 0.88],
     materials: {
-      Main:    { color: '#060610', roughness: 0.95 },
-      Skin:    { color: '#c0b8a0', roughness: 0.9 },
-      Details: { color: '#100010', emissive: '#220055', emissiveIntensity: 0.1 },
-      Grey:    { color: '#0c0c18', roughness: 0.95 },
-      Face:    { color: '#1a1620', emissive: '#8800cc', emissiveIntensity: 0.5 },
+      Clothes: { color: '#080608', roughness: 0.95 },
+      Skin: { color: '#9a9880', emissive: '#110033', emissiveIntensity: 0.04, roughness: 0.9 },
+      Face: { color: '#b0ae90', emissive: '#8800cc', emissiveIntensity: 0.55 },
+      Pants: { color: '#0c0a0e', roughness: 0.95 },
+      DarkClothes: { color: '#060408', roughness: 0.98 },
+      Bones: { color: '#c8c0a0', roughness: 0.8 },
+      Guts: { color: '#100808' },
+      Brain: { color: '#0e0808' },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
     animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { motion } from "framer-motion";
-import { Sword, Trophy } from "lucide-react";
+import { Sword, Trophy, Map } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -162,6 +162,13 @@ export default function Home() {
             <FantasyButton variant="secondary" size="lg" className="w-full sm:w-64 text-lg">
               <Trophy className="w-5 h-5 mr-2" />
               Hall of Heroes
+            </FantasyButton>
+          </Link>
+
+          <Link href="/island" className="w-full sm:w-auto">
+            <FantasyButton variant="secondary" size="lg" className="w-full sm:w-64 text-lg">
+              <Map className="w-5 h-5 mr-2" />
+              Explore Island
             </FantasyButton>
           </Link>
         </motion.div>

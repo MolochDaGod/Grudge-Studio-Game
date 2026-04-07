@@ -60,6 +60,10 @@ export default function Battle() {
   const [mapPings, setMapPings] = useState<MapPing[]>([]);
   // Unit selected by LMB click for inspection — shown in bottom HUD
   const [inspectedUnitId, setInspectedUnitId] = useState<string | null>(null);
+  // Unit currently hovered in 3D scene (for attack preview tooltip)
+  const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
+  // After finishing a walk without acting yet, pulse skill buttons
+  const [postMoveGlow, setPostMoveGlow] = useState(false);
 
   type CtxMenu =
     | { kind: 'portrait' | 'unit'; unit: TacticalUnit; x: number; y: number }
@@ -255,6 +259,44 @@ export default function Battle() {
     const id = grid[x]?.[y];
     return id ? units.find(u => u.id === id) : null;
   };
+
+  // ── Attack Preview ───────────────────────────────────────────────────────────
+  // Computed when hovering an enemy unit while a skill or attack action is active.
+  const attackPreview = useMemo(() => {
+    if (!hoveredUnitId || !currentUnitId) return null;
+    const attacker = units.find(u => u.id === currentUnitId);
+    const target = units.find(u => u.id === hoveredUnitId);
+    if (!attacker || !target) return null;
+    if (attacker.isPlayerControlled === target.isPlayerControlled) return null;
+    if (!['attack', 'skill1', 'skill2', 'skill3', 'skill4', 'skill5'].includes(actionMode)) return null;
+
+    const isSkillMode = actionMode.startsWith('skill');
+    const front = isFrontAttack(attacker, target);
+    const facingMult = facingDefenseMultiplier(attacker, target);
+    const effectiveDef = facingMult > 1 ? Math.floor(target.defense * 0.5) : target.defense;
+    const critChance = front ? 0.10 : 0.35;
+
+    if (isSkillMode) {
+      const slotNum = parseInt(actionMode.replace('skill', '')) as 1 | 2 | 3 | 4 | 5;
+      const loadout = equippedSkills[attacker.id] || getDefaultSkillLoadout(attacker.characterId);
+      const skillId = loadout[slotNum];
+      const skill = skillId ? getSkillById(skillId) : null;
+      if (!skill || skill.dmgMultiplier === undefined) return null;
+      const penFactor = 1 + (skill.armorPen || 0) / 100;
+      const base = Math.max(1, Math.floor(attacker.attack * skill.dmgMultiplier - effectiveDef * (1 / penFactor)));
+      const lo = Math.max(1, base - 2);
+      const hi = base + 3;
+      const critHi = Math.floor(hi * 1.8);
+      return { lo, hi, critHi, critChance, isLethal: hi >= target.hp, isCritLethal: critHi >= target.hp, front, skill };
+    }
+
+    // Basic attack
+    const base = Math.max(1, Math.floor(attacker.attack * 1.0 - effectiveDef));
+    const lo = Math.max(1, base - 2);
+    const hi = base + 3;
+    const critHi = Math.floor(hi * 1.75);
+    return { lo, hi, critHi, critChance, isLethal: hi >= target.hp, isCritLethal: critHi >= target.hp, front, skill: null };
+  }, [hoveredUnitId, currentUnitId, units, actionMode, equippedSkills]);
 
   const getReachableTiles = (start: {x: number, y: number}, maxMove: number) => {
     const queue = [{...start, dist: 0}];
@@ -456,6 +498,12 @@ export default function Battle() {
       return next;
     });
     setAnimStates(prev => ({ ...prev, [unitId]: 'idle' }));
+    // Pulse skill buttons if the active player unit still hasn't attacked
+    const u = useGameStore.getState().units.find(u => u.id === unitId);
+    if (u?.isPlayerControlled && !u.hasActed && unitId === currentUnitId) {
+      setPostMoveGlow(true);
+      setTimeout(() => setPostMoveGlow(false), 2200);
+    }
   };
 
   // Called by BattleScene as a unit enters each tile during its walk
@@ -469,7 +517,9 @@ export default function Battle() {
   };
 
   const executeSkill = (attacker: TacticalUnit, skill: Skill, target: TacticalUnit) => {
-    const isCrit = Math.random() < 0.12;
+    const _front = isFrontAttack(attacker, target);
+    const critChance = _front ? 0.10 : 0.35;
+    const isCrit = Math.random() < critChance;
     const penFactor = 1 + (skill.armorPen || 0) / 100;
     const baseDmg = skill.dmgMultiplier !== undefined
       ? Math.max(1, Math.floor((attacker.attack * skill.dmgMultiplier - target.defense * (1 / penFactor)) + Math.floor(Math.random() * 6) - 2))
@@ -512,12 +562,67 @@ export default function Battle() {
 
     setAnimStates(prev => ({ ...prev, [attacker.id]: atkAnim }));
 
+    // ── Cast-start FX (t = 0) ─────────────────────────────────────────────────
+    const isMagicSkill = (
+      effectType === 'fire_projectile' ||
+      effectType === 'ice_projectile' ||
+      effectType === 'dark_projectile' ||
+      effectType === 'magic_beam' ||
+      effectType === 'ultimate_nova'
+    );
+    if (isMagicSkill) {
+      // Spinning rune circle at caster's feet for the whole wind-up
+      spawnEffect('magic_circle', fromPos, fromPos, effectColor, hitMs + 250);
+      // Energy orb builds in caster's hands then bursts as projectile launches
+      spawnEffect('energy_charge', fromPos, fromPos, effectColor, hitMs + 80);
+    }
+
+    // Melee skill: dash toward target just like a basic attack
+    if (effectType === 'physical_slash') {
+      window.dispatchEvent(new CustomEvent('unit-dash', {
+        detail: {
+          unitId: attacker.id,
+          targetX: toPos[0],
+          targetZ: toPos[2],
+          forwardMs: hitMs,
+          holdMs: 130,
+          returnMs: Math.max(200, atkDurMs - hitMs - 130),
+        },
+      }));
+    }
+
     // At impact point: spawn effects + trigger target reaction
     setTimeout(() => {
       spawnEffect(effectType, fromPos, toPos, effectColor, travelDur);
       if (skill.aoe) spawnEffect('aoe_ring', fromPos, toPos, effectColor, 900);
       if (finalDmg > 0 && effectType !== 'impact_flash' && effectType !== 'heal_burst') {
         setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, effectColor, 380), Math.min(300, Math.floor(travelDur * 0.5)));
+      }
+      // Element-specific explosion on impact
+      if (finalDmg > 0) {
+        const impactDelay = Math.min(350, Math.floor(travelDur * 0.6));
+        if (effectType === 'fire_projectile') {
+          setTimeout(() => spawnEffect('fire_explosion', fromPos, toPos, '#ff6600', 900), impactDelay);
+        } else if (effectType === 'ice_projectile') {
+          setTimeout(() => spawnEffect('ice_shatter', fromPos, toPos, '#88ddff', 950), impactDelay);
+        } else if (effectType === 'dark_projectile') {
+          setTimeout(() => spawnEffect('dark_void', fromPos, toPos, '#9900ff', 1000), impactDelay);
+        } else if (effectType === 'magic_beam' || skill.tags.includes('lightning')) {
+          setTimeout(() => spawnEffect('lightning_arc', fromPos, toPos, '#ccddff', 700), impactDelay);
+        }
+      }
+      // Crit burst on skill crits
+      if (isCrit && finalDmg > 0) {
+        setTimeout(() => spawnEffect('crit_burst', fromPos, toPos, '#ffd700', 750), 180);
+      }
+      // Camera shake on crit or powerful skills
+      if (finalDmg > 0 && (isCrit || skill.tags.includes('ultimate') || skill.dmgMultiplier && skill.dmgMultiplier >= 1.6)) {
+        window.dispatchEvent(new CustomEvent('camera-shake', {
+          detail: {
+            intensity: skill.tags.includes('ultimate') ? 0.35 : isCrit ? 0.26 : 0.18,
+            duration: skill.tags.includes('ultimate') ? 500 : isCrit ? 380 : 280,
+          },
+        }));
       }
       // Target visual reaction
       if (finalDmg > 0 || (skill.applyStatus && skill.statusDuration)) {
@@ -572,9 +677,34 @@ export default function Battle() {
 
     setAnimStates(prev => ({ ...prev, [attacker.id]: 'attack1' }));
 
+    // Melee dash: lunge toward target, hold at impact, spring back
+    if (wt !== 'bow') {
+      window.dispatchEvent(new CustomEvent('unit-dash', {
+        detail: {
+          unitId: attacker.id,
+          targetX: toPos[0],
+          targetZ: toPos[2],
+          forwardMs: hitMs,
+          holdMs: 130,
+          returnMs: Math.max(200, atkDurMs - hitMs - 130),
+        },
+      }));
+    }
+
     setTimeout(() => {
       spawnEffect(wt === 'bow' ? 'arrow' : 'physical_slash', fromPos, toPos, slashColor, 420);
       setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, slashColor, 350), 250);
+      // Crit extras: burst flash + ground slam
+      if (isCrit) {
+        setTimeout(() => spawnEffect('crit_burst', fromPos, toPos, '#ffd700', 700), 200);
+        setTimeout(() => spawnEffect('ground_slam', fromPos, toPos, slashColor, 800), 280);
+      }
+      // Camera shake on crit or high damage
+      if (isCrit || damage >= activeUnit!.attack * 1.4) {
+        window.dispatchEvent(new CustomEvent('camera-shake', {
+          detail: { intensity: isCrit ? 0.28 : 0.16, duration: isCrit ? 380 : 260 },
+        }));
+      }
       // Target reaction
       if (newHp <= 0) {
         setAnimStates(prev => ({ ...prev, [target.id]: 'dead' }));
@@ -1030,6 +1160,8 @@ export default function Battle() {
           mapPings={mapPings}
           onUnitRightClick={handleUnitRightClick}
           onUnitClick={handleUnitClick}
+onUnitHover = { setHoveredUnitId }
+onUnitUnhover = {() => setHoveredUnitId(null)}
           onMapRightClick={handleMapRightClick}
           walkPaths={walkPaths}
           onWalkComplete={onWalkComplete}
@@ -1094,6 +1226,63 @@ export default function Battle() {
           onFocusTile={(wx, wz) => setCameraFocus([wx, 0, wz])}
         />
       </div>
+
+{/* ── ATTACK PREVIEW TOOLTIP ─────────────────────────────────────────── */ }
+<AnimatePresence>
+  { attackPreview && (
+    <motion.div
+            key="attack-preview"
+initial = {{ opacity: 0, y: 8 }}
+animate = {{ opacity: 1, y: 0 }}
+exit = {{ opacity: 0, y: 8 }}
+className = "absolute z-40 pointer-events-none"
+style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
+          >
+  <div className="flex items-center gap-3 rounded-xl border border-orange-500/40 bg-[#0d0810]/90 px-4 py-2.5 shadow-[0_4px_28px_rgba(200,80,0,0.35)] backdrop-blur-md" >
+    {/* Position badge */ }
+    < div className = {
+      cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
+        attackPreview.front
+          ? "border-blue-500/50 bg-blue-950/60 text-blue-300"
+          : "border-amber-500/50 bg-amber-950/60 text-amber-300"
+              )
+    } >
+      { attackPreview.front ? '⬡ Front' : '⬡ Rear' }
+      </div>
+{/* Damage range */ }
+<div className="flex flex-col items-center" >
+  <div className="text-[9px] text-white/30 uppercase tracking-widest" > Damage </div>
+    < div className = "text-base font-bold font-display text-orange-300 leading-none" >
+      { attackPreview.lo }–{ attackPreview.hi }
+</div>
+  </div>
+{/* Crit */ }
+<div className="flex flex-col items-center border-l border-white/10 pl-3" >
+  <div className="text-[9px] text-white/30 uppercase tracking-widest" > Crit({ Math.round(attackPreview.critChance * 100) } %) </div>
+    < div className = "text-base font-bold font-display text-yellow-300 leading-none" >
+                  ↑{ attackPreview.critHi }
+</div>
+  </div>
+{/* Lethal indicator */ }
+{
+  (attackPreview.isLethal || attackPreview.isCritLethal) && (
+    <div className={
+    cn(
+      "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
+      attackPreview.isLethal
+        ? "border-red-500/70 bg-red-950/70 text-red-300"
+        : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
+    )
+  }>
+    { attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill' }
+    </div>
+              )
+}
+</div>
+  </motion.div>
+        )}
+</AnimatePresence>
 
       {/* ── ENEMY TURN BANNER ──────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -1228,7 +1417,9 @@ export default function Battle() {
                         ? "border-primary shadow-[0_0_16px_rgba(212,160,23,0.65)]"
                         : isDisabled
                           ? "border-white/5 opacity-35 cursor-not-allowed"
-                          : "border-white/15 hover:border-primary/50 cursor-pointer hover:shadow-[0_0_10px_rgba(212,160,23,0.35)]"
+                          : postMoveGlow && !isDisabled
+                      ? "border-emerald-400/80 shadow-[0_0_18px_rgba(52,211,153,0.7)] animate-pulse cursor-pointer"
+                      : "border-white/15 hover:border-primary/50 cursor-pointer hover:shadow-[0_0_10px_rgba(212,160,23,0.35)]"
                     )}
                     style={{
                       backgroundImage: `url('${UI("HUD/Action Bar/Slots/ActionBar_MainSlot_Background.png")}')`,
