@@ -291,7 +291,8 @@ export default function CharacterSelect() {
     if (characters) setAllCharacters(characters);
   }, [characters, setAllCharacters]);
 
-  const factionChars = characters?.filter(c => c.faction === selectedFaction) ?? [];
+  const charList = Array.isArray(characters) ? characters : [];
+  const factionChars = charList.filter(c => c.faction === selectedFaction);
 
   const handleFactionSelect = (factionId: string) => {
     setSelectedFaction(factionId);
@@ -335,16 +336,16 @@ export default function CharacterSelect() {
   };
 
   const handleStartBattle = () => {
-    if (selectedIds.length !== 3 || !characters) return;
+    if (selectedIds.length !== 3 || !Array.isArray(characters) || characters.length === 0) return;
     setPlayerSquad(selectedIds);
     const level = getLevelWithEdits(currentLevelId);
     const playerChars = characters.filter(c => selectedIds.includes(c.id));
 
     // Pick an enemy faction that is different from the player's faction
-    const allFactionIds = [...new Set(characters.map(c => c.faction))];
+    const allFactionIds = [...new Set(charList.map(c => c.faction))];
     const otherFactions = allFactionIds.filter(f => f !== selectedFaction);
     const enemyFaction = otherFactions[Math.floor(Math.random() * otherFactions.length)];
-    const possibleEnemies = characters.filter(c => c.faction === enemyFaction);
+    const possibleEnemies = charList.filter(c => c.faction === enemyFaction);
     const enemyChars = [...possibleEnemies].sort(() => 0.5 - Math.random()).slice(0, 3);
 
     let unitIdCounter = 1;
@@ -387,6 +388,7 @@ export default function CharacterSelect() {
         rarity: char.rarity,
         statusEffects: [],
         statusDurations: {},
+        statusImmunities: {},
         hasMoved: false,
         hasActed: false,
       };
@@ -429,11 +431,12 @@ export default function CharacterSelect() {
       </div>
     );
   }
-  if (error || !characters) {
+  if (error || !characters || !Array.isArray(characters)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-destructive">
         <Skull className="w-16 h-16" />
         <h2 className="font-display text-3xl">The archives are sealed</h2>
+        <p className="text-white/40 text-sm">Could not load characters from the server.</p>
         <FantasyButton onClick={() => window.location.reload()}>Retry</FantasyButton>
       </div>
     );
