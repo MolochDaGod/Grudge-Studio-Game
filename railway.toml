@@ -1,0 +1,5 @@
+[build]
+builder = "railpack"
+
+[deploy]
+startCommand = "pnpm --filter @workspace/grudge-studio-game dev"
