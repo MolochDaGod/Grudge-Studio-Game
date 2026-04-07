@@ -3,6 +3,14 @@ lockfileVersion: '9.0'
 settings:
   autoInstallPeers: false
   excludeLinksFromLockfile: false
+  onlyBuiltDependencies:
+    - '@swc/core'
+    - esbuild
+    - msw
+    - unrs-resolver
+  overrides:
+    '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
+    esbuild: 0.27.3
 
 catalogs:
   default:
