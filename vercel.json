@@ -4,7 +4,6 @@
   "installCommand": "pnpm install --ignore-scripts && pnpm install",
   "buildCommand": "pnpm --filter @workspace/grudge-studio-game run build",
   "outputDirectory": "artifacts/grudge-studio-game/dist/public",
-  "nodeVersion": "22",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
