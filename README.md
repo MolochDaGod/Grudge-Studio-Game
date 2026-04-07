@@ -79,7 +79,7 @@ PORT=5173 BASE_PATH=/ pnpm --filter @workspace/grudge-studio-game run dev
 pnpm --filter @workspace/grudge-studio-game run build
 ```
 
-Output goes to `artifacts/grudge-studio-game/dist/public/`.
+Output goes to `artifacts/grudge-studio-game/dist/`.
 
 ### Preview Production Build
 

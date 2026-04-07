@@ -1,9 +1,8 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pnpm install --ignore-scripts && pnpm install",
   "buildCommand": "pnpm --filter @workspace/grudge-studio-game run build",
-  "outputDirectory": "artifacts/grudge-studio-game/dist/public",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "outputDirectory": "artifacts/grudge-studio-game/dist",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
