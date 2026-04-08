@@ -106,8 +106,17 @@ export interface CharacterConfig {
   /**
    * URL to an external diffuse texture for RPG FBX→GLB models that have no embedded textures.
    * When set, CharacterModel loads and applies this texture to all materials in the mesh.
+   * @deprecated Use `textures.diffuse` instead for multi-texture support.
    */
   textureUrl?: string;
+  /** Multi-texture set (diffuse, normal, emissive, roughness/metalness) */
+  textures?: import('./texture-manager').TextureSetConfig;
+  /** If true, this character uses a voxel GLB with no skeleton — procedural animation */
+  isVoxel?: boolean;
+  /** Override voxel auto-scale (only used when isVoxel is true) */
+  voxelScale?: number;
+  /** Path to voxel model GLB (only used when isVoxel is true) */
+  voxelModelUrl?: string;
 }
 
 // Weapon natural longest-axis lengths (from actual GLB vertex bounds):
@@ -197,6 +206,10 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:  { color: '#e8eaf0', roughness: 0.85 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
+    accessoryAttachments: [
+      { modelId: 'orc_shoulder_spike_l', bone: 'Shoulder.L', position: [0, 0.02, 0], rotation: [0, 0, 0], scale: 0.7 },
+      { modelId: 'orc_shoulder_spike_r', bone: 'Shoulder.R', position: [0, 0.02, 0], rotation: [0, 0, 0], scale: 0.7 },
+    ],
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
@@ -371,6 +384,11 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     },
     primaryWeapon: WEAPON_DEFAULTS.sword,
     secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
+    accessoryAttachments: [
+      { modelId: 'knight_helm', bone: 'Head', position: [0, 0.05, 0], rotation: [0, 0, 0], scale: 0.9 },
+      { modelId: 'shoulder_plate_l', bone: 'Shoulder.L', position: [0, 0, 0], rotation: [0, 0, 0], scale: 0.8 },
+      { modelId: 'shoulder_plate_r', bone: 'Shoulder.R', position: [0, 0, 0], rotation: [0, 0, 0], scale: 0.8 },
+    ],
     animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', block: 'StandUp', special1: 'SwordSlash', special2: 'Jump' },
   },
 
@@ -841,6 +859,10 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:     { color: '#880808', roughness: 0.85 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
+    accessoryAttachments: [
+      { modelId: 'pirate_hat', bone: 'Head', position: [0, 0.08, 0], rotation: [0, 0, 0], scale: 0.9 },
+      { modelId: 'captain_cape', bone: 'Spine', position: [0, 0, -0.1], rotation: [0, 0, 0], scale: 1.0 },
+    ],
     animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Roll' },
   },
 
@@ -884,6 +906,16 @@ export function getCharacterConfig(characterId: string): CharacterConfig {
 export function getAnimationName(state: AnimState, config: CharacterConfig): string {
   return config.animMap?.[state] ?? DEFAULT_ANIM_MAP[state] ?? 'Idle';
 }
+
+export const ACCESSORY_MODEL_URLS = [
+  '/models/accessories/knight_helm.glb',
+  '/models/accessories/shoulder_plate_l.glb',
+  '/models/accessories/shoulder_plate_r.glb',
+  '/models/accessories/orc_shoulder_spike_l.glb',
+  '/models/accessories/orc_shoulder_spike_r.glb',
+  '/models/accessories/pirate_hat.glb',
+  '/models/accessories/captain_cape.glb',
+];
 
 export const ALL_MODEL_URLS = [
   '/models/characters/orc.glb',

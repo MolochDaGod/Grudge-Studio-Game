@@ -833,7 +833,20 @@ export function BattleScene({
   walkPaths = {}, onWalkComplete, onWalkStep,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
+  const [showSkeletonDebug, setShowSkeletonDebug] = useState(false);
   const currentUnit = units.find(u => u.id === currentUnitId) ?? null;
+
+  // Shift+B toggles skeleton debug overlay
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'B' && e.shiftKey) {
+        setShowSkeletonDebug(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const { gridW, gridH, tileSize, fogColor, fogNear, fogFar, theme } = level;
   const centerX = (gridW * tileSize) / 2;

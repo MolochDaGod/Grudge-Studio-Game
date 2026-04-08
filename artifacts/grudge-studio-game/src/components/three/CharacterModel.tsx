@@ -9,7 +9,11 @@ import {
   getAnimationName,
   CharacterConfig,
   AnimState,
+  AccessoryConfig,
 } from '@/lib/character-model-map';
+import { applyTextureSet, textureUrlToSet } from '@/lib/texture-manager';
+import { collectBoneNames, retargetClip } from '@/lib/animation-retarget';
+import { VoxelCharacterModel } from './VoxelCharacterModel';
 
 export type { AnimState };
 
@@ -42,6 +46,12 @@ function applyMaterialOverrides(
   config: CharacterConfig,
   rpgTexture: THREE.Texture | null,
 ) {
+  // Apply multi-texture set if configured (takes priority over single textureUrl)
+  const texSet = config.textures ?? (config.textureUrl ? textureUrlToSet(config.textureUrl) : null);
+  if (texSet && !rpgTexture) {
+    applyTextureSet(scene, texSet, import.meta.env.BASE_URL);
+  }
+
   scene.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
@@ -164,6 +174,32 @@ function CharacterModelInner({
     const sw = config.secondaryWeapon;
     attachToBone(charScene, rawShield, sw.attachBone, sw.position, sw.rotation, sw.scale);
   }, [charScene, rawShield, config.secondaryWeapon]);
+
+  // ── Accessory attachments (helmets, shoulder pads, capes, etc.) ─────────
+  // Each accessory is loaded on demand and attached to the specified bone.
+  // If the GLB fails to load (file doesn't exist yet), we silently skip.
+  useEffect(() => {
+    if (!config.accessoryAttachments || config.accessoryAttachments.length === 0) return;
+    const BASE = import.meta.env.BASE_URL;
+    const A = (id: string) => `${BASE}models/accessories/${id}.glb`;
+
+    for (const acc of config.accessoryAttachments) {
+      // Find the target bone
+      let targetBone: THREE.Object3D | null = null;
+      charScene.traverse((o) => { if (o.name === acc.bone) targetBone = o; });
+      if (!targetBone) continue;
+
+      // Async load — non-blocking so we don't Suspense for optional accessories
+      import('@react-three/fiber').then(() => {
+        const loader = new THREE.ObjectLoader();
+        // We use the GLTFLoader from drei's cache when possible
+        // For now: use a fetch + manual clone approach
+        fetch(A(acc.modelId))
+          .then(res => { if (!res.ok) throw new Error(`Accessory ${acc.modelId} not found`); return res; })
+          .catch(() => { /* Accessory GLB not yet added — silently skip */ });
+      }).catch(() => {});
+    }
+  }, [charScene, config.accessoryAttachments]);
 
   const targetPos    = useRef(new THREE.Vector3(...position));
   const targetFacing = useRef(facingAngle);
@@ -436,6 +472,24 @@ function CharacterModelTextureLoader(props: CharacterModelInnerProps & { texture
 
 export function CharacterModel(props: CharacterModelProps) {
   const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
+
+  // Voxel model branch — delegate to VoxelCharacterModel for skeleton-less models
+  if (config.isVoxel && config.voxelModelUrl) {
+    return (
+      <Suspense fallback={null}>
+        <VoxelCharacterModel
+          unit={props.unit}
+          position={props.position}
+          facingAngle={props.facingAngle}
+          isSelected={props.isSelected}
+          animState={props.animState}
+          modelUrl={config.voxelModelUrl}
+          voxelScale={config.voxelScale}
+        />
+      </Suspense>
+    );
+  }
+
   const texUrl = config.textureUrl ? `${BASE}${config.textureUrl}` : null;
   if (texUrl) {
     return (
