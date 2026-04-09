@@ -5,6 +5,7 @@ import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
 import { CharacterModel, AnimState } from './CharacterModel';
+import { tickSequences } from '@/lib/animation-events';
 import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
 import { CombatEffectsLayer, CombatEffectData } from './CombatEffects';
 import { NatureDecor } from './NatureDecor';
@@ -56,6 +57,12 @@ interface BattleSceneProps {
 // ── Camera Shaker ─────────────────────────────────────────────────────────────
 // Listens for 'camera-shake' CustomEvents dispatched from battle logic.
 // Event detail: { intensity?: number; duration?: number }
+// ── Animation sequence ticker — drives combat event timing from useFrame ──────
+function SequenceTicker() {
+  useFrame(() => tickSequences());
+  return null;
+}
+
 function CameraShaker() {
   const { camera } = useThree();
   const shakeRef = useRef<{ intensity: number; duration: number; elapsed: number } | null>(null);
@@ -907,6 +914,7 @@ export function BattleScene({
       <pointLight position={[10, 15, centerZ * 2 - 10]}      color="#44ccaa" intensity={0.8} distance={tileSize * 20} />
       <pointLight position={[centerX * 2 - 10, 15, centerZ * 2 - 10]} color="#ff4422" intensity={0.8} distance={tileSize * 20} />
 
+        <SequenceTicker />
         <CameraShaker />
       <OrbitControls
         makeDefault

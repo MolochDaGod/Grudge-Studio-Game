@@ -25,6 +25,10 @@ import {
   getSkillAnimState, getAtkDuration, bfsPath, getCombatCover,
   isMobilitySkill, findDashLandingTile, resolvePassiveCombat,
 } from "@/lib/combat-engine";
+import {
+  createCombatSequence, startSequence, cancelSequences,
+  type CombatEventType,
+} from "@/lib/animation-events";
 import { getCoverAgainst, type CoverInfo } from "@/lib/cover-system";
 
 const BASE = import.meta.env.BASE_URL;
@@ -201,6 +205,110 @@ export default function Battle() {
     }, 250);
     return () => clearInterval(iv);
   }, []);
+
+  // ── Animation Event Dispatcher listener ─────────────────────────────────
+  // Handles events dispatched by the SequenceTicker in BattleScene.
+  // This replaces setTimeout chains — events fire at the exact animation frame.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      const { eventType, attackerId, targetId, fromPos, toPos, effectType, effectColor, eventData } = d as {
+        eventType: CombatEventType;
+        attackerId: string;
+        targetId?: string;
+        fromPos: [number, number, number];
+        toPos: [number, number, number];
+        effectType?: string;
+        effectColor?: string;
+        eventData: Record<string, any>;
+      };
+
+      switch (eventType) {
+        case 'windup_start':
+          if (eventData.fx === 'magic_circle') spawnEffect('magic_circle', fromPos, fromPos, effectColor ?? '#ffa040', 600);
+          if (eventData.fx === 'energy_charge') spawnEffect('energy_charge', fromPos, fromPos, effectColor ?? '#ffa040', 500);
+          break;
+
+        case 'dash_forward':
+          window.dispatchEvent(new CustomEvent('unit-dash', {
+            detail: { unitId: attackerId, targetX: toPos[0], targetZ: toPos[2], forwardMs: 350, holdMs: 130, returnMs: 400 },
+          }));
+          break;
+
+        case 'projectile':
+          spawnEffect((effectType ?? 'impact_flash') as any, fromPos, toPos, effectColor ?? '#ffa040', 650);
+          break;
+
+        case 'impact':
+          if (effectType === 'physical_slash') {
+            spawnEffect('physical_slash', fromPos, toPos, effectColor ?? '#ffa040', 420);
+          }
+          spawnEffect('impact_flash', fromPos, toPos, effectColor ?? '#ffa040', 380);
+          break;
+
+        case 'camera_shake':
+          window.dispatchEvent(new CustomEvent('camera-shake', {
+            detail: { intensity: eventData.intensity ?? 0.18, duration: eventData.duration ?? 280 },
+          }));
+          break;
+
+        case 'crit_burst':
+          spawnEffect('crit_burst', fromPos, toPos, '#ffd700', 750);
+          break;
+
+        case 'target_react':
+          if (targetId) {
+            if (eventData.lethal) {
+              setAnimStates(prev => ({ ...prev, [targetId]: 'dead' }));
+            } else if (eventData.blocked) {
+              setAnimStates(prev => ({ ...prev, [targetId]: 'block' }));
+              setTimeout(() => setAnimStates(prev => ({ ...prev, [targetId]: 'idle' })), 800);
+            } else {
+              setAnimStates(prev => ({ ...prev, [targetId]: 'hurt' }));
+              setTimeout(() => setAnimStates(prev => ({ ...prev, [targetId]: 'idle' })), 650);
+            }
+          }
+          break;
+
+        case 'impact_vfx': {
+          const et = effectType ?? '';
+          if (et === 'fire_projectile') spawnEffect('fire_explosion', fromPos, toPos, '#ff6600', 900);
+          else if (et === 'ice_projectile') spawnEffect('ice_shatter', fromPos, toPos, '#88ddff', 950);
+          else if (et === 'dark_projectile') spawnEffect('dark_void', fromPos, toPos, '#9900ff', 1000);
+          break;
+        }
+
+        case 'aoe_ring':
+          spawnEffect('aoe_ring', fromPos, toPos, effectColor ?? '#ffa040', 900);
+          break;
+
+        case 'quick_attack':
+          spawnEffect('physical_slash', fromPos, toPos, '#ffcc00', 350);
+          break;
+
+        case 'counter_attack':
+          if (targetId) {
+            setAnimStates(prev => ({ ...prev, [targetId]: 'attack1' }));
+            spawnEffect('physical_slash', toPos, fromPos, '#ff8844', 350);
+            setTimeout(() => setAnimStates(prev => ({ ...prev, [targetId]: 'idle' })), 600);
+          }
+          break;
+
+        case 'return_idle':
+          setAnimStates(prev => ({ ...prev, [attackerId]: 'idle' }));
+          break;
+
+        case 'end_turn': {
+          const u = useGameStore.getState().units.find(u => u.id === attackerId);
+          if (u?.hasMoved && u?.hasActed) endTurn();
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('combat-event', handler);
+    return () => window.removeEventListener('combat-event', handler);
+  }, [spawnEffect, endTurn]);
 
   const spawnEffect = useCallback((
     type: EffectType,
