@@ -545,8 +545,9 @@ export function CharacterModel(props: CharacterModelProps) {
   }
 
   // Determine texture URL from new `textures.diffuse` or legacy `textureUrl`
+  // Resolves through CDN in prod, local in dev via asset-config
   const texSet = config.textures ?? (config.textureUrl ? textureUrlToSet(config.textureUrl) : null);
-  const texUrl = texSet?.diffuse ? `${BASE}${texSet.diffuse}` : null;
+  const texUrl = texSet?.diffuse ? textureAssetUrl(texSet.diffuse) : null;
   if (texUrl) {
     return (
       <Suspense fallback={<LoadingPlaceholder />}>
