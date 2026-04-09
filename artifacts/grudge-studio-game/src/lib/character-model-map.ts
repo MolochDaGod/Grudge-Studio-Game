@@ -218,11 +218,10 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       { modelId: 'orc_shoulder_spike_l', bone: 'Shoulder.L', position: [0, 0.02, 0], rotation: [0, 0, 0], scale: 0.7 },
       { modelId: 'orc_shoulder_spike_r', bone: 'Shoulder.R', position: [0, 0.02, 0], rotation: [0, 0, 0], scale: 0.7 },
     ],
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
+    // animMap removed — inherits from weapon type (greataxe → melee FBX set)
   },
 
   'magma-orc-destroyer': {
-    // Portrait: Huge dark orc, lava-cracked skin, glowing orange eyes, molten stone armor
     modelId: 'orc',
     scale: [0.72 * 1.35, 0.72 * 1.1, 0.72 * 1.35],
     materials: {
@@ -232,11 +231,10 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#707070', metalness: 0.5 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
+    // animMap removed — inherits from weapon type (fire_staff → staff FBX set)
   },
 
   'orcish-warrior': {
-    // Portrait: Classic green orc, silver plate armor with fur trim, ornate axe
     modelId: 'orc',
     scale: [0.72 * 1.22, 0.72 * 1.0, 0.72 * 1.22],
     materials: {
@@ -246,11 +244,9 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#c8a050' },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'orc-blood-guard': {
-    // Portrait: Massive green orc, heavy black spiked armor, glowing red eyes, war hammer
     modelId: 'orc',
     scale: [0.72 * 1.35, 0.72 * 1.05, 0.72 * 1.35],
     materials: {
@@ -260,11 +256,9 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#c09020', metalness: 0.4 },
     },
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'warlord-garnok': {
-    // Portrait: Powerful orc warlord, pinkish-red skin, heavy dark gold-trim armor, skull decorations, topknot
     modelId: 'orc',
     scale: [0.72 * 1.45, 0.72 * 1.12, 0.72 * 1.45],
     materials: {
@@ -274,11 +268,9 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#d8c880', metalness: 0.2 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump', emote: 'Jump' },
   },
 
   'orc-warlock': {
-    // Portrait: Large armored orc in black hood, orange rune tattoos on face, green hellfire aura
     modelId: 'orc',
     scale: [0.72 * 1.2, 0.72 * 1.05, 0.72 * 1.2],
     materials: {
@@ -288,7 +280,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#303030' },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   // ── Undead Faction ────────────────────────────────────────────────────────
@@ -308,7 +299,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Brain:       { color: '#080808' },
     },
     primaryWeapon: WEAPON_DEFAULTS.dark_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump', emote: 'Victory' },
   },
 
   'skeleton-undead': {
@@ -323,7 +313,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#280808', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.rusted_sword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'hollow-zealot': {
@@ -341,7 +330,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Brain:       { color: '#080808' },
     },
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Jump' },
   },
 
   'grave-shade': {
@@ -356,7 +344,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face:    { color: '#1a1618', emissive: '#9900cc', emissiveIntensity: 0.55 },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   'saltbone-corsair': {
@@ -374,7 +361,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:     { color: '#5a0808', roughness: 0.9 },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Roll' },
   },
 
   // ── Human & Elf Faction ───────────────────────────────────────────────────
@@ -397,7 +383,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       { modelId: 'shoulder_plate_l', bone: 'Shoulder.L', position: [0, 0, 0], rotation: [0, 0, 0], scale: 0.8 },
       { modelId: 'shoulder_plate_r', bone: 'Shoulder.R', position: [0, 0, 0], rotation: [0, 0, 0], scale: 0.8 },
     ],
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', block: 'StandUp', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'human-barbarian': {
@@ -413,7 +398,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:  { color: '#0e0808', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
   'elven-archer': {
@@ -426,11 +410,11 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Bow_Texture:    { color: '#c0b060', roughness: 0.8 },
     },
     primaryWeapon: { modelId: 'bow', position: [0,0,0], rotation: [Math.PI/2, Math.PI/2, 0], scale: 19 },
+    // RPG pack has embedded weapon-specific clips — use them as overrides
     animMap: {
       idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
-      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Attack_Draw',
-      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
-      special1: 'Run_Holding', special2: 'Roll',
+      cast: 'Bow_Attack_Draw', stunned: 'RecieveHit', block: 'Idle_Weapon',
+      victory: 'Idle_Attacking', special1: 'Run_Holding',
     },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
@@ -451,7 +435,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#880000', roughness: 0.7 },
     },
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
   // ── Pirate / Naval Faction ────────────────────────────────────────────────
@@ -471,7 +454,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:     { color: '#7a1010', roughness: 0.85 },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', attack4: 'Jump', special1: 'Run', special2: 'Roll' },
   },
 
   // ── Pilgrim / Wanderer ────────────────────────────────────────────────────
@@ -488,7 +470,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face:  { color: '#8a6040', roughness: 0.7 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', cast: 'Jump', special1: 'Run', special2: 'Roll' },
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -508,7 +489,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     },
     primaryWeapon: WEAPON_DEFAULTS.sword,
     secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', block: 'StandUp', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'human_worg': {
@@ -523,7 +503,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:  { color: '#e8c860', roughness: 0.85 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'human_mage': {
@@ -537,7 +516,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face:    { color: '#c08050', emissive: '#330066', emissiveIntensity: 0.1 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'human_ranger': {
@@ -551,7 +529,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face:    { color: '#b87848' },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   // ── CRUSADE — BARBARIAN ────────────────────────────────────────────────────
@@ -567,7 +544,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:  { color: '#0e0808', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
   'barbarian_worg': {
@@ -582,7 +558,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face: { color: '#3a6010', emissive: '#1a3000', emissiveIntensity: 0.06 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'barbarian_mage': {
@@ -596,7 +571,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face:    { color: '#8a5828', emissive: '#660022', emissiveIntensity: 0.1 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'barbarian_ranger': {
@@ -608,12 +582,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Bow_Texture:    { color: '#8a6030', roughness: 0.85 },
     },
     primaryWeapon: { modelId: 'bow', position: [0, 0, 0], rotation: [Math.PI / 2, Math.PI / 2, 0], scale: 19 },
-    animMap: {
-      idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
-      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Attack_Draw',
-      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
-      special1: 'Run_Holding', special2: 'Roll',
-    },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -632,7 +600,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     },
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
     secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
   'dwarf_worg': {
@@ -647,7 +614,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#4a2010', roughness: 0.9 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump', special1: 'Run', special2: 'Jump' },
   },
 
   'dwarf_mage': {
@@ -662,7 +628,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#cc2200', roughness: 0.7 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'dwarf_ranger': {
@@ -677,7 +642,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#3a2808', roughness: 0.9 },
     },
     primaryWeapon: WEAPON_DEFAULTS.war_hammer,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Roll' },
   },
 
   // ── FABLED — ELF ──────────────────────────────────────────────────────────
@@ -692,7 +656,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#1a3818', roughness: 0.7 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'elf_worg': {
@@ -705,7 +668,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Hair:   { color: '#c8c050', roughness: 0.65 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   'elf_mage': {
@@ -720,7 +682,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face: { color: '#d4c890', emissive: '#004422', emissiveIntensity: 0.1 },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'elf_ranger': {
@@ -732,12 +693,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Bow_Texture:    { color: '#c0b060', roughness: 0.8 },
     },
     primaryWeapon: { modelId: 'bow', position: [0, 0, 0], rotation: [Math.PI / 2, Math.PI / 2, 0], scale: 19 },
-    animMap: {
-      idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
-      attack3: 'Roll', attack4: 'Roll', cast: 'Bow_Attack_Draw',
-      stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
-      special1: 'Run_Holding', special2: 'Roll',
-    },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -753,7 +708,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#c8a050' },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'orc_worg': {
@@ -766,7 +720,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#909090', metalness: 0.3 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'orc_mage': {
@@ -779,7 +732,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Teeth: { color: '#303030' },
     },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
 
   'orc_ranger': {
@@ -794,7 +746,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Face: { color: '#4a6a18', emissive: '#1a2800', emissiveIntensity: 0.04 },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   // ── LEGION — UNDEAD ───────────────────────────────────────────────────────
@@ -809,7 +760,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Red:        { color: '#1a0606', roughness: 0.95 },
     },
     primaryWeapon: WEAPON_DEFAULTS.greatsword,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'undead_worg': {
@@ -826,7 +776,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Brain:       { color: '#1a0808' },
     },
     primaryWeapon: WEAPON_DEFAULTS.greataxe,
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Jump', emote: 'Victory' },
   },
 
   'undead_mage': {
@@ -843,7 +792,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Brain:       { color: '#080808' },
     },
     primaryWeapon: WEAPON_DEFAULTS.dark_staff,
-    animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump', emote: 'Victory' },
   },
 
   'undead_ranger': {
@@ -861,7 +809,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Brain: { color: '#0e0808' },
     },
     primaryWeapon: WEAPON_DEFAULTS.daggers,
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', special1: 'Run', special2: 'Roll' },
   },
 
   // ── PIRATES ────────────────────────────────────────────────────────────────
@@ -883,7 +830,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       { modelId: 'pirate_hat', bone: 'Head', position: [0, 0.08, 0], rotation: [0, 0, 0], scale: 0.9 },
       { modelId: 'captain_cape', bone: 'Spine', position: [0, 0, -0.1], rotation: [0, 0, 0], scale: 1.0 },
     ],
-    animMap: { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch', cast: 'Shoot_OneHanded', special1: 'Run', special2: 'Roll' },
   },
 
   'sky_captain': {
@@ -898,7 +844,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     },
     primaryWeapon: WEAPON_DEFAULTS.sword,
     secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
-    animMap: { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', special1: 'Run', special2: 'Jump' },
   },
 
   'faith_barrier': {
@@ -910,11 +855,8 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     },
     primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
     animMap: {
-      // cleric_rpg clips: Attack_Idle, Death, Idle, Idle_Weapon, PickUp, Punch,
-      //   RecieveHit, RecieveHit_Attacking, Roll, Run, Run_Weapon, Spell1, Spell2, Staff_Attack, Walk
-      attack1: 'Staff_Attack', attack2: 'Punch', attack3: 'Roll',
-      cast: 'Spell1', special1: 'Spell2', special2: 'Roll',
-      stunned: 'RecieveHit', block: 'Idle_Weapon',
+      attack1: 'Staff_Attack', attack2: 'Punch', cast: 'Spell1',
+      special1: 'Spell2', stunned: 'RecieveHit', block: 'Idle_Weapon',
       victory: 'Idle_Weapon', idle2: 'Idle_Weapon',
     },
     modelPackType: 'rpg',
@@ -929,10 +871,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     materials: {},
     primaryWeapon: { modelId: 'sword', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 56 },
     secondaryWeapon: { modelId: 'shield', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 24, attachBone: 'Fist.L' },
-    animMap: {
-      attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll',
-      stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
-    },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -943,10 +881,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     textures: { diffuse: 'models/characters/rpg-textures/rogue.png' },
     materials: {},
     primaryWeapon: { modelId: 'daggers', position: [0, 0, 0], rotation: [Math.PI / 2, 0, Math.PI / 6], scale: 43 },
-    animMap: {
-      attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch',
-      stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
-    },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -957,10 +891,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     textures: { diffuse: 'models/characters/rpg-textures/wizard.png' },
     materials: {},
     primaryWeapon: { modelId: 'fire_staff', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 15 },
-    animMap: {
-      attack1: 'Staff_Attack', attack2: 'Punch', cast: 'Spell1',
-      special1: 'Spell2', stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
-    },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -971,10 +901,6 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     textures: { diffuse: 'models/characters/rpg-textures/monk.png' },
     materials: {},
     primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
-    animMap: {
-      attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll',
-      cast: 'Spell1', stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
-    },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
