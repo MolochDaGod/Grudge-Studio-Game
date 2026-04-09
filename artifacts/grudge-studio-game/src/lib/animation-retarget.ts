@@ -230,95 +230,112 @@ export const MIXAMO_ANIM_LIBRARY: MixamoClipDef[] = [
 // pick for attack1/attack2/cast etc.
 
 const WEAPON_ANIM_DEFAULTS: Record<string, Partial<Record<AnimState, string>>> = {
-  // ── Sword & Shield: balanced slash, shield bash, guarded stance ────────────
+  // When external FBX clips are loaded, these names match the FBX clipNames
+  // from animation-library.ts. When FBX fails to load, the embedded GLB
+  // fallback names (SwordSlash, Punch, etc.) still work via the Idle fallback.
+
+  // ── Sword & Shield: FBX shield-sword set ────────────────────────────────
   sword: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll',
-    block: 'StandUp', hurt: 'RecieveHit', cast: 'Shoot_OneHanded',
+    idle: 'ssIdle', walk: 'ssStrafeL', run: 'ssRunFwd', sneak: 'ssStrafeR',
+    attack1: 'ssAttack1', attack2: 'ssAttack2', attack3: 'ssAttack3', attack4: 'ssAttack4',
+    block: 'ssBlock', hurt: 'ssBlockHit', idle2: 'ssBlockIdle', emote: 'ssDrawSword',
+    cast: 'ssAttack2', special1: 'ssRunBwd',
   },
-  // ── Greatsword: wide horizontal slash, overhead chop, heavy stance ────────
+  sword_shield: {
+    idle: 'ssIdle', walk: 'ssStrafeL', run: 'ssRunFwd', sneak: 'ssStrafeR',
+    attack1: 'ssAttack1', attack2: 'ssAttack2', attack3: 'ssAttack3', attack4: 'ssAttack4',
+    block: 'ssBlock', hurt: 'ssBlockHit', idle2: 'ssBlockIdle', emote: 'ssDrawSword',
+    cast: 'ssAttack2', special1: 'ssRunBwd',
+  },
   greatsword: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'ssIdle', walk: 'ssStrafeL', run: 'ssRunFwd',
+    attack1: 'ssAttack1', attack2: 'ssAttack2', attack3: 'ssAttack3', attack4: 'ssAttack4',
+    block: 'ssBlock', hurt: 'ssBlockHit',
   },
-  // ── Greataxe: heavy overhead chop (Punch), wide slash, berserker run ──────
+  rusted_sword: {
+    idle: 'ssIdle', walk: 'ssStrafeL', run: 'ssRunFwd',
+    attack1: 'ssAttack1', attack2: 'ssAttack2', attack3: 'ssAttack3',
+    block: 'ssBlock', hurt: 'ssBlockHit',
+  },
+  // ── Heavy melee: FBX melee set ───────────────────────────────────────────
   greataxe: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun', sneak: 'meleeStrafeL',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    attack4: 'meleeCombo1', special1: 'meleeCombo2', special2: 'meleeCombo3',
+    block: 'meleeBlock', hurt: 'RecieveHit', hide: 'meleeCrouch', emote: 'meleeJump',
+    idle2: 'meleeWalkBwd',
   },
-  // ── War hammer: heavy overhead smash, sweep, defensive stance ─────────────
   war_hammer: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun', sneak: 'meleeStrafeL',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    attack4: 'meleeCombo1', special1: 'meleeCombo2', special2: 'meleeCombo3',
+    block: 'meleeBlock', hurt: 'RecieveHit', hide: 'meleeCrouch',
   },
-  // ── Daggers: quick stab, evasive roll, nimble run ─────────────────────────
   daggers: {
-    idle: 'Idle', walk: 'Walk', run: 'Run', sneak: 'Walk',
-    attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch',
-    special1: 'Run', special2: 'Roll',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun', sneak: 'meleeStrafeL',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    attack4: 'meleeCombo1', special1: 'meleeCombo2', special2: 'meleeCombo3',
+    block: 'meleeBlock', hurt: 'RecieveHit', hide: 'meleeCrouch',
   },
-  // ── Bow: weapon-holding idle/run, shoot + draw from RPG pack ──────────────
-  bow: {
-    idle: 'Idle', idle2: 'Idle_Weapon', walk: 'Walk', run: 'Run',
-    attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
-    cast: 'Bow_Attack_Draw',
-    special1: 'Run_Holding', special2: 'Roll',
-    block: 'Idle_Weapon', hurt: 'RecieveHit',
-  },
-  // ── Fire staff: magical thrust, one-hand cast, staff idle ─────────────────
-  fire_staff: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash',
-    cast: 'Shoot_OneHanded', special1: 'SwordSlash',
-    block: 'StandUp', hurt: 'RecieveHit',
-  },
-  // ── Dark staff: same skeleton as fire staff ───────────────────────────────
-  dark_staff: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash',
-    cast: 'Shoot_OneHanded', special1: 'SwordSlash',
-    block: 'StandUp', hurt: 'RecieveHit',
-  },
-  // ── Shield: block stance only ─────────────────────────────────────────────
-  shield: { block: 'StandUp' },
-  // ── Crossbow: bow-style shoot + draw ──────────────────────────────────────
-  crossbow: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot', cast: 'Bow_Attack_Draw',
-    block: 'Idle_Weapon', hurt: 'RecieveHit',
-  },
-  // ── Gun: one-handed shooting ──────────────────────────────────────────────
-  gun: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Shoot_OneHanded', attack2: 'Shoot_OneHanded', cast: 'Shoot_OneHanded',
-    hurt: 'RecieveHit',
-  },
-  // ── Mace: same feel as war hammer but lighter ─────────────────────────────
   mace: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    block: 'meleeBlock', hurt: 'RecieveHit',
   },
-  // ── Spear / Lance: thrusting attacks ──────────────────────────────────────
+  axe: {
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    attack4: 'meleeCombo1', block: 'meleeBlock', hurt: 'RecieveHit',
+  },
   spear: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    attack4: 'meleeCombo1', block: 'meleeBlock', hurt: 'RecieveHit',
   },
   lance: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
-    block: 'StandUp', hurt: 'RecieveHit',
+    idle: 'meleeIdle', walk: 'meleeWalk', run: 'meleeRun',
+    attack1: 'meleeAttack1', attack2: 'meleeAttack2', attack3: 'meleeAttack3',
+    attack4: 'meleeCombo1', block: 'meleeBlock', hurt: 'RecieveHit',
   },
-  // ── Rusted sword: worn-out version of sword ───────────────────────────────
-  rusted_sword: {
-    idle: 'Idle', walk: 'Walk', run: 'Run',
-    attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll',
-    block: 'StandUp', hurt: 'RecieveHit',
+  // ── Bow: FBX bow set ────────────────────────────────────────────────────
+  bow: {
+    idle: 'bowIdle', walk: 'bowWalkFwd', run: 'bowRunFwd', sneak: 'bowAimStrafeL',
+    attack1: 'bowFire', attack2: 'bowAim', cast: 'bowDraw',
+    block: 'bowBlock', hurt: 'RecieveHit', attack4: 'bowJump',
+    idle2: 'bowAimWalk', special1: 'bowRunBwd',
+  },
+  crossbow: {
+    idle: 'bowIdle', walk: 'bowWalkFwd', run: 'bowRunFwd',
+    attack1: 'bowFire', attack2: 'bowAim', cast: 'bowDraw',
+    block: 'bowBlock', hurt: 'RecieveHit', attack4: 'bowJump',
+  },
+  // ── Magic: FBX staff set ─────────────────────────────────────────────────
+  fire_staff: {
+    idle: 'staffIdle', walk: 'staffWalkFwd', run: 'staffRunFwd',
+    cast: 'staffCast1', special1: 'staffCast2', attack4: 'staffJump',
+    hurt: 'staffHitLarge', stunned: 'staffHitSmall', dead: 'staffDeath',
+    idle2: 'staffIdle2', special2: 'staffRunBwd',
+  },
+  dark_staff: {
+    idle: 'staffIdle', walk: 'staffWalkFwd', run: 'staffRunFwd',
+    cast: 'staffCast1', special1: 'staffCast2', attack4: 'staffJump',
+    hurt: 'staffHitLarge', stunned: 'staffHitSmall', dead: 'staffDeath',
+    idle2: 'staffIdle2',
+  },
+  focus: {
+    idle: 'staffIdle', walk: 'staffWalkFwd', run: 'staffRunFwd',
+    cast: 'staffCast1', special1: 'staffCast2',
+    hurt: 'staffHitLarge', stunned: 'staffHitSmall', dead: 'staffDeath',
+    idle2: 'staffIdle2',
+  },
+  // ── Shield: block stance only ─────────────────────────────────────────────
+  shield: { block: 'ssBlock' },
+  // ── Gun: FBX pistol set ──────────────────────────────────────────────────
+  gun: {
+    idle: 'pistolIdle', walk: 'pistolWalk', run: 'pistolRun',
+    attack1: 'pistolIdle', attack2: 'pistolIdle', cast: 'pistolIdle',
+    attack4: 'pistolJump', hide: 'pistolKneel', sneak: 'pistolStrafe',
+    hurt: 'RecieveHit', idle2: 'pistolWalkBwd', special1: 'pistolRunBwd',
   },
 };
 

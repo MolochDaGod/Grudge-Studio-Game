@@ -17,6 +17,8 @@ import {
 } from '@/lib/character-model-map';
 import { applyTextureSet, textureUrlToSet } from '@/lib/texture-manager';
 import { buildAnimMap } from '@/lib/animation-retarget';
+import { collectBoneNames } from '@/lib/animation-retarget';
+import { loadWeaponAnimations, hasExternalAnimations } from '@/lib/animation-library';
 import { characterModelUrl, weaponModelUrl, textureAssetUrl } from '@/lib/asset-config';
 import { VoxelCharacterModel } from './VoxelCharacterModel';
 
@@ -156,7 +158,30 @@ function CharacterModelInner({
   const groupRef  = useRef<THREE.Group>(null!);
   const starsRef  = useRef<THREE.Group>(null!);
   const poisonRef = useRef<THREE.Mesh>(null!);
-  const { actions } = useAnimations(animations, groupRef);
+
+  // ── External animation loading (Mixamo FBX weapon clips) ──────────────────
+  const [externalClips, setExternalClips] = React.useState<THREE.AnimationClip[]>([]);
+  const resolvedWeaponType = weaponType ?? unit.weaponType;
+
+  React.useEffect(() => {
+    if (!resolvedWeaponType || !hasExternalAnimations(resolvedWeaponType)) return;
+    let cancelled = false;
+    const boneNames = collectBoneNames(charScene);
+    loadWeaponAnimations(resolvedWeaponType, boneNames).then((clips) => {
+      if (!cancelled && clips.length > 0) setExternalClips(clips);
+    });
+    return () => { cancelled = true; };
+  }, [resolvedWeaponType, charScene]);
+
+  // Merge: external FBX clips take priority, embedded GLB clips fill gaps
+  const mergedAnimations = React.useMemo(() => {
+    if (externalClips.length === 0) return animations;
+    const externalNames = new Set(externalClips.map(c => c.name));
+    const kept = animations.filter(a => !externalNames.has(a.name));
+    return [...externalClips, ...kept];
+  }, [animations, externalClips]);
+
+  const { actions } = useAnimations(mergedAnimations, groupRef);
 
   // Build weapon-aware animation map
   const resolvedAnimMap = useMemo(
