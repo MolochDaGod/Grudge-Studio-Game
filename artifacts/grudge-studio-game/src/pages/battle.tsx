@@ -16,14 +16,14 @@ import { BattleLoadingScreen } from "@/components/ui/battle-loading-screen";
 import { SkillTooltip } from "@/components/ui/skill-tooltip";
 import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
-  SkillSlot, Skill, CHARACTER_WEAPON_MAP,
+  SkillSlot, Skill, CHARACTER_WEAPON_MAP, getPassiveBonuses,
 } from "@/lib/weapon-skills";
 import { getLevelWithEdits, LevelDef, hasLineOfSight } from "@/lib/levels";
 import {
   calcFacing, facingDefenseMultiplier, isFrontAttack,
   calculateDamage, getEffectColor, getEffectType,
   getSkillAnimState, getAtkDuration, bfsPath, getCombatCover,
-  isMobilitySkill, findDashLandingTile,
+  isMobilitySkill, findDashLandingTile, resolvePassiveCombat,
 } from "@/lib/combat-engine";
 import { getCoverAgainst, type CoverInfo } from "@/lib/cover-system";
 
@@ -490,6 +490,14 @@ export default function Battle() {
       addLog(`${unit.name} takes ${poisonDmg} poison damage!`, 'debuff');
     }
 
+    // Passive HP regen
+    const passives = getPassiveBonuses(equippedSkills, unit.id);
+    if (passives.regen > 0 && unit.hp > 0 && unit.hp < unit.maxHp) {
+      const healed = Math.min(passives.regen, unit.maxHp - unit.hp);
+      updateUnit(unit.id, { hp: unit.hp + healed });
+      addLog(`${unit.name} regenerates ${healed} HP.`, 'heal');
+    }
+
     setCurrentUnitId(null);
     setActionMode('idle');
     setReachableTiles([]);
@@ -770,15 +778,40 @@ export default function Battle() {
   };
 
   const executeAttack = (attacker: TacticalUnit, target: TacticalUnit) => {
-    // ── Phase 3B: Counter-attack / Block system ──────────────────────────
+    // ── Resolve passive bonuses for both units ───────────────────────
+    const atkPassives = getPassiveBonuses(equippedSkills, attacker.id);
+    const defPassives = getPassiveBonuses(equippedSkills, target.id);
+
     const front = isFrontAttack(attacker, target);
     const rear  = !front;
-    // Front attacks: 25% chance to block (reduce damage by 50%)
-    const blocked = front && Math.random() < 0.25;
-    // Rear attacks: +25% crit chance stacked on base 10%
-    const critChance = rear ? 0.35 : 0.1;
-    const isCrit  = Math.random() < critChance;
-    let damage  = calculateDamage(attacker, target, isCrit, level.obstacleTiles);
+
+    // Resolve passive combat rolls: dodge, enhanced crit/block, counter, quick-attack
+    const baseCrit = rear ? 0.35 : 0.1;
+    const baseBlock = 0.25;
+    const pcr = resolvePassiveCombat(baseCrit, baseBlock, front, atkPassives, defPassives);
+
+    // Dodge: target completely avoids the attack
+    if (pcr.dodged) {
+      updateUnit(attacker.id, { hasActed: true, facing: calcFacing(attacker.position, target.position) });
+      setActionMode('idle');
+      setAttackableTiles([]);
+      addLog(`${target.name} DODGES ${attacker.name}'s attack!`, 'buff');
+
+      // Play dodge animation (Roll)
+      setAnimStates(prev => ({ ...prev, [attacker.id]: 'attack1', [target.id]: 'attack3' }));
+      setTimeout(() => {
+        setAnimStates(prev => ({ ...prev, [attacker.id]: 'idle', [target.id]: 'idle' }));
+        setTimeout(() => {
+          const u = useGameStore.getState().units.find(u => u.id === attacker.id);
+          if (u?.hasMoved && u?.hasActed) endTurn();
+        }, 150);
+      }, 900);
+      return;
+    }
+
+    const blocked = front && Math.random() < pcr.blockChance;
+    const isCrit  = Math.random() < pcr.critChance;
+    let damage  = calculateDamage(attacker, target, isCrit, level.obstacleTiles, atkPassives, defPassives);
     if (blocked) damage = Math.max(1, Math.floor(damage * 0.5));
     const newHp   = target.hp - damage;
 
@@ -787,8 +820,9 @@ export default function Battle() {
     updateUnit(target.id, { hp: Math.max(0, newHp) });
     setActionMode('idle');
     setAttackableTiles([]);
+    const dodgeTag = '';
     const blockSuffix = blocked ? ' [BLOCKED!]' : '';
-    addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}${blockSuffix}${rear ? ' (backstab)' : ''}`, 'damage');
+    addLog(`${attacker.name} attacks ${target.name} for ${damage} damage!${isCrit ? ' (CRITICAL)' : ''}${blockSuffix}${rear ? ' (backstab)' : ''}${dodgeTag}`, 'damage');
     if (newHp <= 0) addLog(`${target.name} is defeated!`, 'debuff');
 
     // Animation timing
@@ -844,6 +878,29 @@ export default function Battle() {
 
     setTimeout(() => {
       setAnimStates(prev => ({ ...prev, [attacker.id]: 'idle' }));
+
+      // ── Quick Attack: attacker strikes a second time ─────────────────────
+      if (pcr.quickAttack && newHp > 0) {
+        const qaDmg = Math.max(1, Math.floor(damage * 0.6));
+        const qaHp = Math.max(0, (useGameStore.getState().units.find(u => u.id === target.id)?.hp ?? 0) - qaDmg);
+        updateUnit(target.id, { hp: qaHp });
+        addLog(`${attacker.name} strikes again! ${qaDmg} bonus damage!`, 'damage');
+        if (qaHp <= 0) addLog(`${target.name} is defeated!`, 'debuff');
+        spawnEffect('physical_slash', fromPos, toPos, '#ffcc00', 350);
+      }
+
+      // ── Counter-Attack: defender strikes back ─────────────────────────
+      if (pcr.counterAttack && newHp > 0) {
+        const counterDmg = Math.max(1, Math.floor(target.attack * pcr.counterDmgMult));
+        const atkHp = Math.max(0, (useGameStore.getState().units.find(u => u.id === attacker.id)?.hp ?? 0) - counterDmg);
+        updateUnit(attacker.id, { hp: atkHp });
+        addLog(`${target.name} COUNTERS for ${counterDmg} damage!`, 'damage');
+        if (atkHp <= 0) addLog(`${attacker.name} is defeated by counter!`, 'debuff');
+        setAnimStates(prev => ({ ...prev, [target.id]: 'attack1' }));
+        spawnEffect('physical_slash', toPos, fromPos, '#ff8844', 350);
+        setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 600);
+      }
+
       setTimeout(() => {
         const u = useGameStore.getState().units.find(u => u.id === attacker.id);
         if (u?.hasMoved && u?.hasActed) endTurn();

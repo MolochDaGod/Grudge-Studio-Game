@@ -1,7 +1,7 @@
 import { TacticalUnit } from '@/store/use-game-store';
 import { AnimState } from '@/components/three/CharacterModel';
 import { EffectType } from '@/components/three/CombatEffects';
-import { Skill } from '@/lib/weapon-skills';
+import { Skill, PassiveBonuses } from '@/lib/weapon-skills';
 import { getCoverAgainst, CoverInfo } from '@/lib/cover-system';
 
 // ── Facing helpers ────────────────────────────────────────────────────────────
@@ -48,23 +48,34 @@ export function isFrontAttack(
   return facingDefenseMultiplier(attacker, defender) === 1.0;
 }
 
-// ── Damage calculation ────────────────────────────────────────────────────────
+// ── Damage calculation ──────────────────────────────────────────────────────
 
 export function calculateDamage(
   attacker: TacticalUnit,
   defender: TacticalUnit,
   isCrit = false,
   obstacles?: Set<string>,
+  attackerPassives?: PassiveBonuses,
+  defenderPassives?: PassiveBonuses,
 ): number {
+  const atkBonus = attackerPassives?.attack ?? 0;
+  const defBonus = defenderPassives?.defense ?? 0;
+  const dmgReduction = defenderPassives?.damageReduction ?? 0;
+
   const facingMult = facingDefenseMultiplier(attacker, defender);
+  const totalDef = (defender.defense + defBonus);
   const effectiveDef = facingMult > 1
-    ? Math.floor(defender.defense * 0.5)
-    : defender.defense;
+    ? Math.floor(totalDef * 0.5)
+    : totalDef;
   let damage = Math.max(
     1,
-    attacker.attack - effectiveDef + Math.floor(Math.random() * 6) - 2,
+    (attacker.attack + atkBonus) - effectiveDef + Math.floor(Math.random() * 6) - 2,
   );
   if (isCrit) damage = Math.floor(damage * 2);
+  // Apply passive damage reduction
+  if (dmgReduction > 0) {
+    damage = Math.max(1, Math.floor(damage * (1 - dmgReduction)));
+  }
   // Apply cover reduction if obstacles provided
   if (obstacles) {
     const cover = getCoverAgainst(attacker.position, defender.position, obstacles);
@@ -73,6 +84,43 @@ export function calculateDamage(
     }
   }
   return damage;
+}
+
+/**
+ * Roll passive combat checks: dodge, enhanced crit, enhanced block, counter-attack, quick-attack.
+ * Returns a result object that the caller uses to modify combat flow.
+ */
+export interface PassiveCombatResult {
+  dodged: boolean;
+  critChance: number;      // modified crit chance (base + passive)
+  blockChance: number;     // modified block chance (base + passive)
+  counterAttack: boolean;  // should the defender counter-attack after being hit?
+  counterDmgMult: number;  // counter damage multiplier
+  quickAttack: boolean;    // should the attacker strike a second time?
+}
+
+export function resolvePassiveCombat(
+  baseCritChance: number,
+  baseBlockChance: number,
+  isFront: boolean,
+  attackerPassives?: PassiveBonuses,
+  defenderPassives?: PassiveBonuses,
+): PassiveCombatResult {
+  const dodge = defenderPassives?.dodge ?? 0;
+  const dodged = Math.random() < dodge;
+
+  const critChance = baseCritChance + (attackerPassives?.critBonus ?? 0);
+  const blockChance = isFront
+    ? baseBlockChance + (defenderPassives?.blockBonus ?? 0)
+    : 0; // can only block from front
+
+  const counterChance = defenderPassives?.counter ?? 0;
+  const counterAttack = !dodged && Math.random() < counterChance;
+  const counterDmgMult = defenderPassives?.counterDmg ?? 0.5;
+
+  const quickAttack = Math.random() < (attackerPassives?.quickAttack ?? 0);
+
+  return { dodged, critChance, blockChance, counterAttack, counterDmgMult, quickAttack };
 }
 
 /** Get cover info between attacker and defender (convenience re-export) */

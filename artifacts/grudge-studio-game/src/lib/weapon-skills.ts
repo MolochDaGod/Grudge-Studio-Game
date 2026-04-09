@@ -71,6 +71,28 @@ export interface Skill {
    * Shown with a dashed border and "PASSIVE" label in the HUD.
    */
   isPassive?: boolean;
+
+  // ── Passive bonus fields (only apply when isPassive: true) ───────────────
+  /** Flat bonus to defense stat */
+  passiveDefense?: number;
+  /** Additive crit chance bonus (e.g. 0.10 = +10%) */
+  passiveCritBonus?: number;
+  /** Additive block chance bonus on frontal attacks (e.g. 0.15 = +15%) */
+  passiveBlockBonus?: number;
+  /** Dodge chance — % chance to completely avoid an attack (e.g. 0.12 = 12%) */
+  passiveDodge?: number;
+  /** Counter-attack chance — % chance to auto-strike back after being hit (e.g. 0.20 = 20%) */
+  passiveCounter?: number;
+  /** Counter-attack damage multiplier (default 0.5 = 50% of normal attack) */
+  passiveCounterDmg?: number;
+  /** Flat bonus to attack stat */
+  passiveAttack?: number;
+  /** Quick-attack chance — % chance to strike twice (e.g. 0.15 = 15%) */
+  passiveQuickAttack?: number;
+  /** Damage reduction % (e.g. 0.10 = take 10% less damage from all sources) */
+  passiveDamageReduction?: number;
+  /** HP regen per turn (flat amount) */
+  passiveRegen?: number;
 }
 
 export interface WeaponSkillTree {
@@ -1646,6 +1668,146 @@ for (const tree of Object.values(WEAPON_SKILL_TREES)) {
   }
 }
 
+// ── Universal Passive Skills (injected into weapon trees) ───────────────────
+// These are weapon-archetype-specific passives that give always-on combat bonuses.
+
+// Heavy melee passives (greataxe, greatsword, war_hammer)
+const HEAVY_MELEE_PASSIVES: Skill[] = [
+  {
+    id: 'passive_iron_skin', name: 'Iron Skin', icon: '🛡️',
+    description: 'Thick armor and battle scars. +4 DEF, take 10% less damage from all sources.',
+    slot: 3, tier: 'T1', cooldown: 0, range: 0, tags: ['buff'], stats: ['+4 DEF', '-10% DMG taken'],
+    isPassive: true, selfTarget: true, passiveDefense: 4, passiveDamageReduction: 0.10,
+  },
+  {
+    id: 'passive_berserker_blood', name: 'Berserker Blood', icon: '🩸',
+    description: 'Rage fuels power. +8% crit chance, +2 ATK.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['+8% crit', '+2 ATK'],
+    isPassive: true, selfTarget: true, passiveCritBonus: 0.08, passiveAttack: 2,
+  },
+  {
+    id: 'passive_counter_swing', name: 'Counter Swing', icon: '↩️',
+    description: 'When hit in melee, 25% chance to automatically counter-attack for 50% damage.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['25% counter', '50% ATK counter'],
+    isPassive: true, selfTarget: true, passiveCounter: 0.25, passiveCounterDmg: 0.50,
+  },
+];
+
+// Light melee passives (daggers, sword, rusted_sword)
+const LIGHT_MELEE_PASSIVES: Skill[] = [
+  {
+    id: 'passive_quick_reflexes', name: 'Quick Reflexes', icon: '⚡',
+    description: 'Lightning reflexes. 15% dodge chance, +5% crit.',
+    slot: 3, tier: 'T1', cooldown: 0, range: 0, tags: ['buff'], stats: ['15% dodge', '+5% crit'],
+    isPassive: true, selfTarget: true, passiveDodge: 0.15, passiveCritBonus: 0.05,
+  },
+  {
+    id: 'passive_dual_strike', name: 'Double Strike', icon: '⚔️',
+    description: 'Nimble hands. 18% chance to strike twice with any attack.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['18% double strike'],
+    isPassive: true, selfTarget: true, passiveQuickAttack: 0.18,
+  },
+  {
+    id: 'passive_riposte', name: 'Riposte', icon: '🗡️',
+    description: 'Master parry. +20% block chance from the front, 30% counter on successful block.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['+20% block', '30% counter on block'],
+    isPassive: true, selfTarget: true, passiveBlockBonus: 0.20, passiveCounter: 0.30, passiveCounterDmg: 0.40,
+  },
+];
+
+// Ranged passives (bow, crossbow, gun)
+const RANGED_PASSIVES: Skill[] = [
+  {
+    id: 'passive_steady_aim', name: 'Steady Aim', icon: '🎯',
+    description: 'Patient precision. +12% crit chance on all ranged attacks.',
+    slot: 3, tier: 'T1', cooldown: 0, range: 0, tags: ['buff'], stats: ['+12% crit'],
+    isPassive: true, selfTarget: true, passiveCritBonus: 0.12,
+  },
+  {
+    id: 'passive_evasive', name: 'Evasive Stance', icon: '💨',
+    description: 'Hard to pin down. 20% dodge chance against melee attacks.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['20% dodge (vs melee)'],
+    isPassive: true, selfTarget: true, passiveDodge: 0.20,
+  },
+  {
+    id: 'passive_quick_shot', name: 'Quick Shot', icon: '🏹',
+    description: 'Rapid fire training. 15% chance to fire a free follow-up shot.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['15% double shot'],
+    isPassive: true, selfTarget: true, passiveQuickAttack: 0.15,
+  },
+];
+
+// Magic passives (fire_staff, dark_staff, focus)
+const MAGIC_PASSIVES: Skill[] = [
+  {
+    id: 'passive_arcane_barrier', name: 'Arcane Barrier', icon: '🟣',
+    description: 'Magical ward. +3 DEF, 12% damage reduction from all attacks.',
+    slot: 3, tier: 'T1', cooldown: 0, range: 0, tags: ['buff'], stats: ['+3 DEF', '-12% DMG taken'],
+    isPassive: true, selfTarget: true, passiveDefense: 3, passiveDamageReduction: 0.12,
+  },
+  {
+    id: 'passive_spell_surge', name: 'Spell Surge', icon: '🌟',
+    description: 'Arcane overflow. +3 ATK, +6% crit chance on spell attacks.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['+3 ATK', '+6% crit'],
+    isPassive: true, selfTarget: true, passiveAttack: 3, passiveCritBonus: 0.06,
+  },
+  {
+    id: 'passive_regen_aura', name: 'Regeneration Aura', icon: '💚',
+    description: 'Healing magic seeps from you. Recover 5 HP at the start of each turn.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff', 'heal'], stats: ['+5 HP/turn'],
+    isPassive: true, selfTarget: true, passiveRegen: 5,
+  },
+];
+
+// Tank passives (sword_shield, war_hammer + shield)
+const TANK_PASSIVES: Skill[] = [
+  {
+    id: 'passive_shield_wall', name: 'Shield Wall', icon: '🪨',
+    description: 'Immovable defense. +30% block chance from front, +5 DEF.',
+    slot: 3, tier: 'T2', cooldown: 0, range: 0, tags: ['buff'], stats: ['+30% block', '+5 DEF'],
+    isPassive: true, selfTarget: true, passiveBlockBonus: 0.30, passiveDefense: 5,
+  },
+  {
+    id: 'passive_stalwart', name: 'Stalwart', icon: '🏰',
+    description: 'Unyielding resolve. 15% damage reduction, +2 DEF.',
+    slot: 3, tier: 'T1', cooldown: 0, range: 0, tags: ['buff'], stats: ['-15% DMG taken', '+2 DEF'],
+    isPassive: true, selfTarget: true, passiveDamageReduction: 0.15, passiveDefense: 2,
+  },
+];
+
+// Inject passives per weapon archetype into slot 3
+const PASSIVE_MAP: Record<string, Skill[]> = {
+  greataxe: HEAVY_MELEE_PASSIVES,
+  greatsword: HEAVY_MELEE_PASSIVES,
+  war_hammer: [...HEAVY_MELEE_PASSIVES, ...TANK_PASSIVES],
+  sword: [...LIGHT_MELEE_PASSIVES, ...TANK_PASSIVES],
+  sword_shield: [...LIGHT_MELEE_PASSIVES, ...TANK_PASSIVES],
+  daggers: LIGHT_MELEE_PASSIVES,
+  rusted_sword: LIGHT_MELEE_PASSIVES,
+  mace: [...HEAVY_MELEE_PASSIVES, ...TANK_PASSIVES],
+  axe: HEAVY_MELEE_PASSIVES,
+  spear: [...HEAVY_MELEE_PASSIVES, ...LIGHT_MELEE_PASSIVES],
+  lance: [...HEAVY_MELEE_PASSIVES, ...LIGHT_MELEE_PASSIVES],
+  bow: RANGED_PASSIVES,
+  crossbow: RANGED_PASSIVES,
+  gun: RANGED_PASSIVES,
+  fire_staff: MAGIC_PASSIVES,
+  dark_staff: MAGIC_PASSIVES,
+  focus: MAGIC_PASSIVES,
+};
+
+for (const [wt, passives] of Object.entries(PASSIVE_MAP)) {
+  const tree = WEAPON_SKILL_TREES[wt];
+  if (!tree) continue;
+  const slot3 = tree.slots.find(s => s.slot === 3);
+  if (!slot3) continue;
+  for (const p of passives) {
+    if (!slot3.skills.some(s => s.id === p.id)) {
+      slot3.skills.push(p);
+    }
+  }
+}
+
 // Inject dash-strike skills into melee weapon trees (slot 2)
 const MELEE_WEAPON_TYPES = ['greataxe', 'greatsword', 'sword', 'sword_shield', 'war_hammer', 'daggers', 'rusted_sword', 'mace', 'axe', 'spear', 'lance'];
 for (const wt of MELEE_WEAPON_TYPES) {
@@ -1726,6 +1888,60 @@ export function getSkillById(skillId: string): Skill | undefined {
     }
   }
   return undefined;
+}
+
+// ── Passive Bonus Aggregator ──────────────────────────────────────────────
+// Collects all passive bonuses from a unit's equipped skill loadout.
+
+export interface PassiveBonuses {
+  defense: number;
+  attack: number;
+  critBonus: number;
+  blockBonus: number;
+  dodge: number;
+  counter: number;
+  counterDmg: number;
+  quickAttack: number;
+  damageReduction: number;
+  regen: number;
+}
+
+const EMPTY_PASSIVES: PassiveBonuses = {
+  defense: 0, attack: 0, critBonus: 0, blockBonus: 0,
+  dodge: 0, counter: 0, counterDmg: 0.5, quickAttack: 0,
+  damageReduction: 0, regen: 0,
+};
+
+/**
+ * Scan a unit's equipped loadout and sum all passive bonuses.
+ * Call once per turn (or cache) — results feed into combat calculations.
+ */
+export function getPassiveBonuses(
+  equippedSkills: Record<string, Record<SkillSlot, string>>,
+  unitId: string,
+): PassiveBonuses {
+  const loadout = equippedSkills[unitId];
+  if (!loadout) return { ...EMPTY_PASSIVES };
+
+  const result = { ...EMPTY_PASSIVES };
+  for (const slot of [1, 2, 3, 4, 5] as SkillSlot[]) {
+    const skillId = loadout[slot];
+    if (!skillId) continue;
+    const skill = getSkillById(skillId);
+    if (!skill || !skill.isPassive) continue;
+
+    result.defense += skill.passiveDefense ?? 0;
+    result.attack += skill.passiveAttack ?? 0;
+    result.critBonus += skill.passiveCritBonus ?? 0;
+    result.blockBonus += skill.passiveBlockBonus ?? 0;
+    result.dodge += skill.passiveDodge ?? 0;
+    result.counter = Math.max(result.counter, skill.passiveCounter ?? 0);
+    result.counterDmg = Math.max(result.counterDmg, skill.passiveCounterDmg ?? 0.5);
+    result.quickAttack = Math.max(result.quickAttack, skill.passiveQuickAttack ?? 0);
+    result.damageReduction += skill.passiveDamageReduction ?? 0;
+    result.regen += skill.passiveRegen ?? 0;
+  }
+  return result;
 }
 
 export const SLOT_LABELS: Record<SkillSlot, { roman: string; label: string; color: string }> = {

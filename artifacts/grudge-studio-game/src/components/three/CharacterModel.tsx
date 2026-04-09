@@ -17,6 +17,7 @@ import {
 } from '@/lib/character-model-map';
 import { applyTextureSet, textureUrlToSet } from '@/lib/texture-manager';
 import { buildAnimMap } from '@/lib/animation-retarget';
+import { characterModelUrl, weaponModelUrl, textureAssetUrl } from '@/lib/asset-config';
 import { VoxelCharacterModel } from './VoxelCharacterModel';
 
 export type { AnimState };
@@ -39,9 +40,9 @@ interface CharacterModelInnerProps extends CharacterModelProps {
   resolvedSecondary?: SecondaryWeaponConfig;
 }
 
-const BASE = import.meta.env.BASE_URL;
-const C = (id: string) => `${BASE}models/characters/${id}.glb`;
-const W = (id: string) => `${BASE}models/weapons/${id}.glb`;
+/** Resolve character/weapon model URLs through CDN-aware asset-config */
+const C = (id: string) => characterModelUrl(id);
+const W = (id: string) => weaponModelUrl(id);
 
 
 // States that play once
