@@ -1357,6 +1357,7 @@ export default function Battle() {
           onUnitClick={handleUnitClick}
           onUnitHover={setHoveredUnitId}
           onUnitUnhover={() => setHoveredUnitId(null)}
+          targetedUnitId={actionMode !== 'idle' && actionMode !== 'move' ? hoveredUnitId : null}
           onMapRightClick={handleMapRightClick}
           walkPaths={walkPaths}
           onWalkComplete={onWalkComplete}

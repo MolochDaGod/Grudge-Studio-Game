@@ -46,6 +46,8 @@ interface BattleSceneProps {
   onUnitHover?: (unitId: string) => void;
   onUnitUnhover?: (unitId: string) => void;
   onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
+  /** ID of the unit currently being hovered for attack targeting */
+  targetedUnitId?: string | null;
   walkPaths?: Record<string, GridPos[]>;
   onWalkComplete?: (unitId: string) => void;
   onWalkStep?: (unitId: string, tile: GridPos) => void;
@@ -833,6 +835,7 @@ export function BattleScene({
   showUnitInfo = false, mapPings = [], onUnitRightClick, onUnitClick,
   onUnitHover, onUnitUnhover, onMapRightClick,
   walkPaths = {}, onWalkComplete, onWalkStep,
+  targetedUnitId,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
   const [showSkeletonDebug, setShowSkeletonDebug] = useState(false);
@@ -956,23 +959,41 @@ export function BattleScene({
           {/* Craftpix Stylized Nature — trees, rocks, bushes ringing the map border */}
           <NatureDecor gridW={gridW} gridH={gridH} tileSize={tileSize} />
 
-          {units.map(unit => (
-            <WalkingUnit
-              key={unit.id}
-              unit={unit}
-              tileSize={tileSize}
-              walkPath={walkPaths[unit.id]}
-              onWalkComplete={onWalkComplete}
-              onWalkStep={onWalkStep}
-              currentUnitId={currentUnitId}
-              animState={animStates[unit.id] || 'idle'}
-              onDoubleClick={onUnitDoubleClick}
-              onRightClick={onUnitRightClick}
-              onClick={onUnitClick}
-              onHover = { onUnitHover }
-              onUnhover = { onUnitUnhover }
-            />
-          ))}
+          {units.map(unit => {
+            // Compute targeting data: when a unit is being targeted, show reticle;
+            // when the active unit is attacking, provide target pos for look-at
+            const isThisTargeted = targetedUnitId === unit.id;
+            const activeUnit = currentUnitId ? units.find(u => u.id === currentUnitId) : null;
+            const targetUnit = targetedUnitId ? units.find(u => u.id === targetedUnitId) : null;
+            // If this is the active (attacking) unit and there's a hovered target, give it target pos
+            let targetWorldPosForLookAt: [number, number, number] | undefined;
+            if (unit.id === currentUnitId && targetUnit && targetUnit.hp > 0) {
+              targetWorldPosForLookAt = tileToWorld(targetUnit.position.x, targetUnit.position.y, tileSize, 0.9);
+            }
+            // Augment unit with targeting data (read by CharacterModel)
+            const augUnit = {
+              ...unit,
+              _targetWorldPos: targetWorldPosForLookAt ?? null,
+              _isTargeted: isThisTargeted,
+            };
+            return (
+              <WalkingUnit
+                key={unit.id}
+                unit={augUnit as any}
+                tileSize={tileSize}
+                walkPath={walkPaths[unit.id]}
+                onWalkComplete={onWalkComplete}
+                onWalkStep={onWalkStep}
+                currentUnitId={currentUnitId}
+                animState={animStates[unit.id] || 'idle'}
+                onDoubleClick={onUnitDoubleClick}
+                onRightClick={onUnitRightClick}
+                onClick={onUnitClick}
+                onHover={onUnitHover}
+                onUnhover={onUnitUnhover}
+              />
+            );
+          })}
 
           {showUnitInfo && <UnitMarkers units={units} tileSize={tileSize} />}
           {mapPings.length > 0 && <PingMarkers pings={mapPings} tileSize={tileSize} />}

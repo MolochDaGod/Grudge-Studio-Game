@@ -32,6 +32,10 @@ interface CharacterModelProps {
   animState: AnimState;
   /** Equipped weapon type — overrides the config's default weapon + animation set */
   weaponType?: string;
+  /** World position of the current target (enemy being attacked). Drives smooth look-at. */
+  targetWorldPos?: [number, number, number] | null;
+  /** When true, show a targeting reticle ring at the character's feet */
+  isTargeted?: boolean;
 }
 
 interface CharacterModelInnerProps extends CharacterModelProps {
@@ -277,9 +281,25 @@ function CharacterModelInner({
   const lungeOffset  = useRef(new THREE.Vector3());
   const _effTarget   = useRef(new THREE.Vector3());
   const prevAnimRef  = useRef<AnimState>('idle');
+  // Props forwarded from outer component
+  const { targetWorldPos, isTargeted } = {
+    targetWorldPos: (unit as any)._targetWorldPos as [number, number, number] | null | undefined,
+    isTargeted: (unit as any)._isTargeted as boolean | undefined,
+  };
 
   useEffect(() => { targetPos.current.set(...position); }, [position]);
   useEffect(() => { targetFacing.current = facingAngle; }, [facingAngle]);
+
+  // ── Smart target tracking: when attacking, face the target smoothly ───────
+  useEffect(() => {
+    if (targetWorldPos && LOOP_ONCE_STATES.has(animState)) {
+      // Compute angle from character position to target world position
+      const dx = targetWorldPos[0] - targetPos.current.x;
+      const dz = targetWorldPos[2] - targetPos.current.z;
+      const angle = Math.atan2(dx, dz);
+      targetFacing.current = angle;
+    }
+  }, [targetWorldPos, animState]);
 
   // Lunge forward when an attack/cast begins
   useEffect(() => {
@@ -526,6 +546,14 @@ function CharacterModelInner({
         <mesh position={[0, sy * 0.9, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[ringRad * 0.9, ringRad * 1.15, 32]} />
           <meshBasicMaterial color="#d4a017" transparent opacity={0.55} depthWrite={false} />
+        </mesh>
+      )}
+
+      {/* Targeting reticle — pulsing red ring when this unit is being targeted */}
+      {isTargeted && !isDead && (
+        <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[ringRad * 1.1, ringRad * 1.35, 32]} />
+          <meshBasicMaterial color="#ff2200" transparent opacity={0.7} depthWrite={false} />
         </mesh>
       )}
     </group>
