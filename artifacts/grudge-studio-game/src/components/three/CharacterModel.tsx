@@ -168,10 +168,18 @@ function CharacterModelInner({
     if (!actions) return;
     const name = resolvedAnimMap[animState] ?? 'Idle';
     // Some GLBs (Quaternius RPG pack) prefix every clip with "CharacterArmature|"
-    const action = actions[name] ?? actions[`CharacterArmature|${name}`];
+    let action = actions[name] ?? actions[`CharacterArmature|${name}`];
+    // Fallback: if the requested clip doesn't exist in this GLB, use Idle
+    if (!action) {
+      action = actions['Idle'] ?? actions['CharacterArmature|Idle'] ?? null;
+    }
     if (!action) return;
     Object.values(actions).forEach((a) => { if (a && a !== action) a.fadeOut(0.25); });
-    action.timeScale = animState === 'frozen' ? 0.06 : 1.0;
+    // Speed modifiers: frozen = near-stop, sneak = half speed, poisoned = 80% speed
+    action.timeScale = animState === 'frozen' ? 0.06
+      : animState === 'sneak' ? 0.5
+      : animState === 'poisoned' ? 0.8
+      : 1.0;
     if (animState === 'dead') {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
@@ -563,13 +571,15 @@ export function CharacterModel(props: CharacterModelProps) {
     );
   }
   return (
-    <CharacterModelInner
-      {...props}
-      config={config}
-      rpgTexture={null}
-      resolvedPrimary={resolvedPrimary}
-      resolvedSecondary={resolvedSecondary}
-    />
+    <Suspense fallback={<LoadingPlaceholder />}>
+      <CharacterModelInner
+        {...props}
+        config={config}
+        rpgTexture={null}
+        resolvedPrimary={resolvedPrimary}
+        resolvedSecondary={resolvedSecondary}
+      />
+    </Suspense>
   );
 }
 

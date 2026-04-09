@@ -547,8 +547,8 @@ function WalkingUnit({
         e.stopPropagation();
         onRightClick?.(unit.id, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
       }}
-onPointerEnter = { e => { e.stopPropagation(); onHover?.(unit.id); }}
-onPointerLeave = { e => { e.stopPropagation(); onUnhover?.(unit.id); }}
+      onPointerEnter={e => { e.stopPropagation(); onHover?.(unit.id); }}
+      onPointerLeave={e => { e.stopPropagation(); onUnhover?.(unit.id); }}
     >
       <CharacterModel
         unit={unit}

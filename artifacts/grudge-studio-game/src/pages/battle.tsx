@@ -1355,8 +1355,8 @@ export default function Battle() {
           mapPings={mapPings}
           onUnitRightClick={handleUnitRightClick}
           onUnitClick={handleUnitClick}
-onUnitHover = { setHoveredUnitId }
-onUnitUnhover = {() => setHoveredUnitId(null)}
+          onUnitHover={setHoveredUnitId}
+          onUnitUnhover={() => setHoveredUnitId(null)}
           onMapRightClick={handleMapRightClick}
           walkPaths={walkPaths}
           onWalkComplete={onWalkComplete}
@@ -1422,69 +1422,67 @@ onUnitUnhover = {() => setHoveredUnitId(null)}
         />
       </div>
 
-{/* ── ATTACK PREVIEW TOOLTIP ─────────────────────────────────────────── */ }
-<AnimatePresence>
-  { attackPreview && (
-    <motion.div
+      {/* ── ATTACK PREVIEW TOOLTIP ──────────────────────────────── */}
+      <AnimatePresence>
+        {attackPreview && (
+          <motion.div
             key="attack-preview"
-initial = {{ opacity: 0, y: 8 }}
-animate = {{ opacity: 1, y: 0 }}
-exit = {{ opacity: 0, y: 8 }}
-className = "absolute z-40 pointer-events-none"
-style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="absolute z-40 pointer-events-none"
+            style={{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
           >
-  <div className="flex items-center gap-3 rounded-xl border border-orange-500/40 bg-[#0d0810]/90 px-4 py-2.5 shadow-[0_4px_28px_rgba(200,80,0,0.35)] backdrop-blur-md" >
-    {/* Position badge */ }
-    < div className = {
-      cn(
+            <div className="flex items-center gap-3 rounded-xl border border-orange-500/40 bg-[#0d0810]/90 px-4 py-2.5 shadow-[0_4px_28px_rgba(200,80,0,0.35)] backdrop-blur-md">
+              {/* Position badge */}
+              <div className={cn(
                 "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
-        attackPreview.front
-          ? "border-blue-500/50 bg-blue-950/60 text-blue-300"
-          : "border-amber-500/50 bg-amber-950/60 text-amber-300"
-              )
-    } >
-      { attackPreview.front ? '⬡ Front' : '⬡ Rear' }
-      </div>
-{/* Damage range */ }
-<div className="flex flex-col items-center" >
-  <div className="text-[9px] text-white/30 uppercase tracking-widest">Damage</div>
-    < div className = "text-base font-bold font-display text-orange-300 leading-none" >
-      { attackPreview.lo }–{ attackPreview.hi }
-</div>
-  </div>
-{/* Crit */ }
-<div className="flex flex-col items-center border-l border-white/10 pl-3" >
-  <div className="text-[9px] text-white/30 uppercase tracking-widest" > Crit({ Math.round(attackPreview.critChance * 100) } %) </div>
-    < div className = "text-base font-bold font-display text-yellow-300 leading-none" >
-                  ↑{ attackPreview.critHi }
-</div>
-  </div>
-{/* Cover indicator */}
-{attackPreview.cover?.isProtected && (
-  <div className={cn(
-    "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
-    attackPreview.cover.label === 'heavy'
-      ? "border-cyan-500/60 bg-cyan-950/60 text-cyan-300"
-      : "border-teal-500/50 bg-teal-950/50 text-teal-300"
-  )}>
-    🛡 {attackPreview.cover.label === 'heavy' ? 'Heavy Cover' : 'Half Cover'}
-  </div>
-)}
-{/* Lethal indicator */}
-{(attackPreview.isLethal || attackPreview.isCritLethal) && (
-  <div className={cn(
-    "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
-    attackPreview.isLethal
-      ? "border-red-500/70 bg-red-950/70 text-red-300"
-      : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
-  )}>
-    {attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill'}
-  </div>
-)}
-</div>
-  </motion.div>
+                attackPreview.front
+                  ? "border-blue-500/50 bg-blue-950/60 text-blue-300"
+                  : "border-amber-500/50 bg-amber-950/60 text-amber-300"
+              )}>
+                {attackPreview.front ? '⬡ Front' : '⬡ Rear'}
+              </div>
+              {/* Damage range */}
+              <div className="flex flex-col items-center">
+                <div className="text-[9px] text-white/30 uppercase tracking-widest">Damage</div>
+                <div className="text-base font-bold font-display text-orange-300 leading-none">
+                  {attackPreview.lo}–{attackPreview.hi}
+                </div>
+              </div>
+              {/* Crit */}
+              <div className="flex flex-col items-center border-l border-white/10 pl-3">
+                <div className="text-[9px] text-white/30 uppercase tracking-widest">Crit({Math.round(attackPreview.critChance * 100)}%)</div>
+                <div className="text-base font-bold font-display text-yellow-300 leading-none">
+                  ↑{attackPreview.critHi}
+                </div>
+              </div>
+              {/* Cover indicator */}
+              {attackPreview.cover?.isProtected && (
+                <div className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
+                  attackPreview.cover.label === 'heavy'
+                    ? "border-cyan-500/60 bg-cyan-950/60 text-cyan-300"
+                    : "border-teal-500/50 bg-teal-950/50 text-teal-300"
+                )}>
+                  🛡 {attackPreview.cover.label === 'heavy' ? 'Heavy Cover' : 'Half Cover'}
+                </div>
+              )}
+              {/* Lethal indicator */}
+              {(attackPreview.isLethal || attackPreview.isCritLethal) && (
+                <div className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
+                  attackPreview.isLethal
+                    ? "border-red-500/70 bg-red-950/70 text-red-300"
+                    : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
+                )}>
+                  {attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill'}
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
-</AnimatePresence>
+      </AnimatePresence>
 
       {/* ── ENEMY TURN BANNER ──────────────────────────────────────────────── */}
       <AnimatePresence>
