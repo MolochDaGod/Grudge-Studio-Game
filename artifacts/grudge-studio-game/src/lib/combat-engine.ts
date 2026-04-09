@@ -114,6 +114,13 @@ export function getEffectType(skill: Skill, weaponType?: string): EffectType {
 // ── Anim state for skills ─────────────────────────────────────────────────────
 
 export function getSkillAnimState(skill: Skill): AnimState {
+  // Mobility skills
+  if (skill.mobilityType === 'team_jump') return 'attack4';  // Jump animation
+  if (skill.mobilityType === 'flight')    return 'special2'; // Jump/fly animation
+  if (skill.mobilityType === 'teleport')  return 'cast';     // Cast/blink animation
+  // Dash-strike skills
+  if (skill.attackType === 'dash' && skill.dmgMultiplier) return 'attack1';
+  // Normal combat
   if (skill.tags.includes('ultimate')) return 'special1';
   if (skill.tags.includes('heal') || skill.tags.includes('buff')) return 'cast';
   if (skill.aoe) return 'attack3';
@@ -123,11 +130,56 @@ export function getSkillAnimState(skill: Skill): AnimState {
 
 /** Attack animation duration by skill type (ms) */
 export function getAtkDuration(skill: Skill): number {
+  // Mobility skills have their own timing
+  if (skill.mobilityType === 'team_jump') return 700;
+  if (skill.mobilityType === 'flight')    return 900;
+  if (skill.mobilityType === 'teleport')  return 550;
+  // Dash-strike: longer to account for dash-out + hold + return
+  if (skill.attackType === 'dash' && skill.returnsToOrigin) return 1400;
+  if (skill.attackType === 'dash') return 1200;
+  // Normal combat
   if (skill.tags?.includes('ultimate')) return 1600;
   if (skill.aoe) return 1400;
   if (skill.range > 2) return 1250;
   if (skill.tags?.includes('heal') || skill.tags?.includes('buff')) return 1100;
   return 1050;
+}
+
+/** Check if a skill is a mobility/movement skill (targets empty tiles, not enemies) */
+export function isMobilitySkill(skill: Skill): boolean {
+  return !!skill.mobilityType;
+}
+
+/**
+ * For dash attacks that don't return to origin, find the best adjacent tile
+ * near the target for the attacker to land on after striking.
+ */
+export function findDashLandingTile(
+  target: { x: number; y: number },
+  origin: { x: number; y: number },
+  gridW: number,
+  gridH: number,
+  occupied: Set<string>,
+  obstacles: Set<string>,
+): { x: number; y: number } {
+  const dirs = [[0,1],[0,-1],[1,0],[-1,0]] as const;
+  // Prefer the tile that's on the attacker's approach side
+  const dx = origin.x - target.x;
+  const dy = origin.y - target.y;
+  const sorted = [...dirs].sort((a, b) => {
+    // Score: prefer tile in direction of origin (attacker's approach side)
+    const scoreA = a[0] * Math.sign(dx) + a[1] * Math.sign(dy);
+    const scoreB = b[0] * Math.sign(dx) + b[1] * Math.sign(dy);
+    return scoreB - scoreA;
+  });
+  for (const [ddx, ddy] of sorted) {
+    const nx = target.x + ddx, ny = target.y + ddy;
+    const key = `${nx},${ny}`;
+    if (nx >= 0 && ny >= 0 && nx < gridW && ny < gridH && !occupied.has(key) && !obstacles.has(key)) {
+      return { x: nx, y: ny };
+    }
+  }
+  return origin; // fallback: stay at origin if no adjacent tile is free
 }
 
 // ── BFS path for movement ─────────────────────────────────────────────────────

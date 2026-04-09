@@ -87,6 +87,8 @@ export interface AccessoryConfig {
   scale: number;
 }
 
+export type ModelPackType = 'quaternius' | 'rpg';
+
 export interface CharacterConfig {
   modelId: ModelId;
   scale: [number, number, number];
@@ -117,6 +119,12 @@ export interface CharacterConfig {
   voxelScale?: number;
   /** Path to voxel model GLB (only used when isVoxel is true) */
   voxelModelUrl?: string;
+  /**
+   * Which asset pack this model comes from. Affects automatic weapon scaling.
+   * - 'quaternius': native scale ~1.0, character scale ~0.72 (default)
+   * - 'rpg': native scale ~1000×, character scale ~0.0072, weapons need ~86× multiplier
+   */
+  modelPackType?: ModelPackType;
 }
 
 // Weapon natural longest-axis lengths (from actual GLB vertex bounds):
@@ -126,7 +134,7 @@ export interface CharacterConfig {
 // Target: weapon_world_length = scale * 0.72(char) * natural_length ≈ 0.7-1.0
 // Rotation [Math.PI/2, 0, 0] rotates Z-axis → Y-axis (blade points up in fist's local space)
 
-const WEAPON_DEFAULTS: Record<string, WeaponConfig> = {
+export const WEAPON_DEFAULTS: Record<string, WeaponConfig> = {
   greataxe: {
     modelId: 'greataxe',
     position: [0, 0, 0],
@@ -354,7 +362,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'saltbone-corsair': {
     // Portrait: Skeleton pirate captain — navy blue officer coat, gold trim, skull face, purple glowing eyes, daggers
     modelId: 'pirate_male',
-    scale: [0.72 * 0.95, 0.72 * 0.95, 0.72 * 0.95],
+    scale: [0.72, 0.72, 0.72],
     materials: {
       Clothes: { color: '#060c22', roughness: 0.85 },
       Beige:   { color: '#d8d0c0', roughness: 0.9 },
@@ -412,7 +420,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     // Portrait: Graceful elf, silver braided hair, green+gold leaf armor, longbow — RPG pack for bow animations
     modelId: 'ranger_rpg',
     scale: [0.0072, 0.0072, 0.0072],
-    textureUrl: 'models/characters/rpg-textures/ranger.png',
+    textures: { diffuse: 'models/characters/rpg-textures/ranger.png' },
     materials: {
       Ranger_Texture: { color: '#c8e8b0', emissive: '#006600', emissiveIntensity: 0.05, roughness: 0.75 },
       Bow_Texture:    { color: '#c0b060', roughness: 0.8 },
@@ -424,6 +432,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
       special1: 'Run_Holding', special2: 'Roll',
     },
+    modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 
@@ -450,7 +459,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'canal-lurker': {
     // Portrait: Green reptilian creature in navy blue naval captain coat with gold trim, pirate hat, cannon + sword
     modelId: 'pirate_male',
-    scale: [0.72 * 0.9, 0.72 * 0.9, 0.72 * 0.9],
+    scale: [0.72, 0.72, 0.72],
     materials: {
       Clothes: { color: '#0a1840', roughness: 0.8 },
       Beige:   { color: '#e8e4d8', roughness: 0.85 },
@@ -579,7 +588,13 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'barbarian_mage': {
     modelId: 'witch',
     scale: [0.72 * 0.95, 0.72 * 0.95, 0.72 * 0.95],
-    materials: {},
+    materials: {
+      Main:    { color: '#2a0810', roughness: 0.8 },
+      Skin:    { color: '#8a5828', roughness: 0.65 },
+      Details: { color: '#4a1020', emissive: '#440000', emissiveIntensity: 0.12 },
+      Grey:    { color: '#1a0e10', roughness: 0.9 },
+      Face:    { color: '#8a5828', emissive: '#660022', emissiveIntensity: 0.1 },
+    },
     primaryWeapon: WEAPON_DEFAULTS.fire_staff,
     animMap: { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded', special1: 'SwordSlash', special2: 'Jump' },
   },
@@ -587,8 +602,11 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'barbarian_ranger': {
     modelId: 'ranger_rpg',
     scale: [0.0072, 0.0072, 0.0072],
-    textureUrl: 'models/characters/rpg-textures/ranger.png',
-    materials: {},
+    textures: { diffuse: 'models/characters/rpg-textures/ranger.png' },
+    materials: {
+      Ranger_Texture: { color: '#c8b890', roughness: 0.8 },
+      Bow_Texture:    { color: '#8a6030', roughness: 0.85 },
+    },
     primaryWeapon: { modelId: 'bow', position: [0, 0, 0], rotation: [Math.PI / 2, Math.PI / 2, 0], scale: 19 },
     animMap: {
       idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
@@ -596,6 +614,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
       special1: 'Run_Holding', special2: 'Roll',
     },
+    modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 
@@ -707,7 +726,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'elf_ranger': {
     modelId: 'ranger_rpg',
     scale: [0.0072, 0.0072, 0.0072],
-    textureUrl: 'models/characters/rpg-textures/ranger.png',
+    textures: { diffuse: 'models/characters/rpg-textures/ranger.png' },
     materials: {
       Ranger_Texture: { color: '#c8e8b0', emissive: '#006600', emissiveIntensity: 0.05, roughness: 0.75 },
       Bow_Texture:    { color: '#c0b060', roughness: 0.8 },
@@ -719,6 +738,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       stunned: 'RecieveHit', block: 'Idle_Weapon', victory: 'Idle_Attacking',
       special1: 'Run_Holding', special2: 'Roll',
     },
+    modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 
@@ -847,7 +867,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   // ── PIRATES ────────────────────────────────────────────────────────────────
   'pirate_king': {
     modelId: 'pirate_male',
-    scale: [0.72 * 1.1, 0.72 * 1.08, 0.72 * 1.1],
+    scale: [0.72, 0.72, 0.72],
     materials: {
       Clothes: { color: '#1a0808', roughness: 0.8 },
       Beige:   { color: '#e8d8c0', roughness: 0.85 },
@@ -884,8 +904,10 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
   'faith_barrier': {
     modelId: 'cleric_rpg',
     scale: [0.0072, 0.0072, 0.0072],
-    textureUrl: 'models/characters/rpg-textures/cleric.png',
-    materials: {},
+    textures: { diffuse: 'models/characters/rpg-textures/cleric.png' },
+    materials: {
+      Cleric_Texture: { color: '#e8e0c8', emissive: '#886600', emissiveIntensity: 0.08, roughness: 0.7 },
+    },
     primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
     animMap: {
       // cleric_rpg clips: Attack_Idle, Death, Idle, Idle_Weapon, PickUp, Punch,
@@ -895,6 +917,65 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       stunned: 'RecieveHit', block: 'Idle_Weapon',
       victory: 'Idle_Weapon', idle2: 'Idle_Weapon',
     },
+    modelPackType: 'rpg',
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
+
+  // ── RPG Pack Characters ──────────────────────────────────────────────────
+  'warrior_rpg_hero': {
+    modelId: 'warrior_rpg',
+    scale: [0.0072, 0.0072, 0.0072],
+    textures: { diffuse: 'models/characters/rpg-textures/warrior.png' },
+    materials: {},
+    primaryWeapon: { modelId: 'sword', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 56 },
+    secondaryWeapon: { modelId: 'shield', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 24, attachBone: 'Fist.L' },
+    animMap: {
+      attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
+    },
+    modelPackType: 'rpg',
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
+
+  'rogue_rpg_hero': {
+    modelId: 'rogue_rpg',
+    scale: [0.0072, 0.0072, 0.0072],
+    textures: { diffuse: 'models/characters/rpg-textures/rogue.png' },
+    materials: {},
+    primaryWeapon: { modelId: 'daggers', position: [0, 0, 0], rotation: [Math.PI / 2, 0, Math.PI / 6], scale: 43 },
+    animMap: {
+      attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch',
+      stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
+    },
+    modelPackType: 'rpg',
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
+
+  'wizard_rpg_hero': {
+    modelId: 'wizard_rpg',
+    scale: [0.0072, 0.0072, 0.0072],
+    textures: { diffuse: 'models/characters/rpg-textures/wizard.png' },
+    materials: {},
+    primaryWeapon: { modelId: 'fire_staff', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 15 },
+    animMap: {
+      attack1: 'Staff_Attack', attack2: 'Punch', cast: 'Spell1',
+      special1: 'Spell2', stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
+    },
+    modelPackType: 'rpg',
+    labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
+  },
+
+  'monk_rpg_hero': {
+    modelId: 'monk_rpg',
+    scale: [0.0072, 0.0072, 0.0072],
+    textures: { diffuse: 'models/characters/rpg-textures/monk.png' },
+    materials: {},
+    primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
+    animMap: {
+      attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll',
+      cast: 'Spell1', stunned: 'RecieveHit', block: 'Idle_Weapon', idle2: 'Idle_Weapon',
+    },
+    modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
 };
@@ -905,6 +986,63 @@ export function getCharacterConfig(characterId: string): CharacterConfig {
 
 export function getAnimationName(state: AnimState, config: CharacterConfig): string {
   return config.animMap?.[state] ?? DEFAULT_ANIM_MAP[state] ?? 'Idle';
+}
+
+// ── Weapon fallback map ─────────────────────────────────────────────────────
+// Maps weapon types that don't have GLBs yet to the closest visual substitute.
+
+export const WEAPON_FALLBACK: Record<string, string> = {
+  crossbow:     'bow',
+  gun:          'bow',
+  lance:        'greatsword',
+  focus:        'dark_staff',
+  mace:         'war_hammer',
+  axe:          'greataxe',
+  spear:        'greatsword',
+  greathammer:  'war_hammer',
+  sword_shield: 'sword',  // shield added as secondary
+};
+
+// Weapon types that automatically add a shield as secondary weapon.
+const SHIELD_COMBO_WEAPONS = new Set(['sword_shield']);
+
+/** RPG pack models need ~86× weapon scale compared to Quaternius models. */
+const RPG_WEAPON_SCALE_MULTIPLIER = 86;
+
+/**
+ * Resolve a weapon type string into a concrete WeaponConfig + optional shield.
+ * Handles fallback for missing GLBs and auto-scales for RPG-pack models.
+ */
+export function resolveWeaponConfig(
+  weaponType: string | undefined,
+  config: CharacterConfig,
+): { primary: WeaponConfig; secondary?: SecondaryWeaponConfig } {
+  if (!weaponType) {
+    return { primary: config.primaryWeapon, secondary: config.secondaryWeapon };
+  }
+
+  // Resolve fallback if no GLB for this weapon type
+  const resolvedType = WEAPON_DEFAULTS[weaponType] ? weaponType : (WEAPON_FALLBACK[weaponType] ?? weaponType);
+  const baseConfig = WEAPON_DEFAULTS[resolvedType] ?? config.primaryWeapon;
+
+  // Auto-scale for RPG pack models
+  const isRpg = config.modelPackType === 'rpg';
+  const primary: WeaponConfig = isRpg
+    ? { ...baseConfig, scale: baseConfig.scale * RPG_WEAPON_SCALE_MULTIPLIER }
+    : baseConfig;
+
+  // Auto-add shield for combo weapon types
+  let secondary: SecondaryWeaponConfig | undefined = config.secondaryWeapon;
+  if (SHIELD_COMBO_WEAPONS.has(weaponType)) {
+    const shieldBase = WEAPON_DEFAULTS.shield;
+    secondary = {
+      ...shieldBase,
+      scale: isRpg ? shieldBase.scale * RPG_WEAPON_SCALE_MULTIPLIER : shieldBase.scale,
+      attachBone: 'Fist.L',
+    };
+  }
+
+  return { primary, secondary };
 }
 
 export const ACCESSORY_MODEL_URLS = [

@@ -4,18 +4,26 @@ A browser-based 3D turn-based tactics game inspired by Mario + Rabbids: Kingdom 
 
 ## Features
 
-- **3D Tactical Battles** — Isometric tile-based combat on 80×80 to 140×140 grids with 4 themed levels (Graveyard Ruins, Orc Stronghold, Elven Citadel, Iron Bastion)
-- **50+ GLTF Character Models** — Quaternius character packs with bone-attached weapons, material overrides, and animation blending
-- **7 Weapon Skill Trees** — Greataxe, Fire Staff, Dark Staff, Daggers, Greatsword, Longbow, Sword & Shield, War Hammer, Rusted Blade — each with 5 skill slots (basic, core, utility, special, ultimate)
+- **3D Tactical Battles** — Isometric tile-based combat on compact 40×40 to 70×70 grids with 4 themed levels (Graveyard Ruins, Orc Stronghold, Elven Citadel, Iron Bastion)
+- **50+ GLTF Character Models** — Quaternius + RPG character packs with dynamic weapon attachment, per-character material overrides, animation retargeting, and model-pack-aware scaling
+- **15+ Weapon Skill Trees** — Greataxe, Fire Staff, Dark Staff, Daggers, Greatsword, Longbow, Sword & Shield, War Hammer, Rusted Blade, Bow, Crossbow, Gun, Spear, Lance, Arcane Focus — each with 5 skill slots (basic, core, utility, special, ultimate)
+- **Weapon-Aware Rendering** — Player's weapon choice drives the 3D model, bone-attached weapon, and animation set via `resolveWeaponConfig()` + `buildAnimMap()`. Fallback system for 9 missing weapon GLBs
+- **Mobility System** — Team Jump (bounce off allies, Yoshi-style), Heroic Leap (fly over obstacles), Shadow Step (instant teleport), with parabolic arc and fade animations
+- **Dash-Strike Mechanics** — Lunge Strike (dash + return to origin), Blitz Rush (dash + stay at target), Hit & Run (fast dash + return). Creates spatial risk/reward strategy
+- **Long-Range Blasts** — Every weapon has 10-14 tile ranged blast options (Energy Wave, Piercing Shot, Shockwave Slam) injected universally
+- **Friendly Targeting** — Heal/buff skills target allies with green zone highlights, cast animations, and heal_ring/buff_aura VFX
+- **Color-Coded Tile Zones** — Red (enemy attacks), Blue (movement/self), Purple (mobility skills), Green (heals/buffs)
 - **Cover System** — Directional half-cover (25% reduction) and heavy-cover (50% reduction) from obstacle adjacency, shown in the attack preview HUD
 - **Tactical AI** — Scoring-based enemy AI with move evaluation, target selection, skill/ability scoring, and 3 difficulty levels (easy, normal, hard)
 - **Charge Time Turn System** — Speed-based CT accumulation (like FFT) with a visual turn order bar
 - **Facing & Flanking** — 4-directional facing with rear attack bonus (+50% damage, +25% crit chance)
 - **Status Effects** — Stun, poison, freeze with immunity after expiry to prevent stun-lock
-- **Combat VFX** — Projectile trails, physical slash arcs, elemental explosions, crit bursts, camera shake, melee dash lunges
+- **Combat VFX** — Projectile trails, physical slash arcs, elemental explosions, crit bursts, camera shake, melee dash lunges, heal rings, buff auras, magic circles, energy charges
+- **Passive Skill Display** — Passive skills shown with dashed border, dimmed filter, and "PASSIVE" label; non-clickable
 - **4 Camera Modes** — Tactical isometric (Q/E 45° rotation), free orbit, third-person follow, RTS overhead
+- **Accessory System** — GLTFLoader-based async bone attachment for helmets, shoulder pads, capes
 - **Map Editor** — In-game prop placement for custom level design
-- **Minimap** — Real-time unit tracker for large maps
+- **Minimap** — Real-time unit tracker for compact maps
 
 ## Tech Stack
 
@@ -39,9 +47,12 @@ A browser-based 3D turn-based tactics game inspired by Mario + Rabbids: Kingdom 
 │   │   │   ├── combat-engine.ts    # Damage calc, facing, BFS pathfinding, effect mapping
 │   │   │   ├── cover-system.ts     # Directional cover mechanics (half/heavy)
 │   │   │   ├── tactical-ai.ts      # Enemy AI with move/action scoring + difficulty levels
-│   │   │   ├── levels.ts           # 4 level definitions with obstacle layouts and 3D props
-│   │   │   ├── weapon-skills.ts    # 7 weapon skill trees with 45+ skills
-│   │   │   ├── character-model-map.ts  # 40+ character configs with material/weapon/anim mappings
+│   │   │   ├── levels.ts           # 4 compact level definitions with obstacle layouts and 3D props
+│   │   │   ├── weapon-skills.ts    # 15+ weapon skill trees with 90+ skills, mobility, dash-strikes, long-range blasts
+│   │   │   ├── character-model-map.ts  # 50+ character configs with material/weapon/anim mappings + RPG pack support
+│   │   │   ├── animation-retarget.ts   # Bone retargeting, weapon-specific anim defaults, Mixamo library catalog
+│   │   │   ├── hero-weapons.ts     # Per-character weapon options (3 choices each)
+│   │   │   ├── texture-manager.ts  # Multi-texture loading, atlas slicing, cache
 │   │   │   └── lore.ts             # Character lore and descriptions
 │   │   ├── pages/                  # Route pages (battle, character-select, skill-tree, etc.)
 │   │   └── store/use-game-store.ts # Zustand game state
@@ -135,6 +146,25 @@ Scoring-based AI that evaluates every option:
 - Crit chance: 10% front / 35% rear
 - Cover damage reduction applied after all other calculations
 - Bresenham line-of-sight for ranged attacks
+- Mobility skill detection (`isMobilitySkill`)
+- Dash landing tile resolution (`findDashLandingTile`)
+
+### Character Rendering Pipeline
+
+- `CharacterModel` receives `weaponType` prop → resolves weapon config via `resolveWeaponConfig()` (handles fallbacks for missing GLBs, RPG-pack scale correction)
+- Animations driven by `buildAnimMap()` which merges: global defaults → weapon-specific anims → per-character overrides → runtime overrides
+- Full weapon-specific animation sets for walk, run, idle, attack, block, hurt per weapon type
+- Accessory system loads helmets/capes/shoulder pads via async GLTFLoader with cleanup on unmount
+- Voxel character branch for skeleton-less models with procedural animation
+
+### Mobility & Spatial Strategy
+
+- **Team Jump** — Bounce off adjacent ally to reach 5-tile range (ignores obstacles)
+- **Heroic Leap** — Fly 6 tiles over everything (parabolic Y arc, 4.0 peak height)
+- **Shadow Step** — Teleport 4 tiles (fade out → snap → fade in)
+- **Dash-Strike-Return** — Lunge to enemy, strike, spring back to origin tile (position unchanged)
+- **Blitz Rush** — Dash to enemy, strike, stay at adjacent tile near target (reposition)
+- Visual events: `unit-jump`, `unit-flight`, `unit-teleport` drive WalkingUnit arc animations
 
 ## License
 

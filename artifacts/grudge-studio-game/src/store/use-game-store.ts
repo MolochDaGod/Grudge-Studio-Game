@@ -19,6 +19,8 @@ export interface TacticalUnit {
   speed: number;
   move: number;
   range: number;
+  /** Equipped weapon type (e.g. 'sword', 'bow', 'greataxe'). Drives 3D model + animation selection. */
+  weaponType: string;
   position: { x: number; y: number };
   /** 0=N, 1=E, 2=S, 3=W */
   facing: 0 | 1 | 2 | 3;

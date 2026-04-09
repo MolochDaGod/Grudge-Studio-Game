@@ -360,6 +360,8 @@ export default function CharacterSelect() {
       const y = Math.min(spawn.yMax, spawn.yMin + row * 5);
       const maxMana    = Math.round(Math.max(20, 10 + speed * 3));
       const maxStamina = Math.round(Math.max(40, 30 + speed * 2));
+      // Use the player's chosen weapon, or default to the character's first weapon option
+      const chosenWeapon = isPlayer ? (weaponByCharId[char.id] ?? '') : '';
       return {
         id: `unit_${unitIdCounter++}`,
         characterId: char.id,
@@ -377,6 +379,7 @@ export default function CharacterSelect() {
         speed,
         move,
         range,
+        weaponType: chosenWeapon,
         position: { x, y },
         facing: (isPlayer ? 1 : 3) as 0 | 1 | 2 | 3,
         isPlayerControlled: isPlayer,

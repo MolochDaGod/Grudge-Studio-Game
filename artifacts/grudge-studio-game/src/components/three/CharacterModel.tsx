@@ -3,6 +3,7 @@ import { useGLTF, useAnimations, Text, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three-stdlib';
 import { TacticalUnit } from '@/store/use-game-store';
 import {
   getCharacterConfig,
@@ -10,9 +11,12 @@ import {
   CharacterConfig,
   AnimState,
   AccessoryConfig,
+  resolveWeaponConfig,
+  WeaponConfig,
+  SecondaryWeaponConfig,
 } from '@/lib/character-model-map';
 import { applyTextureSet, textureUrlToSet } from '@/lib/texture-manager';
-import { collectBoneNames, retargetClip } from '@/lib/animation-retarget';
+import { buildAnimMap } from '@/lib/animation-retarget';
 import { VoxelCharacterModel } from './VoxelCharacterModel';
 
 export type { AnimState };
@@ -23,11 +27,16 @@ interface CharacterModelProps {
   facingAngle?: number;
   isSelected: boolean;
   animState: AnimState;
+  /** Equipped weapon type — overrides the config's default weapon + animation set */
+  weaponType?: string;
 }
 
 interface CharacterModelInnerProps extends CharacterModelProps {
   config: CharacterConfig;
   rpgTexture: THREE.Texture | null;
+  /** Resolved weapon configs (with fallbacks and RPG-pack scaling applied) */
+  resolvedPrimary: WeaponConfig;
+  resolvedSecondary?: SecondaryWeaponConfig;
 }
 
 const BASE = import.meta.env.BASE_URL;
@@ -122,12 +131,16 @@ function attachToBone(
   (bone as THREE.Object3D).add(clone);
 }
 
+// Shared GLTF loader instance for async accessory loading
+const _gltfLoader = new GLTFLoader();
+
 function CharacterModelInner({
   unit, position, facingAngle = Math.PI, isSelected, animState, config, rpgTexture,
+  weaponType, resolvedPrimary, resolvedSecondary,
 }: CharacterModelInnerProps) {
   const charUrl   = C(config.modelId);
-  const weapUrl   = W(config.primaryWeapon.modelId);
-  const shieldUrl = config.secondaryWeapon ? W(config.secondaryWeapon.modelId) : weapUrl;
+  const weapUrl   = W(resolvedPrimary.modelId);
+  const shieldUrl = resolvedSecondary ? W(resolvedSecondary.modelId) : weapUrl;
 
   const { scene: rawChar, animations } = useGLTF(charUrl);
   const { scene: rawWeap }             = useGLTF(weapUrl);
@@ -144,9 +157,15 @@ function CharacterModelInner({
   const poisonRef = useRef<THREE.Mesh>(null!);
   const { actions } = useAnimations(animations, groupRef);
 
+  // Build weapon-aware animation map
+  const resolvedAnimMap = useMemo(
+    () => buildAnimMap(unit.characterId, weaponType),
+    [unit.characterId, weaponType],
+  );
+
   useEffect(() => {
     if (!actions) return;
-    const name = getAnimationName(animState, config);
+    const name = resolvedAnimMap[animState] ?? 'Idle';
     // Some GLBs (Quaternius RPG pack) prefix every clip with "CharacterArmature|"
     const action = actions[name] ?? actions[`CharacterArmature|${name}`];
     if (!action) return;
@@ -162,26 +181,26 @@ function CharacterModelInner({
       action.setLoop(THREE.LoopRepeat, Infinity);
     }
     action.reset().fadeIn(0.2).play();
-  }, [animState, actions, config]);
+  }, [animState, actions, resolvedAnimMap]);
 
   useEffect(() => {
-    const pw = config.primaryWeapon;
-    attachToBone(charScene, rawWeap, 'Fist.R', pw.position, pw.rotation, pw.scale);
-  }, [charScene, rawWeap, config.primaryWeapon]);
+    attachToBone(charScene, rawWeap, 'Fist.R', resolvedPrimary.position, resolvedPrimary.rotation, resolvedPrimary.scale);
+  }, [charScene, rawWeap, resolvedPrimary]);
 
   useEffect(() => {
-    if (!config.secondaryWeapon) return;
-    const sw = config.secondaryWeapon;
-    attachToBone(charScene, rawShield, sw.attachBone, sw.position, sw.rotation, sw.scale);
-  }, [charScene, rawShield, config.secondaryWeapon]);
+    if (!resolvedSecondary) return;
+    attachToBone(charScene, rawShield, resolvedSecondary.attachBone, resolvedSecondary.position, resolvedSecondary.rotation, resolvedSecondary.scale);
+  }, [charScene, rawShield, resolvedSecondary]);
 
   // ── Accessory attachments (helmets, shoulder pads, capes, etc.) ─────────
-  // Each accessory is loaded on demand and attached to the specified bone.
+  // Each accessory is loaded on demand via GLTFLoader and attached to the specified bone.
   // If the GLB fails to load (file doesn't exist yet), we silently skip.
   useEffect(() => {
     if (!config.accessoryAttachments || config.accessoryAttachments.length === 0) return;
-    const BASE = import.meta.env.BASE_URL;
-    const A = (id: string) => `${BASE}models/accessories/${id}.glb`;
+    const base = import.meta.env.BASE_URL;
+    const A = (id: string) => `${base}models/accessories/${id}.glb`;
+    let disposed = false;
+    const attached: Array<{ bone: THREE.Object3D; child: THREE.Object3D }> = [];
 
     for (const acc of config.accessoryAttachments) {
       // Find the target bone
@@ -189,16 +208,34 @@ function CharacterModelInner({
       charScene.traverse((o) => { if (o.name === acc.bone) targetBone = o; });
       if (!targetBone) continue;
 
-      // Async load — non-blocking so we don't Suspense for optional accessories
-      import('@react-three/fiber').then(() => {
-        const loader = new THREE.ObjectLoader();
-        // We use the GLTFLoader from drei's cache when possible
-        // For now: use a fetch + manual clone approach
-        fetch(A(acc.modelId))
-          .then(res => { if (!res.ok) throw new Error(`Accessory ${acc.modelId} not found`); return res; })
-          .catch(() => { /* Accessory GLB not yet added — silently skip */ });
-      }).catch(() => {});
+      const bone: THREE.Object3D = targetBone; // capture for closure
+      _gltfLoader.load(
+        A(acc.modelId),
+        (gltf) => {
+          if (disposed) return;
+          const clone = SkeletonUtils.clone(gltf.scene);
+          clone.userData.isAccessory = true;
+          clone.position.set(...acc.position);
+          clone.rotation.set(...acc.rotation);
+          clone.scale.setScalar(acc.scale);
+          clone.traverse((o) => {
+            if (o instanceof THREE.Mesh) {
+              o.castShadow = true;
+              o.receiveShadow = true;
+            }
+          });
+          bone.add(clone);
+          attached.push({ bone, child: clone });
+        },
+        undefined,
+        () => { /* Accessory GLB not found — silently skip */ },
+      );
     }
+
+    return () => {
+      disposed = true;
+      for (const { bone, child } of attached) bone.remove(child);
+    };
   }, [charScene, config.accessoryAttachments]);
 
   const targetPos    = useRef(new THREE.Vector3(...position));
@@ -463,20 +500,36 @@ function CharacterModelInner({
 
 // Loader wrapper for RPG models needing external textures
 function CharacterModelTextureLoader(props: CharacterModelInnerProps & { textureUrl: string }) {
-  const { textureUrl, ...rest } = props;
+  const { textureUrl, ...innerProps } = props;
   const texture = useTexture(textureUrl);
   texture.flipY = false;
   texture.colorSpace = THREE.SRGBColorSpace;
-  return <CharacterModelInner {...rest} rpgTexture={texture} />;
+  return <CharacterModelInner {...innerProps} rpgTexture={texture} />;
 }
 
 export function CharacterModel(props: CharacterModelProps) {
   const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
 
+  // Resolve weapon model + secondary from the equipped weapon type (with fallbacks)
+  const { resolvedPrimary, resolvedSecondary } = useMemo(() => {
+    const resolved = resolveWeaponConfig(props.weaponType ?? props.unit.weaponType, config);
+    return { resolvedPrimary: resolved.primary, resolvedSecondary: resolved.secondary };
+  }, [props.weaponType, props.unit.weaponType, config]);
+
+  // Placeholder capsule shown while GLBs load
+  const LoadingPlaceholder = () => (
+    <group position={props.position}>
+      <mesh position={[0, 0.6, 0]}>
+        <capsuleGeometry args={[0.25, 0.6, 4, 8]} />
+        <meshBasicMaterial color={props.unit.isPlayerControlled ? '#4488ff' : '#ff4444'} wireframe />
+      </mesh>
+    </group>
+  );
+
   // Voxel model branch — delegate to VoxelCharacterModel for skeleton-less models
   if (config.isVoxel && config.voxelModelUrl) {
     return (
-      <Suspense fallback={null}>
+      <Suspense fallback={<LoadingPlaceholder />}>
         <VoxelCharacterModel
           unit={props.unit}
           position={props.position}
@@ -490,15 +543,32 @@ export function CharacterModel(props: CharacterModelProps) {
     );
   }
 
-  const texUrl = config.textureUrl ? `${BASE}${config.textureUrl}` : null;
+  // Determine texture URL from new `textures.diffuse` or legacy `textureUrl`
+  const texSet = config.textures ?? (config.textureUrl ? textureUrlToSet(config.textureUrl) : null);
+  const texUrl = texSet?.diffuse ? `${BASE}${texSet.diffuse}` : null;
   if (texUrl) {
     return (
-      <Suspense fallback={null}>
-        <CharacterModelTextureLoader {...props} config={config} textureUrl={texUrl} rpgTexture={null} />
+      <Suspense fallback={<LoadingPlaceholder />}>
+        <CharacterModelTextureLoader
+          {...props}
+          config={config}
+          textureUrl={texUrl}
+          rpgTexture={null}
+          resolvedPrimary={resolvedPrimary}
+          resolvedSecondary={resolvedSecondary}
+        />
       </Suspense>
     );
   }
-  return <CharacterModelInner {...props} config={config} rpgTexture={null} />;
+  return (
+    <CharacterModelInner
+      {...props}
+      config={config}
+      rpgTexture={null}
+      resolvedPrimary={resolvedPrimary}
+      resolvedSecondary={resolvedSecondary}
+    />
+  );
 }
 
 // Preload all assets — only models actually used in CHARACTER_CONFIGS
@@ -514,5 +584,9 @@ const modelIds = [
 ];
 const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
                  'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
-modelIds.forEach((id) => useGLTF.preload(C(id)));
-weapIds.forEach((id)  => useGLTF.preload(W(id)));
+try {
+  modelIds.forEach((id) => useGLTF.preload(C(id)));
+  weapIds.forEach((id)  => useGLTF.preload(W(id)));
+} catch (err) {
+  console.warn('[CharacterModel] Failed to preload some GLB assets:', err);
+}

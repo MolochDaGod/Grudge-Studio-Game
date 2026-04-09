@@ -1,5 +1,5 @@
-[phases.setup]
-nixPkgs = ["nodejs_22", "pnpm"]
+# Railpack configuration for Railway deployment
+# https://railpack.com/config/file
 
 [phases.install]
 cmds = ["pnpm install --no-frozen-lockfile"]

@@ -23,6 +23,7 @@ import {
   calcFacing, facingDefenseMultiplier, isFrontAttack,
   calculateDamage, getEffectColor, getEffectType,
   getSkillAnimState, getAtkDuration, bfsPath, getCombatCover,
+  isMobilitySkill, findDashLandingTile,
 } from "@/lib/combat-engine";
 import { getCoverAgainst, type CoverInfo } from "@/lib/cover-system";
 
@@ -134,7 +135,7 @@ export default function Battle() {
         const skillId = loadout[slotIdx];
         if (!skillId) return;
         const skill = getSkillById(skillId);
-        if (!skill) return;
+        if (!skill || skill.isPassive) return;
         const isActive = actionMode === slotKey;
         if (isActive) {
           setActionMode('idle');
@@ -142,6 +143,7 @@ export default function Battle() {
         } else {
           setActionMode(slotKey);
           setReachableTiles([]);
+          setZoneColor(getZoneColor(skill));
           setAttackableTiles(getAttackableTiles(unit.position, skill.range ?? unit.range, skill));
         }
       }
@@ -333,23 +335,65 @@ export default function Battle() {
     return reachable;
   };
 
+  /** Resolve target type from skill: heal/buff→friendly, mobility→empty, selfTarget→self, default→enemy */
+  const resolveTargetType = (skill?: Skill): 'enemy' | 'friendly' | 'self' | 'empty' | 'any' => {
+    if (!skill) return 'enemy';
+    if (skill.targetType) return skill.targetType;
+    if (skill.mobilityType) return 'empty';
+    if (skill.selfTarget) return 'self';
+    if (skill.tags.includes('heal') && !skill.tags.includes('attack')) return 'friendly';
+    if (skill.tags.includes('buff') && !skill.tags.includes('attack') && !skill.tags.includes('damage')) return 'friendly';
+    return 'enemy';
+  };
+
+  /** Get zone color for a skill: red=enemy, purple=mobility, green=friendly, blue=self */
+  const getZoneColor = (skill?: Skill): string => {
+    if (!skill) return '#ff3333';
+    const tt = resolveTargetType(skill);
+    if (tt === 'empty') return '#aa44ff';     // purple for mobility
+    if (tt === 'friendly') return '#22cc66';   // green for heals/buffs
+    if (tt === 'self') return '#4488ff';        // blue for self-target
+    return '#ff3333';                           // red for enemy attacks
+  };
+
+  const [zoneColor, setZoneColor] = useState('#ff3333');
+
   const getAttackableTiles = (start: {x: number, y: number}, range: number, skill?: Skill) => {
     const attackType = skill?.attackType ?? 'normal';
+    const targetType = resolveTargetType(skill);
     const effectiveRange = attackType === 'dash'
       ? range + (skill?.dashBonus ?? 0)
       : range;
     const tiles: {x: number; y: number}[] = [];
+
+    // Self-target: just the caster's own tile
+    if (targetType === 'self') return [start];
+
+    const activeUnit = units.find(u => u.id === currentUnitId);
+
     for (let x = 0; x < GRID_W; x++) {
       for (let y = 0; y < GRID_H; y++) {
         const dist = Math.abs(start.x - x) + Math.abs(start.y - y);
-        if (dist <= effectiveRange && dist > 0) {
-          // jump: ignores line-of-sight (leaps over walls)
-          // dash: also ignores LOS (charges through)
-          // normal: requires clear LOS
-          const passesLos = attackType !== 'normal'
-            ? true
-            : hasLineOfSight(start, {x, y}, level.visionBlockers);
-          if (passesLos) tiles.push({x, y});
+        if (dist > effectiveRange || dist === 0) continue;
+
+        const passesLos = (attackType !== 'normal' || skill?.ignoresObstacles)
+          ? true
+          : hasLineOfSight(start, {x, y}, level.visionBlockers);
+        if (!passesLos) continue;
+
+        if (targetType === 'empty') {
+          // Mobility: only empty, non-obstacle tiles
+          const unitOn = getUnitAt(x, y);
+          if (!unitOn && !level.obstacleTiles.has(`${x},${y}`)) tiles.push({x, y});
+        } else if (targetType === 'friendly') {
+          // Heal/buff: only friendly units
+          const unitOn = getUnitAt(x, y);
+          if (unitOn && unitOn.hp > 0 && activeUnit && unitOn.isPlayerControlled === activeUnit.isPlayerControlled) {
+            tiles.push({x, y});
+          }
+        } else {
+          // Enemy targeting (default)
+          tiles.push({x, y});
         }
       }
     }
@@ -488,6 +532,45 @@ export default function Battle() {
       const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
       if (!isAttackable) return;
 
+      // ── Mobility skills: target empty tiles ───────────────────────────────
+      if (isMobilitySkill(skill)) {
+        const occupied = getUnitAt(x, y);
+        if (occupied) return;
+        if (skill.mobilityType === 'team_jump') {
+          const allies = units.filter(u => u.id !== unit.id && u.isPlayerControlled === unit.isPlayerControlled && u.hp > 0);
+          const hasAdjacentAlly = allies.some(a =>
+            Math.abs(a.position.x - unit.position.x) + Math.abs(a.position.y - unit.position.y) === 1
+          );
+          if (!hasAdjacentAlly) { addLog(`${unit.name} needs an adjacent ally to Team Jump!`, 'info'); return; }
+        }
+        const fromPos = tileToWorld(unit.position.x, unit.position.y, level.tileSize, 0.9);
+        const toPos = tileToWorld(x, y, level.tileSize, 0.9);
+        const facing = calcFacing(unit.position, { x, y });
+        const durMs = getAtkDuration(skill);
+        const eventName = skill.mobilityType === 'team_jump' ? 'unit-jump' : skill.mobilityType === 'flight' ? 'unit-flight' : 'unit-teleport';
+        window.dispatchEvent(new CustomEvent(eventName, { detail: { unitId: unit.id, targetX: toPos[0], targetZ: toPos[2], durationMs: durMs } }));
+        setAnimStates(prev => ({ ...prev, [unit.id]: getSkillAnimState(skill) }));
+        const posDelay = skill.mobilityType === 'teleport' ? Math.floor(durMs * 0.45) : durMs - 100;
+        setTimeout(() => updateUnit(unit.id, { position: { x, y }, hasMoved: true, facing }), posDelay);
+        if (skill.cooldown > 0) setSkillCooldown(unit.id, skill.id, skill.cooldown);
+        updateUnit(unit.id, { hasActed: true });
+        setActionMode('idle'); setAttackableTiles([]);
+        addLog(`${unit.name} ${skill.mobilityType === 'team_jump' ? 'bounces off an ally' : skill.mobilityType === 'flight' ? 'soars' : 'blinks'} to [${x},${y}]!`, 'buff');
+        setTimeout(() => { setAnimStates(prev => ({ ...prev, [unit.id]: 'idle' })); setTimeout(() => endTurn(), 200); }, durMs);
+        return;
+      }
+
+      // ── Friendly skills: heals/buffs on allies ────────────────────────────
+      const targetType = resolveTargetType(skill);
+      if (targetType === 'friendly' || targetType === 'self') {
+        const friendlyTarget = targetType === 'self' ? unit : getUnitAt(x, y);
+        if (friendlyTarget && friendlyTarget.hp > 0 && friendlyTarget.isPlayerControlled === unit.isPlayerControlled) {
+          executeFriendlySkill(unit, skill, friendlyTarget);
+        }
+        return;
+      }
+
+      // ── Enemy attack skills ───────────────────────────────────────────────
       const target = getUnitAt(x, y);
       if (target && target.hp > 0 && target.isPlayerControlled !== unit.isPlayerControlled) {
         executeSkill(unit, skill, target);
@@ -519,6 +602,39 @@ export default function Battle() {
     // Future: check level.traps for this tile and apply effects
     // Example stub: addLog(`${unit.name} steps on [${tile.x},${tile.y}].`);
     void tile;
+  };
+
+  // ── Execute friendly skill (heal/buff on allies) ─────────────────────────
+  const executeFriendlySkill = (caster: TacticalUnit, skill: Skill, target: TacticalUnit) => {
+    const atkDurMs = getAtkDuration(skill);
+    const hitMs = Math.floor(atkDurMs * 0.45);
+    const fromPos = tileToWorld(caster.position.x, caster.position.y, level.tileSize, 0.9);
+    const toPos = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
+
+    updateUnit(caster.id, { hasActed: true, facing: calcFacing(caster.position, target.position) });
+    if (skill.cooldown > 0) setSkillCooldown(caster.id, skill.id, skill.cooldown);
+    setActionMode('idle'); setAttackableTiles([]);
+
+    if (skill.healMultiplier) {
+      const healAmt = Math.floor(target.maxHp * skill.healMultiplier);
+      updateUnit(target.id, { hp: Math.min(target.maxHp, target.hp + healAmt) });
+      addLog(`${caster.name} uses ${skill.name} on ${target.id === caster.id ? 'self' : target.name} — heals ${healAmt} HP!`, 'heal');
+    } else {
+      addLog(`${caster.name} uses ${skill.name} on ${target.id === caster.id ? 'self' : target.name}!`, 'buff');
+    }
+
+    setAnimStates(prev => ({ ...prev, [caster.id]: 'cast' }));
+    setTimeout(() => {
+      const isHeal = !!skill.healMultiplier;
+      spawnEffect(isHeal ? 'heal_ring' : 'buff_aura', fromPos, toPos, isHeal ? '#00ff66' : '#4488ff', 800);
+      spawnEffect('heal_burst', fromPos, toPos, isHeal ? '#00ff66' : '#4488ff', 600);
+      setAnimStates(prev => ({ ...prev, [target.id]: 'victory' }));
+      setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 600);
+    }, hitMs);
+    setTimeout(() => {
+      setAnimStates(prev => ({ ...prev, [caster.id]: 'idle' }));
+      setTimeout(() => { const u = useGameStore.getState().units.find(u => u.id === caster.id); if (u?.hasMoved && u?.hasActed) endTurn(); }, 150);
+    }, atkDurMs);
   };
 
   const executeSkill = (attacker: TacticalUnit, skill: Skill, target: TacticalUnit) => {
@@ -1012,7 +1128,20 @@ export default function Battle() {
 
   const tileSize = level.tileSize;
 
-  if (phase !== 'battle') return null;
+  if (phase !== 'battle') {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-black text-white gap-4">
+        <p className="font-display text-xl uppercase tracking-widest text-red-400">No Battle Active</p>
+        <p className="text-sm text-white/50">Start a battle from the home screen first.</p>
+        <button
+          onClick={() => setLocation('/')}
+          className="mt-4 px-4 py-2 bg-primary/20 border border-primary/50 rounded text-primary text-sm hover:bg-primary/30 transition-colors"
+        >
+          ← Return Home
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen overflow-hidden bg-black select-none">
@@ -1156,6 +1285,7 @@ export default function Battle() {
           level={level}
           reachableTiles={reachableTiles}
           attackableTiles={attackableTiles}
+          attackableColor={zoneColor}
           currentUnitId={currentUnitId}
           actionMode={actionMode}
           onTileClick={handleTileClick}
@@ -1403,8 +1533,16 @@ style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
               const isOnCooldown = cd > 0;
               const isActive = actionMode === slotKey;
               const slotStyle = SLOT_LABELS[slot];
-              const isDisabled = activeUnit.hasActed || isOnCooldown || isUltimateUsed;
+              const isPassive = skill?.isPassive ?? false;
+              const isDisabled = activeUnit.hasActed || isOnCooldown || isUltimateUsed || isPassive;
               const tierStyle = skill ? (TIER_STYLES[skill.tier] ?? TIER_STYLES.T1) : null;
+              const skillTargetType = skill ? resolveTargetType(skill) : 'enemy';
+              // Border color hint by skill type
+              const typeBorderColor = isPassive ? 'border-white/10'
+                : skillTargetType === 'empty' ? 'border-violet-500/60'
+                : skillTargetType === 'friendly' ? 'border-emerald-500/60'
+                : skillTargetType === 'self' ? 'border-blue-500/60'
+                : '';
               return (
                 <div key={slot} className="relative">
                   {hoveredSlot === slot && skill && tierStyle && (
@@ -1422,19 +1560,22 @@ style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
                       } else {
                         setActionMode(slotKey);
                         setReachableTiles([]);
+                        setZoneColor(getZoneColor(skill ?? undefined));
                         setAttackableTiles(getAttackableTiles(activeUnit.position, skill?.range ?? activeUnit.range, skill ?? undefined));
                       }
                     }}
                     className={cn(
-                      "relative flex flex-col items-center justify-center rounded border transition-all duration-150",
-                      "w-[80px] h-[96px] overflow-hidden",
-                      isActive
-                        ? "border-primary shadow-[0_0_16px_rgba(212,160,23,0.65)]"
-                        : isDisabled
-                          ? "border-white/5 opacity-35 cursor-not-allowed"
-                          : postMoveGlow && !isDisabled
-                      ? "border-emerald-400/80 shadow-[0_0_18px_rgba(52,211,153,0.7)] animate-pulse cursor-pointer"
-                      : "border-white/15 hover:border-primary/50 cursor-pointer hover:shadow-[0_0_10px_rgba(212,160,23,0.35)]"
+                      "relative flex flex-col items-center justify-center rounded transition-all duration-150",
+                      "w-[80px] h-[96px] overflow-hidden border",
+                      isPassive
+                        ? "border-dashed border-white/15 opacity-50 cursor-default"
+                        : isActive
+                          ? `border-primary shadow-[0_0_16px_rgba(212,160,23,0.65)]`
+                          : isDisabled
+                            ? "border-white/5 opacity-35 cursor-not-allowed"
+                            : postMoveGlow && !isDisabled
+                              ? "border-emerald-400/80 shadow-[0_0_18px_rgba(52,211,153,0.7)] animate-pulse cursor-pointer"
+                              : cn("hover:border-primary/50 cursor-pointer hover:shadow-[0_0_10px_rgba(212,160,23,0.35)]", typeBorderColor || 'border-white/15')
                     )}
                     style={{
                       backgroundImage: `url('${UI("HUD/Action Bar/Slots/ActionBar_MainSlot_Background.png")}')`,
@@ -1442,6 +1583,8 @@ style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
                       backgroundRepeat: "no-repeat",
                       filter: isActive
                         ? "brightness(1.35) sepia(0.5) hue-rotate(-10deg)"
+                        : isPassive
+                        ? "brightness(0.35) saturate(0.15)"
                         : isDisabled
                         ? "brightness(0.45) saturate(0.2)"
                         : "brightness(0.88)",
@@ -1454,7 +1597,10 @@ style = {{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
                       <>
                         <div className="text-[26px] leading-none mt-2">{skill.icon}</div>
                         <div className="text-[9px] text-center leading-tight text-white/65 mt-1 px-1 truncate w-full">{skill.name}</div>
-                        {isOnCooldown && !isUltimateUsed && (
+                        {isPassive && (
+                          <div className="absolute bottom-3 left-0 right-0 text-center text-[7px] font-bold text-white/30 uppercase tracking-widest">Passive</div>
+                        )}
+                        {isOnCooldown && !isUltimateUsed && !isPassive && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/72 text-base font-bold text-orange-400">{cd}</div>
                         )}
                         {isUltimateUsed && (

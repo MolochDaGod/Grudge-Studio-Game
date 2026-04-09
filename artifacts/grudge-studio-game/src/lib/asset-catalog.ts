@@ -1,5 +1,9 @@
-const BASE = import.meta.env.BASE_URL;
-const M = (pack: string, file: string) => `${BASE}models/maps/${pack}/${file}.glb`;
+import { mapModelUrl, localUrl } from './asset-config';
+
+/** Local path (dev server / bundled public/) */
+const M = (pack: string, file: string) => localUrl(`models/maps/${pack}/${file}.glb`);
+/** CDN-resolved path (prod R2 CDN, local fallback in dev) */
+const CDN = (pack: string, file: string) => mapModelUrl(pack, file);
 
 export type AssetPack = 'medieval' | 'elven' | 'orc' | 'ruins';
 export type AssetCategory = 'fortress' | 'tower' | 'wall' | 'gate' | 'building' | 'prop' | 'bridge' | 'ruin';
@@ -7,7 +11,10 @@ export type AssetCategory = 'fortress' | 'tower' | 'wall' | 'gate' | 'building' 
 export interface AssetEntry {
   id: string;
   label: string;
+  /** Local dev-server URL (always works in dev) */
   url: string;
+  /** CDN URL — resolved via asset-config (R2 in prod, local in dev) */
+  cdnUrl: string;
   pack: AssetPack;
   category: AssetCategory;
 }

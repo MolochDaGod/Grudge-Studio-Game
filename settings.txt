@@ -1,0 +1,4 @@
+root: F:\GitHub\Grudge-Studio-Game\Grudge-Studio-Game\Grudge-Studio-Game 
+path: C:\Program Files\nodejs 
+arch: 64 
+proxy: none

@@ -9,7 +9,8 @@ export type EffectType =
   | 'status_stun'     | 'status_poison'    | 'status_freeze'  | 'impact_flash'
   | 'magic_beam' | 'crit_burst' | 'fire_explosion' | 'ice_shatter'
   | 'dark_void' | 'lightning_arc' | 'ground_slam'
-  | 'magic_circle' | 'energy_charge';
+  | 'magic_circle' | 'energy_charge'
+  | 'heal_ring' | 'buff_aura';
 
 export interface CombatEffectData {
   id: string;
@@ -981,6 +982,60 @@ function EnergyCharge({ effect }: EffectProps) {
   );
 }
 
+// ── Heal Ring: green expanding ring + rising sparkles at target ─────────────
+
+function HealRing({ effect }: EffectProps) {
+  const ringRef = useRef<THREE.Mesh>(null!);
+  const pos = useMemo(() => new THREE.Vector3(...effect.to), []);
+
+  useFrame(() => {
+    if (!ringRef.current) return;
+    const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
+    const scale = 0.3 + t * 1.8;
+    ringRef.current.scale.setScalar(scale);
+    (ringRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.75 * (1 - t));
+    ringRef.current.position.y = 0.1 + t * 0.5;
+  });
+
+  return (
+    <>
+      <mesh ref={ringRef} position={[pos.x, 0.1, pos.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.5, 0.7, 32]} />
+        <meshBasicMaterial color="#00ff66" transparent opacity={0.75} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      <Sparkles position={[pos.x, pos.y + 0.8, pos.z]} count={24} scale={1.8} size={6} speed={2.0} color="#44ff88" />
+      <pointLight position={[pos.x, pos.y + 1.0, pos.z]} color="#00ff66" intensity={5} distance={4} decay={2} />
+    </>
+  );
+}
+
+// ── Buff Aura: blue rising column of particles at target ───────────────────
+
+function BuffAura({ effect }: EffectProps) {
+  const colRef = useRef<THREE.Mesh>(null!);
+  const pos = useMemo(() => new THREE.Vector3(...effect.to), []);
+
+  useFrame(() => {
+    if (!colRef.current) return;
+    const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
+    const h = 0.5 + t * 2.5;
+    colRef.current.scale.set(0.6, h, 0.6);
+    colRef.current.position.y = h * 0.5;
+    (colRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.45 * (1 - t * 0.7));
+  });
+
+  return (
+    <>
+      <mesh ref={colRef} position={[pos.x, 0.5, pos.z]}>
+        <cylinderGeometry args={[0.35, 0.55, 1, 16, 1, true]} />
+        <meshBasicMaterial color={effect.color || '#4488ff'} transparent opacity={0.45} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      <Sparkles position={[pos.x, pos.y + 1.2, pos.z]} count={20} scale={1.5} size={5} speed={1.8} color={effect.color || '#6699ff'} />
+      <pointLight position={[pos.x, pos.y + 1.5, pos.z]} color={effect.color || '#4488ff'} intensity={4} distance={3.5} decay={2} />
+    </>
+  );
+}
+
 // ── Main layer: renders all active effects ────────────────────────────────────
 interface CombatEffectsLayerProps {
   effects: CombatEffectData[];
@@ -1030,6 +1085,10 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
             return <MagicCircle key={ key } effect = { effect } />;
           case 'energy_charge':
             return <EnergyCharge key={ key } effect = { effect } />;
+          case 'heal_ring':
+            return <HealRing key={key} effect={effect} />;
+          case 'buff_aura':
+            return <BuffAura key={key} effect={effect} />;
           default:
             return null;
         }

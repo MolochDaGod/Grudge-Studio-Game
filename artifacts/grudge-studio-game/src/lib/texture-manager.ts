@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { textureAssetUrl } from './asset-config';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type TextureSlot = 'diffuse' | 'normal' | 'emissive' | 'roughnessMetalness';
 
 export interface TextureSetConfig {
-  /** Base color / albedo texture path (relative to BASE_URL) */
+  /** Base color / albedo texture path (relative to BASE_URL or CDN root) */
   diffuse?: string;
   /** Normal map path */
   normal?: string;
@@ -16,35 +17,124 @@ export interface TextureSetConfig {
 }
 
 // ── Texture cache ────────────────────────────────────────────────────────────
-// Avoids reloading the same texture if multiple characters share assets.
+// Shared across all components to avoid reloading the same texture.
 
 const textureCache = new Map<string, THREE.Texture>();
+const pendingLoads = new Map<string, Promise<THREE.Texture>>();
 const loader = new THREE.TextureLoader();
 
-function loadCached(url: string, flipY = false, colorSpace?: THREE.ColorSpace): THREE.Texture {
+let cacheHits = 0;
+let cacheMisses = 0;
+
+/** Dev-mode cache stats */
+export function getTextureCacheStats() {
+  return { size: textureCache.size, hits: cacheHits, misses: cacheMisses };
+}
+
+/**
+ * Synchronous load — returns immediately (texture may still be streaming).
+ * Cached by (url, flipY, colorSpace) tuple.
+ */
+function loadCached(
+  url: string,
+  flipY = false,
+  colorSpace?: THREE.ColorSpace,
+): THREE.Texture {
   const key = `${url}|${flipY}|${colorSpace ?? ''}`;
-  if (textureCache.has(key)) return textureCache.get(key)!;
-  const tex = loader.load(url);
+  if (textureCache.has(key)) {
+    cacheHits++;
+    return textureCache.get(key)!;
+  }
+  cacheMisses++;
+  const tex = loader.load(
+    url,
+    undefined,
+    undefined,
+    (err) => {
+      console.warn(`[TextureManager] Failed to load: ${url}`, err);
+      // Retry once after 2 seconds
+      setTimeout(() => {
+        console.info(`[TextureManager] Retrying: ${url}`);
+        loader.load(
+          url,
+          (retryTex) => {
+            retryTex.flipY = flipY;
+            if (colorSpace) retryTex.colorSpace = colorSpace;
+            textureCache.set(key, retryTex);
+          },
+          undefined,
+          (retryErr) => console.error(`[TextureManager] Retry failed: ${url}`, retryErr),
+        );
+      }, 2000);
+    },
+  );
   tex.flipY = flipY;
   if (colorSpace) tex.colorSpace = colorSpace;
   textureCache.set(key, tex);
   return tex;
 }
 
+/**
+ * Async load — returns a Promise that resolves when the texture is fully decoded.
+ * Ideal for preloading or Suspense-compatible workflows.
+ */
+export function loadTextureAsync(
+  url: string,
+  flipY = false,
+  colorSpace?: THREE.ColorSpace,
+): Promise<THREE.Texture> {
+  const key = `${url}|${flipY}|${colorSpace ?? ''}`;
+  if (textureCache.has(key)) return Promise.resolve(textureCache.get(key)!);
+  if (pendingLoads.has(key)) return pendingLoads.get(key)!;
+
+  const promise = new Promise<THREE.Texture>((resolve, reject) => {
+    loader.load(
+      url,
+      (tex) => {
+        tex.flipY = flipY;
+        if (colorSpace) tex.colorSpace = colorSpace;
+        textureCache.set(key, tex);
+        pendingLoads.delete(key);
+        resolve(tex);
+      },
+      undefined,
+      (err) => {
+        pendingLoads.delete(key);
+        // Retry once
+        setTimeout(() => {
+          loader.load(
+            url,
+            (tex) => {
+              tex.flipY = flipY;
+              if (colorSpace) tex.colorSpace = colorSpace;
+              textureCache.set(key, tex);
+              resolve(tex);
+            },
+            undefined,
+            reject,
+          );
+        }, 2000);
+      },
+    );
+  });
+  pendingLoads.set(key, promise);
+  return promise;
+}
+
 // ── Apply full texture set to a scene ────────────────────────────────────────
-// Traverses all MeshStandardMaterial meshes and applies the appropriate texture
-// maps. If a diffuse map is applied and no embedded map existed, resets color
-// to white so the PNG shows at full brightness.
+// Traverses all MeshStandardMaterial meshes and applies the appropriate maps.
+// Resolves paths through the CDN/local asset config.
 
 export function applyTextureSet(
   scene: THREE.Object3D,
   textures: TextureSetConfig,
   baseUrl: string,
 ): void {
-  const diffuseTex  = textures.diffuse  ? loadCached(`${baseUrl}${textures.diffuse}`, false, THREE.SRGBColorSpace) : null;
-  const normalTex   = textures.normal   ? loadCached(`${baseUrl}${textures.normal}`, false) : null;
-  const emissiveTex = textures.emissive ? loadCached(`${baseUrl}${textures.emissive}`, false, THREE.SRGBColorSpace) : null;
-  const rmTex       = textures.roughnessMetalness ? loadCached(`${baseUrl}${textures.roughnessMetalness}`, false) : null;
+  const resolve = (path: string) => textureAssetUrl(path);
+  const diffuseTex  = textures.diffuse  ? loadCached(resolve(textures.diffuse), false, THREE.SRGBColorSpace) : null;
+  const normalTex   = textures.normal   ? loadCached(resolve(textures.normal), false) : null;
+  const emissiveTex = textures.emissive ? loadCached(resolve(textures.emissive), false, THREE.SRGBColorSpace) : null;
+  const rmTex       = textures.roughnessMetalness ? loadCached(resolve(textures.roughnessMetalness), false) : null;
 
   scene.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
@@ -79,7 +169,6 @@ export function applyTextureSet(
 }
 
 // ── Atlas slicing ────────────────────────────────────────────────────────────
-// Creates a cropped Texture from a sprite-sheet atlas for sprite-based characters.
 
 export function sliceAtlas(
   atlasUrl: string,
@@ -89,9 +178,9 @@ export function sliceAtlas(
   tileH: number,
   atlasW: number,
   atlasH: number,
-  baseUrl: string,
+  _baseUrl: string,
 ): THREE.Texture {
-  const tex = loadCached(`${baseUrl}${atlasUrl}`, false, THREE.SRGBColorSpace);
+  const tex = loadCached(textureAssetUrl(atlasUrl), false, THREE.SRGBColorSpace);
   const cloned = tex.clone();
   cloned.repeat.set(tileW / atlasW, tileH / atlasH);
   cloned.offset.set(tileX / atlasW, 1 - (tileY + tileH) / atlasH);
@@ -100,18 +189,16 @@ export function sliceAtlas(
 }
 
 // ── Backward compat helper ──────────────────────────────────────────────────
-// Converts the old single `textureUrl` field to a TextureSetConfig.
 
 export function textureUrlToSet(textureUrl: string): TextureSetConfig {
   return { diffuse: textureUrl };
 }
 
 // ── Preload textures ────────────────────────────────────────────────────────
-// Call at init time with known texture URLs to start loading early.
 
-export function preloadTextures(urls: string[], baseUrl: string): void {
+export function preloadTextures(urls: string[], _baseUrl?: string): void {
   for (const url of urls) {
-    loadCached(`${baseUrl}${url}`, false, THREE.SRGBColorSpace);
+    loadCached(textureAssetUrl(url), false, THREE.SRGBColorSpace);
   }
 }
 
@@ -122,4 +209,7 @@ export function clearTextureCache(): void {
     tex.dispose();
   }
   textureCache.clear();
+  pendingLoads.clear();
+  cacheHits = 0;
+  cacheMisses = 0;
 }

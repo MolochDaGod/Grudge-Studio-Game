@@ -29,6 +29,8 @@ interface BattleSceneProps {
   level: LevelDef;
   reachableTiles: Array<{x: number, y: number}>;
   attackableTiles: Array<{x: number, y: number}>;
+  /** Color hint for attackable zone overlay: red=enemy, purple=mobility, green=friendly */
+  attackableColor?: string;
   currentUnitId: string | null;
   actionMode: string;
   onTileClick: (x: number, y: number) => void;
@@ -825,7 +827,7 @@ function SceneSky({ theme, fogColor }: { theme: IslandTheme; fogColor: string })
 
 // ── Main BattleScene ─────────────────────────────────────────────────────────
 export function BattleScene({
-  units, level, reachableTiles, attackableTiles,
+  units, level, reachableTiles, attackableTiles, attackableColor,
   currentUnitId, actionMode, onTileClick, animStates,
   combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
   showUnitInfo = false, mapPings = [], onUnitRightClick, onUnitClick,
@@ -931,12 +933,18 @@ export function BattleScene({
       />
       <OceanPlane cx={centerX} cz={centerZ} />
 
-      <Suspense fallback={null}>
+      <Suspense fallback={
+        <mesh position={[centerX, 0.5, centerZ]}>
+          <boxGeometry args={[2, 1, 2]} />
+          <meshBasicMaterial color="#4488ff" wireframe />
+        </mesh>
+      }>
         <group>
           <TileGrid
             level={level}
             reachableTiles={reachableTiles}
             attackableTiles={attackableTiles}
+            attackableColor={attackableColor}
             onTileClick={onTileClick}
             hoveredTile={hoveredTile}
             setHoveredTile={setHoveredTile}

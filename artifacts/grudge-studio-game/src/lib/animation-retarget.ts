@@ -230,15 +230,96 @@ export const MIXAMO_ANIM_LIBRARY: MixamoClipDef[] = [
 // pick for attack1/attack2/cast etc.
 
 const WEAPON_ANIM_DEFAULTS: Record<string, Partial<Record<AnimState, string>>> = {
-  sword:       { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', block: 'StandUp' },
-  greatsword:  { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump' },
-  greataxe:    { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump' },
-  war_hammer:  { attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump' },
-  daggers:     { attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch' },
-  bow:         { attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot', cast: 'Bow_Attack_Draw' },
-  fire_staff:  { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded' },
-  dark_staff:  { attack1: 'Punch', attack2: 'SwordSlash', cast: 'Shoot_OneHanded' },
-  shield:      { block: 'StandUp' },
+  // ── Sword & Shield: balanced slash, shield bash, guarded stance ────────────
+  sword: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll',
+    block: 'StandUp', hurt: 'RecieveHit', cast: 'Shoot_OneHanded',
+  },
+  // ── Greatsword: wide horizontal slash, overhead chop, heavy stance ────────
+  greatsword: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll', attack4: 'Jump',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Greataxe: heavy overhead chop (Punch), wide slash, berserker run ──────
+  greataxe: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── War hammer: heavy overhead smash, sweep, defensive stance ─────────────
+  war_hammer: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Daggers: quick stab, evasive roll, nimble run ─────────────────────────
+  daggers: {
+    idle: 'Idle', walk: 'Walk', run: 'Run', sneak: 'Walk',
+    attack1: 'SwordSlash', attack2: 'Roll', attack3: 'Punch',
+    special1: 'Run', special2: 'Roll',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Bow: weapon-holding idle/run, shoot + draw from RPG pack ──────────────
+  bow: {
+    idle: 'Idle', idle2: 'Idle_Weapon', walk: 'Walk', run: 'Run',
+    attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
+    cast: 'Bow_Attack_Draw',
+    special1: 'Run_Holding', special2: 'Roll',
+    block: 'Idle_Weapon', hurt: 'RecieveHit',
+  },
+  // ── Fire staff: magical thrust, one-hand cast, staff idle ─────────────────
+  fire_staff: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash',
+    cast: 'Shoot_OneHanded', special1: 'SwordSlash',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Dark staff: same skeleton as fire staff ───────────────────────────────
+  dark_staff: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash',
+    cast: 'Shoot_OneHanded', special1: 'SwordSlash',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Shield: block stance only ─────────────────────────────────────────────
+  shield: { block: 'StandUp' },
+  // ── Crossbow: bow-style shoot + draw ──────────────────────────────────────
+  crossbow: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot', cast: 'Bow_Attack_Draw',
+    block: 'Idle_Weapon', hurt: 'RecieveHit',
+  },
+  // ── Gun: one-handed shooting ──────────────────────────────────────────────
+  gun: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Shoot_OneHanded', attack2: 'Shoot_OneHanded', cast: 'Shoot_OneHanded',
+    hurt: 'RecieveHit',
+  },
+  // ── Mace: same feel as war hammer but lighter ─────────────────────────────
+  mace: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Spear / Lance: thrusting attacks ──────────────────────────────────────
+  spear: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  lance: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'Punch', attack2: 'SwordSlash', attack3: 'Roll', attack4: 'Jump',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
+  // ── Rusted sword: worn-out version of sword ───────────────────────────────
+  rusted_sword: {
+    idle: 'Idle', walk: 'Walk', run: 'Run',
+    attack1: 'SwordSlash', attack2: 'Punch', attack3: 'Roll',
+    block: 'StandUp', hurt: 'RecieveHit',
+  },
 };
 
 // ── buildAnimMap ────────────────────────────────────────────────────────────
