@@ -1,0 +1,14 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "pnpm"]
+
+[phases.install]
+cmds = ["pnpm install --no-frozen-lockfile"]
+
+[phases.build]
+cmds = [
+  "pnpm --filter @workspace/grudge-studio-game run build",
+  "pnpm --filter @workspace/api-server run build"
+]
+
+[start]
+cmd = "node artifacts/api-server/dist/index.cjs"

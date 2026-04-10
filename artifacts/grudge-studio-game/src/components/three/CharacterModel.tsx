@@ -3,13 +3,24 @@ import { useGLTF, useAnimations, Text, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { SkeletonUtils } from 'three-stdlib';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three-stdlib';
 import { TacticalUnit } from '@/store/use-game-store';
 import {
   getCharacterConfig,
   getAnimationName,
   CharacterConfig,
   AnimState,
+  AccessoryConfig,
+  resolveWeaponConfig,
+  WeaponConfig,
+  SecondaryWeaponConfig,
 } from '@/lib/character-model-map';
+import { applyTextureSet, textureUrlToSet } from '@/lib/texture-manager';
+import { buildAnimMap } from '@/lib/animation-retarget';
+import { collectBoneNames } from '@/lib/animation-retarget';
+import { loadWeaponAnimations, hasExternalAnimations } from '@/lib/animation-library';
+import { characterModelUrl, weaponModelUrl, textureAssetUrl } from '@/lib/asset-config';
+import { VoxelCharacterModel } from './VoxelCharacterModel';
 
 export type { AnimState };
 
@@ -19,16 +30,25 @@ interface CharacterModelProps {
   facingAngle?: number;
   isSelected: boolean;
   animState: AnimState;
+  /** Equipped weapon type — overrides the config's default weapon + animation set */
+  weaponType?: string;
+  /** World position of the current target (enemy being attacked). Drives smooth look-at. */
+  targetWorldPos?: [number, number, number] | null;
+  /** When true, show a targeting reticle ring at the character's feet */
+  isTargeted?: boolean;
 }
 
 interface CharacterModelInnerProps extends CharacterModelProps {
   config: CharacterConfig;
   rpgTexture: THREE.Texture | null;
+  /** Resolved weapon configs (with fallbacks and RPG-pack scaling applied) */
+  resolvedPrimary: WeaponConfig;
+  resolvedSecondary?: SecondaryWeaponConfig;
 }
 
-const BASE = import.meta.env.BASE_URL;
-const C = (id: string) => `${BASE}models/characters/${id}.glb`;
-const W = (id: string) => `${BASE}models/weapons/${id}.glb`;
+/** Resolve character/weapon model URLs through CDN-aware asset-config */
+const C = (id: string) => characterModelUrl(id);
+const W = (id: string) => weaponModelUrl(id);
 
 
 // States that play once
@@ -42,6 +62,12 @@ function applyMaterialOverrides(
   config: CharacterConfig,
   rpgTexture: THREE.Texture | null,
 ) {
+  // Apply multi-texture set if configured (takes priority over single textureUrl)
+  const texSet = config.textures ?? (config.textureUrl ? textureUrlToSet(config.textureUrl) : null);
+  if (texSet && !rpgTexture) {
+    applyTextureSet(scene, texSet, import.meta.env.BASE_URL);
+  }
+
   scene.traverse((obj) => {
     if (!(obj instanceof THREE.Mesh)) return;
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
@@ -112,12 +138,16 @@ function attachToBone(
   (bone as THREE.Object3D).add(clone);
 }
 
+// Shared GLTF loader instance for async accessory loading
+const _gltfLoader = new GLTFLoader();
+
 function CharacterModelInner({
   unit, position, facingAngle = Math.PI, isSelected, animState, config, rpgTexture,
+  weaponType, resolvedPrimary, resolvedSecondary,
 }: CharacterModelInnerProps) {
   const charUrl   = C(config.modelId);
-  const weapUrl   = W(config.primaryWeapon.modelId);
-  const shieldUrl = config.secondaryWeapon ? W(config.secondaryWeapon.modelId) : weapUrl;
+  const weapUrl   = W(resolvedPrimary.modelId);
+  const shieldUrl = resolvedSecondary ? W(resolvedSecondary.modelId) : weapUrl;
 
   const { scene: rawChar, animations } = useGLTF(charUrl);
   const { scene: rawWeap }             = useGLTF(weapUrl);
@@ -132,16 +162,53 @@ function CharacterModelInner({
   const groupRef  = useRef<THREE.Group>(null!);
   const starsRef  = useRef<THREE.Group>(null!);
   const poisonRef = useRef<THREE.Mesh>(null!);
-  const { actions } = useAnimations(animations, groupRef);
+
+  // ── External animation loading (Mixamo FBX weapon clips) ──────────────────
+  const [externalClips, setExternalClips] = React.useState<THREE.AnimationClip[]>([]);
+  const resolvedWeaponType = weaponType ?? unit.weaponType;
+
+  React.useEffect(() => {
+    if (!resolvedWeaponType || !hasExternalAnimations(resolvedWeaponType)) return;
+    let cancelled = false;
+    const boneNames = collectBoneNames(charScene);
+    loadWeaponAnimations(resolvedWeaponType, boneNames).then((clips) => {
+      if (!cancelled && clips.length > 0) setExternalClips(clips);
+    });
+    return () => { cancelled = true; };
+  }, [resolvedWeaponType, charScene]);
+
+  // Merge: external FBX clips take priority, embedded GLB clips fill gaps
+  const mergedAnimations = React.useMemo(() => {
+    if (externalClips.length === 0) return animations;
+    const externalNames = new Set(externalClips.map(c => c.name));
+    const kept = animations.filter(a => !externalNames.has(a.name));
+    return [...externalClips, ...kept];
+  }, [animations, externalClips]);
+
+  const { actions } = useAnimations(mergedAnimations, groupRef);
+
+  // Build weapon-aware animation map
+  const resolvedAnimMap = useMemo(
+    () => buildAnimMap(unit.characterId, weaponType),
+    [unit.characterId, weaponType],
+  );
 
   useEffect(() => {
     if (!actions) return;
-    const name = getAnimationName(animState, config);
+    const name = resolvedAnimMap[animState] ?? 'Idle';
     // Some GLBs (Quaternius RPG pack) prefix every clip with "CharacterArmature|"
-    const action = actions[name] ?? actions[`CharacterArmature|${name}`];
+    let action = actions[name] ?? actions[`CharacterArmature|${name}`];
+    // Fallback: if the requested clip doesn't exist in this GLB, use Idle
+    if (!action) {
+      action = actions['Idle'] ?? actions['CharacterArmature|Idle'] ?? null;
+    }
     if (!action) return;
     Object.values(actions).forEach((a) => { if (a && a !== action) a.fadeOut(0.25); });
-    action.timeScale = animState === 'frozen' ? 0.06 : 1.0;
+    // Speed modifiers: frozen = near-stop, sneak = half speed, poisoned = 80% speed
+    action.timeScale = animState === 'frozen' ? 0.06
+      : animState === 'sneak' ? 0.5
+      : animState === 'poisoned' ? 0.8
+      : 1.0;
     if (animState === 'dead') {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
@@ -152,27 +219,87 @@ function CharacterModelInner({
       action.setLoop(THREE.LoopRepeat, Infinity);
     }
     action.reset().fadeIn(0.2).play();
-  }, [animState, actions, config]);
+  }, [animState, actions, resolvedAnimMap]);
 
   useEffect(() => {
-    const pw = config.primaryWeapon;
-    attachToBone(charScene, rawWeap, 'Fist.R', pw.position, pw.rotation, pw.scale);
-  }, [charScene, rawWeap, config.primaryWeapon]);
+    attachToBone(charScene, rawWeap, 'Fist.R', resolvedPrimary.position, resolvedPrimary.rotation, resolvedPrimary.scale);
+  }, [charScene, rawWeap, resolvedPrimary]);
 
   useEffect(() => {
-    if (!config.secondaryWeapon) return;
-    const sw = config.secondaryWeapon;
-    attachToBone(charScene, rawShield, sw.attachBone, sw.position, sw.rotation, sw.scale);
-  }, [charScene, rawShield, config.secondaryWeapon]);
+    if (!resolvedSecondary) return;
+    attachToBone(charScene, rawShield, resolvedSecondary.attachBone, resolvedSecondary.position, resolvedSecondary.rotation, resolvedSecondary.scale);
+  }, [charScene, rawShield, resolvedSecondary]);
+
+  // ── Accessory attachments (helmets, shoulder pads, capes, etc.) ─────────
+  // Each accessory is loaded on demand via GLTFLoader and attached to the specified bone.
+  // If the GLB fails to load (file doesn't exist yet), we silently skip.
+  useEffect(() => {
+    if (!config.accessoryAttachments || config.accessoryAttachments.length === 0) return;
+    const base = import.meta.env.BASE_URL;
+    const A = (id: string) => `${base}models/accessories/${id}.glb`;
+    let disposed = false;
+    const attached: Array<{ bone: THREE.Object3D; child: THREE.Object3D }> = [];
+
+    for (const acc of config.accessoryAttachments) {
+      // Find the target bone
+      let targetBone: THREE.Object3D | null = null;
+      charScene.traverse((o) => { if (o.name === acc.bone) targetBone = o; });
+      if (!targetBone) continue;
+
+      const bone: THREE.Object3D = targetBone; // capture for closure
+      _gltfLoader.load(
+        A(acc.modelId),
+        (gltf) => {
+          if (disposed) return;
+          const clone = SkeletonUtils.clone(gltf.scene);
+          clone.userData.isAccessory = true;
+          clone.position.set(...acc.position);
+          clone.rotation.set(...acc.rotation);
+          clone.scale.setScalar(acc.scale);
+          clone.traverse((o) => {
+            if (o instanceof THREE.Mesh) {
+              o.castShadow = true;
+              o.receiveShadow = true;
+            }
+          });
+          bone.add(clone);
+          attached.push({ bone, child: clone });
+        },
+        undefined,
+        () => { /* Accessory GLB not found — silently skip */ },
+      );
+    }
+
+    return () => {
+      disposed = true;
+      for (const { bone, child } of attached) bone.remove(child);
+    };
+  }, [charScene, config.accessoryAttachments]);
 
   const targetPos    = useRef(new THREE.Vector3(...position));
   const targetFacing = useRef(facingAngle);
   const lungeOffset  = useRef(new THREE.Vector3());
   const _effTarget   = useRef(new THREE.Vector3());
   const prevAnimRef  = useRef<AnimState>('idle');
+  // Props forwarded from outer component
+  const { targetWorldPos, isTargeted } = {
+    targetWorldPos: (unit as any)._targetWorldPos as [number, number, number] | null | undefined,
+    isTargeted: (unit as any)._isTargeted as boolean | undefined,
+  };
 
   useEffect(() => { targetPos.current.set(...position); }, [position]);
   useEffect(() => { targetFacing.current = facingAngle; }, [facingAngle]);
+
+  // ── Smart target tracking: when attacking, face the target smoothly ───────
+  useEffect(() => {
+    if (targetWorldPos && LOOP_ONCE_STATES.has(animState)) {
+      // Compute angle from character position to target world position
+      const dx = targetWorldPos[0] - targetPos.current.x;
+      const dz = targetWorldPos[2] - targetPos.current.z;
+      const angle = Math.atan2(dx, dz);
+      targetFacing.current = angle;
+    }
+  }, [targetWorldPos, animState]);
 
   // Lunge forward when an attack/cast begins
   useEffect(() => {
@@ -421,44 +548,113 @@ function CharacterModelInner({
           <meshBasicMaterial color="#d4a017" transparent opacity={0.55} depthWrite={false} />
         </mesh>
       )}
+
+      {/* Targeting reticle — pulsing red ring when this unit is being targeted */}
+      {isTargeted && !isDead && (
+        <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[ringRad * 1.1, ringRad * 1.35, 32]} />
+          <meshBasicMaterial color="#ff2200" transparent opacity={0.7} depthWrite={false} />
+        </mesh>
+      )}
     </group>
   );
 }
 
 // Loader wrapper for RPG models needing external textures
 function CharacterModelTextureLoader(props: CharacterModelInnerProps & { textureUrl: string }) {
-  const { textureUrl, ...rest } = props;
+  const { textureUrl, ...innerProps } = props;
   const texture = useTexture(textureUrl);
   texture.flipY = false;
   texture.colorSpace = THREE.SRGBColorSpace;
-  return <CharacterModelInner {...rest} rpgTexture={texture} />;
+  return <CharacterModelInner {...innerProps} rpgTexture={texture} />;
+}
+
+// Stable placeholder component — defined outside render to avoid remount loops
+function LoadingPlaceholder({ color }: { color: string }) {
+  return (
+    <group>
+      <mesh position={[0, 0.6, 0]}>
+        <capsuleGeometry args={[0.25, 0.6, 4, 8]} />
+        <meshBasicMaterial color={color} wireframe />
+      </mesh>
+    </group>
+  );
 }
 
 export function CharacterModel(props: CharacterModelProps) {
   const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
-  const texUrl = config.textureUrl ? `${BASE}${config.textureUrl}` : null;
-  if (texUrl) {
+
+  // Resolve weapon model + secondary from the equipped weapon type (with fallbacks)
+  const { resolvedPrimary, resolvedSecondary } = useMemo(() => {
+    const resolved = resolveWeaponConfig(props.weaponType ?? props.unit.weaponType, config);
+    return { resolvedPrimary: resolved.primary, resolvedSecondary: resolved.secondary };
+  }, [props.weaponType, props.unit.weaponType, config]);
+
+  const placeholderColor = props.unit.isPlayerControlled ? '#4488ff' : '#ff4444';
+
+  // Voxel model branch — delegate to VoxelCharacterModel for skeleton-less models
+  if (config.isVoxel && config.voxelModelUrl) {
     return (
-      <Suspense fallback={null}>
-        <CharacterModelTextureLoader {...props} config={config} textureUrl={texUrl} rpgTexture={null} />
+      <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
+        <VoxelCharacterModel
+          unit={props.unit}
+          position={props.position}
+          facingAngle={props.facingAngle}
+          isSelected={props.isSelected}
+          animState={props.animState}
+          modelUrl={config.voxelModelUrl}
+          voxelScale={config.voxelScale}
+        />
       </Suspense>
     );
   }
-  return <CharacterModelInner {...props} config={config} rpgTexture={null} />;
+
+  // Determine texture URL from new `textures.diffuse` or legacy `textureUrl`
+  // Resolves through CDN in prod, local in dev via asset-config
+  const texSet = config.textures ?? (config.textureUrl ? textureUrlToSet(config.textureUrl) : null);
+  const texUrl = texSet?.diffuse ? textureAssetUrl(texSet.diffuse) : null;
+  if (texUrl) {
+    return (
+      <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
+        <CharacterModelTextureLoader
+          {...props}
+          config={config}
+          textureUrl={texUrl}
+          rpgTexture={null}
+          resolvedPrimary={resolvedPrimary}
+          resolvedSecondary={resolvedSecondary}
+        />
+      </Suspense>
+    );
+  }
+  return (
+    <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
+      <CharacterModelInner
+        {...props}
+        config={config}
+        rpgTexture={null}
+        resolvedPrimary={resolvedPrimary}
+        resolvedSecondary={resolvedSecondary}
+      />
+    </Suspense>
+  );
 }
 
 // Preload all assets — only models actually used in CHARACTER_CONFIGS
-const modelIds = [
-  // Quaternius Fantasy Pack
-  'orc', 'dwarf',
-  // Quaternius RPG Characters Pack (actively used)
-  'ranger_rpg', 'cleric_rpg',
-  // Ultimate Animated Character Pack
-  'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
-  'pirate_male', 'zombie_male', 'zombie_female', 'soldier_male', 'wizard', 'witch',
-  'casual_bald', 'goblin_male', 'kimono_female',
-];
-const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
-                 'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
-modelIds.forEach((id) => useGLTF.preload(C(id)));
-weapIds.forEach((id)  => useGLTF.preload(W(id)));
+// Wrapped in typeof check to avoid SSR/module-scope crashes
+if (typeof window !== 'undefined') {
+  const modelIds = [
+    'orc', 'dwarf', 'ranger_rpg', 'cleric_rpg',
+    'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
+    'pirate_male', 'zombie_male', 'zombie_female', 'soldier_male', 'wizard', 'witch',
+    'casual_bald', 'goblin_male', 'kimono_female',
+  ];
+  const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
+                   'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
+  try {
+    modelIds.forEach((id) => useGLTF.preload(C(id)));
+    weapIds.forEach((id)  => useGLTF.preload(W(id)));
+  } catch {
+    // Preload failure is non-fatal — models load on demand via Suspense
+  }
+}

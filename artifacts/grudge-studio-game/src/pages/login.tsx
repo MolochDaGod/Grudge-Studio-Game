@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuthStore } from '@/store/use-auth-store';
-import { getDiscordOAuthUrl } from '@/lib/grudge-api';
+import { getDiscordOAuthUrl, loginAsGuestBackend } from '@/lib/grudge-api';
 import { FantasyButton } from '@/components/ui/fantasy-button';
 
 const BASE = import.meta.env.BASE_URL;
 
+/** Check if running inside Puter environment */
+function isPuterAvailable(): boolean {
+  return typeof (window as any).puter !== 'undefined';
+}
+
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated, isGuest, isLoading, loginDiscord, playAsGuest } = useAuthStore();
+  const { isAuthenticated, isGuest, isLoading, loginDiscord, loginPuter, playAsGuest } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+  const [puterAvailable] = useState(isPuterAvailable);
 
   // If already authenticated or guest, go to home
   useEffect(() => {
@@ -21,14 +27,56 @@ export default function Login() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (code) {
-      loginDiscord(code).catch((e) => setError(e.message));
-      // Clean URL
+      loginDiscord(code).catch((e) => {
+        const msg = e.message || '';
+        if (msg.includes('Duplicate entry') || msg.includes('duplicate') || msg.includes('email')) {
+          setError('This email is already registered. Try a different login method or contact support.');
+        } else {
+          setError(msg);
+        }
+      });
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [loginDiscord]);
 
+  // Auto-login via Puter if available
+  useEffect(() => {
+    if (!puterAvailable) return;
+    const puter = (window as any).puter;
+    if (puter?.auth?.isSignedIn?.()) {
+      const session = puter.auth.getToken?.() ?? '';
+      if (session) {
+        loginPuter(session).catch(() => { /* Puter auth failed — user can try other methods */ });
+      }
+    }
+  }, [puterAvailable, loginPuter]);
+
   const handleDiscord = () => {
     window.location.href = getDiscordOAuthUrl();
+  };
+
+  const handlePuterLogin = async () => {
+    try {
+      const puter = (window as any).puter;
+      if (!puter) { setError('Puter is not available'); return; }
+      await puter.auth.signIn();
+      const session = puter.auth.getToken?.() ?? '';
+      if (session) {
+        await loginPuter(session);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Puter login failed');
+    }
+  };
+
+  const handleGrudgeGuest = async () => {
+    try {
+      await loginAsGuestBackend();
+      playAsGuest();
+    } catch {
+      // Backend offline — just play as local guest
+      playAsGuest();
+    }
   };
 
   return (
@@ -72,6 +120,16 @@ export default function Login() {
               {isLoading ? 'Connecting...' : 'Sign in with Discord'}
             </button>
 
+            {/* Puter / Grudge ID login */}
+            <button
+              onClick={handlePuterLogin}
+              disabled={isLoading}
+              className="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-lg bg-primary/15 border border-primary/40 text-primary hover:bg-primary/25 transition-all font-bold text-sm uppercase tracking-wider disabled:opacity-50"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              {isLoading ? 'Connecting...' : 'Sign in with Grudge ID'}
+            </button>
+
             {/* Wallet (placeholder — requires Web3Auth setup) */}
             <button
               disabled
@@ -90,14 +148,14 @@ export default function Login() {
 
             {/* Guest mode */}
             <FantasyButton
-              onClick={playAsGuest}
+              onClick={handleGrudgeGuest}
               variant="ghost"
               className="w-full border border-white/10 text-white/50"
             >
               Play as Guest
             </FantasyButton>
             <p className="text-[10px] text-white/20 text-center">
-              Guest players cannot save teams or appear on leaderboards
+              Guest progress saved locally only — sign in to save across devices
             </p>
           </div>
         </div>

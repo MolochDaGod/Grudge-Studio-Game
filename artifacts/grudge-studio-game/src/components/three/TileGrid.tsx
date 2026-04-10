@@ -15,6 +15,8 @@ interface TileGridProps {
   level: LevelDef;
   reachableTiles: Array<{ x: number; y: number }>;
   attackableTiles: Array<{ x: number; y: number }>;
+  /** Color hint for attackable zone: red=enemy, purple=mobility, green=friendly */
+  attackableColor?: string;
   onTileClick: (x: number, y: number) => void;
   hoveredTile: { x: number; y: number } | null;
   setHoveredTile: (t: { x: number; y: number } | null) => void;
@@ -29,7 +31,7 @@ const COLOR_DARK    = new THREE.Color(0x2a2a35);
 const COLOR_LIGHT   = new THREE.Color(0x3a3a45);
 const COLOR_BLOCKED = new THREE.Color(0x1a1218);
 
-export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, hoveredTile, setHoveredTile, onRightClick }: TileGridProps) {
+export function TileGrid({ level, reachableTiles, attackableTiles, attackableColor, onTileClick, hoveredTile, setHoveredTile, onRightClick }: TileGridProps) {
   const { gridW, gridH, tileSize, obstacleTiles, groundColor, groundColor2 } = level;
   const instRef = useRef<THREE.InstancedMesh>(null!);
   const totalTiles = gridW * gridH;
@@ -131,7 +133,7 @@ export function TileGrid({ level, reachableTiles, attackableTiles, onTileClick, 
       {/* Highlight overlays */}
       {highlightedTiles.map(({ x, y, type }, i) => {
         const [wx, , wz] = tileToWorld(x, y, tileSize);
-        const color = type === 'attack' ? '#ff3333' : type === 'hover' ? '#ffffaa' : '#3388ff';
+        const color = type === 'attack' ? (attackableColor ?? '#ff3333') : type === 'hover' ? '#ffffaa' : '#3388ff';
         const opacity = type === 'hover' ? 0.45 : 0.38;
         return (
           <mesh key={`hl_${i}`} position={[wx, 0.22, wz]} rotation={[-Math.PI / 2, 0, 0]}>
