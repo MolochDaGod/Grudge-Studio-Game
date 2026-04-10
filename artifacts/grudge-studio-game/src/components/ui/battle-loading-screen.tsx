@@ -53,6 +53,7 @@ export function BattleLoadingScreen({ levelName, onDone }: BattleLoadingScreenPr
       const t = setTimeout(onDone, 700);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [progress, minPassed, onDone]);
 
   return (
