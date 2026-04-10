@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGameStore } from "@/store/use-game-store";
 import { useAuthStore } from "@/store/use-auth-store";
@@ -7,13 +7,14 @@ import { submitCombatLog } from "@/lib/grudge-api";
 import { FantasyButton } from "@/components/ui/fantasy-button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
-import { Trophy, Skull, Loader2, RefreshCw, ListOrdered } from "lucide-react";
+import { Trophy, Skull, Loader2, RefreshCw, ListOrdered, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { loadCampaignState, clearLevel, getHeroUnlockedByLevel, type CampaignState } from "@/lib/campaign";
 
 export default function Result() {
   const [, setLocation] = useLocation();
-  const { battleResult, score, characterUsed, reset } = useGameStore();
+  const { battleResult, score, characterUsed, currentLevelId, reset } = useGameStore();
   const { mutate: submitScore, isPending } = useSubmitScore();
   const { toast } = useToast();
   
@@ -26,6 +27,21 @@ export default function Result() {
   }
 
   const isWin = battleResult === 'win';
+
+  // ── Campaign progression: unlock next hero on win ───────────────────────
+  const [campaignUpdate, setCampaignUpdate] = useState<{ hero: string; pirates: boolean } | null>(null);
+  useEffect(() => {
+    if (!isWin || !currentLevelId) return;
+    const state = loadCampaignState();
+    const heroToUnlock = getHeroUnlockedByLevel(state, currentLevelId);
+    const updated = clearLevel(state, currentLevelId);
+    if (heroToUnlock || updated.piratesUnlocked) {
+      setCampaignUpdate({
+        hero: heroToUnlock?.name ?? '',
+        pirates: updated.piratesUnlocked && !state.piratesUnlocked,
+      });
+    }
+  }, [isWin, currentLevelId]);
 
   const { isAuthenticated, grudgeId } = useAuthStore();
 
@@ -124,6 +140,26 @@ export default function Result() {
             Score successfully recorded in the Hall of Heroes!
           </div>
         ) : null}
+
+        {/* Campaign unlock notification */}
+        {campaignUpdate && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-primary/10 border border-primary/40 rounded-sm"
+          >
+            <div className="flex items-center justify-center gap-2 text-primary font-bold mb-1">
+              <Unlock className="w-5 h-5" />
+              Hero Unlocked!
+            </div>
+            {campaignUpdate.hero && (
+              <p className="text-white/80 text-sm">{campaignUpdate.hero} has joined your roster!</p>
+            )}
+            {campaignUpdate.pirates && (
+              <p className="text-amber-400 text-sm mt-1 font-bold">🏴‍☠️ The Pirates faction is now available!</p>
+            )}
+          </motion.div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <FantasyButton variant="secondary" onClick={handlePlayAgain} className="flex-1">

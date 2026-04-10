@@ -1,0 +1,11 @@
+# Railpack configuration for Railway deployment
+# https://railpack.com/config/file
+
+[phases.install]
+cmds = ["pnpm install --no-frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm --filter @workspace/api-server run build"]
+
+[start]
+cmd = "node artifacts/api-server/dist/index.cjs"

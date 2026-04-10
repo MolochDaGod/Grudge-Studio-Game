@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+*.md
+.local
+.github
+3dmotion
+attached_assets
+PATH.txt
+settings.txt

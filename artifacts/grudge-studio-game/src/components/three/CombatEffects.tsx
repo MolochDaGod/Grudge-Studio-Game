@@ -2,6 +2,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
+import { GEO, getEffectMaterial, getEffectMaterialDS } from './shared-effect-resources';
 
 export type EffectType =
   | 'fire_projectile' | 'dark_projectile' | 'ice_projectile' | 'arrow'
@@ -9,7 +10,8 @@ export type EffectType =
   | 'status_stun'     | 'status_poison'    | 'status_freeze'  | 'impact_flash'
   | 'magic_beam' | 'crit_burst' | 'fire_explosion' | 'ice_shatter'
   | 'dark_void' | 'lightning_arc' | 'ground_slam'
-  | 'magic_circle' | 'energy_charge';
+  | 'magic_circle' | 'energy_charge'
+  | 'heal_ring' | 'buff_aura';
 
 export interface CombatEffectData {
   id: string;
@@ -33,8 +35,8 @@ function Projectile({ effect }: EffectProps) {
   const ref = useRef<THREE.Group>(null!);
   const trailRefs = useRef<THREE.Mesh[]>([]);
 
-  const from = useMemo(() => new THREE.Vector3(...effect.from), []);
-  const to   = useMemo(() => new THREE.Vector3(...effect.to),   []);
+  const from = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
+  const to   = useMemo(() => new THREE.Vector3(...effect.to),   [effect.to[0], effect.to[1], effect.to[2]]);
   const arcH = Math.max(1.5, from.distanceTo(to) * 0.18);
 
   const isFire = effect.type === 'fire_projectile';
@@ -136,8 +138,8 @@ function Projectile({ effect }: EffectProps) {
 // ── Arrow: thin capsule flying flat arc ──────────────────────────────────────
 function Arrow({ effect }: EffectProps) {
   const ref = useRef<THREE.Group>(null!);
-  const from = useMemo(() => new THREE.Vector3(...effect.from), []);
-  const to   = useMemo(() => new THREE.Vector3(...effect.to),   []);
+  const from = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
+  const to   = useMemo(() => new THREE.Vector3(...effect.to),   [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     if (!ref.current) return;
@@ -179,7 +181,7 @@ function PhysicalSlash({ effect }: EffectProps) {
   const arc2Ref = useRef<THREE.Mesh>(null!);
   const arc3Ref = useRef<THREE.Mesh>(null!);
   const sparkRefs = useRef<THREE.Mesh[]>([]);
-  const origin = useMemo(() => new THREE.Vector3(...effect.from), []);
+  const origin = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -252,7 +254,7 @@ function ImpactFlash({ effect }: EffectProps) {
   const ref2 = useRef<THREE.Mesh>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
   const ring2Ref = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -302,7 +304,7 @@ function ImpactFlash({ effect }: EffectProps) {
 // ── AoE ring: flat torus expanding outward ───────────────────────────────────
 function AoeRing({ effect }: EffectProps) {
   const ref = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     if (!ref.current) return;
@@ -322,7 +324,7 @@ function AoeRing({ effect }: EffectProps) {
 // ── Heal burst: rising green sparks at caster ────────────────────────────────
 function HealBurst({ effect }: EffectProps) {
   const refs = useRef<THREE.Mesh[]>([]);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
   const COUNT = 8;
   const angles = useMemo(() => Array.from({ length: COUNT }, (_, i) => (i / COUNT) * Math.PI * 2), []);
 
@@ -372,7 +374,7 @@ function UltimateNova({ effect }: EffectProps) {
   const sphereRef = useRef<THREE.Mesh>(null!);
   const ring1Ref  = useRef<THREE.Mesh>(null!);
   const ring2Ref  = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -416,8 +418,8 @@ function MagicBeam({ effect }: EffectProps) {
   const glowRef  = useRef<THREE.Mesh>(null!);
   const color = useMemo(() => new THREE.Color(effect.color), [effect.color]);
 
-  const from = useMemo(() => new THREE.Vector3(...effect.from), []);
-  const to   = useMemo(() => new THREE.Vector3(...effect.to),   []);
+  const from = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
+  const to   = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
   const mid  = useMemo(() => from.clone().lerp(to, 0.5), [from, to]);
   const dist = useMemo(() => from.distanceTo(to), [from, to]);
   const dir  = useMemo(() => to.clone().sub(from).normalize(), [from, to]);
@@ -466,7 +468,7 @@ function MagicBeam({ effect }: EffectProps) {
 // ── Status effect burst ───────────────────────────────────────────────────────
 function StatusBurst({ effect }: EffectProps) {
   const refs = useRef<THREE.Mesh[]>([]);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
   const COUNT = 6;
   const angles = useMemo(() => Array.from({ length: COUNT }, (_, i) => (i / COUNT) * Math.PI * 2), []);
 
@@ -506,7 +508,7 @@ function CritBurst({ effect }: EffectProps) {
   const slashRefs = useRef<THREE.Mesh[]>([]);
   const ringRef = useRef<THREE.Mesh>(null!);
   const innerRef = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -557,7 +559,7 @@ function FireExplosion({ effect }: EffectProps) {
   const outerRef = useRef<THREE.Mesh>(null!);
   const ring1Ref = useRef<THREE.Mesh>(null!);
   const ring2Ref = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -610,7 +612,7 @@ function IceShatter({ effect }: EffectProps) {
   const spikeRefs = useRef<THREE.Mesh[]>([]);
   const shardRefs = useRef<THREE.Mesh[]>([]);
   const ringRef = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -686,7 +688,7 @@ function DarkVoid({ effect }: EffectProps) {
   const ringRefs = useRef<THREE.Mesh[]>([]);
   const coreRef = useRef<THREE.Mesh>(null!);
   const glowRef = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -741,8 +743,8 @@ const LIGHTNING_SEGMENT_COUNT = 8;
 function LightningArc({ effect }: EffectProps) {
   const segRefs = useRef<THREE.Mesh[]>([]);
   const flashRef = useRef<THREE.Mesh>(null!);
-  const from = useMemo(() => new THREE.Vector3(...effect.from), []);
-  const to = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const from = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
+  const to = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -798,7 +800,7 @@ function GroundSlam({ effect }: EffectProps) {
   const ring3Ref = useRef<THREE.Mesh>(null!);
   const debrisRefs = useRef<THREE.Mesh[]>([]);
   const dustRef = useRef<THREE.Mesh>(null!);
-  const target = useMemo(() => new THREE.Vector3(...effect.to), []);
+  const target = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -873,7 +875,7 @@ function MagicCircle({ effect }: EffectProps) {
   const ring2 = useRef<THREE.Mesh>(null!);
   const ring3 = useRef<THREE.Mesh>(null!);
   const glowRef = useRef<THREE.Mesh>(null!);
-  const pos = useMemo(() => new THREE.Vector3(...effect.from), []);
+  const pos = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -929,7 +931,7 @@ function MagicCircle({ effect }: EffectProps) {
 function EnergyCharge({ effect }: EffectProps) {
   const coreRef = useRef<THREE.Mesh>(null!);
   const orbitRefs = useRef<THREE.Mesh[]>([]);
-  const pos = useMemo(() => new THREE.Vector3(...effect.from), []);
+  const pos = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
 
   useFrame(() => {
     const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
@@ -977,6 +979,60 @@ function EnergyCharge({ effect }: EffectProps) {
 }
 <Sparkles position={ [pos.x, pos.y + 1.3, pos.z] } count = { 18} scale = { 1.4} size = { 5} speed = { 1.4} color = { effect.color } />
   <pointLight position={ [pos.x, pos.y + 1.3, pos.z] } color = { effect.color } intensity = { 7} distance = { 4} decay = { 2} />
+    </>
+  );
+}
+
+// ── Heal Ring: green expanding ring + rising sparkles at target ─────────────
+
+function HealRing({ effect }: EffectProps) {
+  const ringRef = useRef<THREE.Mesh>(null!);
+  const pos = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
+
+  useFrame(() => {
+    if (!ringRef.current) return;
+    const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
+    const scale = 0.3 + t * 1.8;
+    ringRef.current.scale.setScalar(scale);
+    (ringRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.75 * (1 - t));
+    ringRef.current.position.y = 0.1 + t * 0.5;
+  });
+
+  return (
+    <>
+      <mesh ref={ringRef} position={[pos.x, 0.1, pos.z]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.5, 0.7, 32]} />
+        <meshBasicMaterial color="#00ff66" transparent opacity={0.75} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      <Sparkles position={[pos.x, pos.y + 0.8, pos.z]} count={24} scale={1.8} size={6} speed={2.0} color="#44ff88" />
+      <pointLight position={[pos.x, pos.y + 1.0, pos.z]} color="#00ff66" intensity={5} distance={4} decay={2} />
+    </>
+  );
+}
+
+// ── Buff Aura: blue rising column of particles at target ───────────────────
+
+function BuffAura({ effect }: EffectProps) {
+  const colRef = useRef<THREE.Mesh>(null!);
+  const pos = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
+
+  useFrame(() => {
+    if (!colRef.current) return;
+    const t = Math.min(1, (performance.now() - effect.createdAt) / effect.duration);
+    const h = 0.5 + t * 2.5;
+    colRef.current.scale.set(0.6, h, 0.6);
+    colRef.current.position.y = h * 0.5;
+    (colRef.current.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.45 * (1 - t * 0.7));
+  });
+
+  return (
+    <>
+      <mesh ref={colRef} position={[pos.x, 0.5, pos.z]}>
+        <cylinderGeometry args={[0.35, 0.55, 1, 16, 1, true]} />
+        <meshBasicMaterial color={effect.color || '#4488ff'} transparent opacity={0.45} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      <Sparkles position={[pos.x, pos.y + 1.2, pos.z]} count={20} scale={1.5} size={5} speed={1.8} color={effect.color || '#6699ff'} />
+      <pointLight position={[pos.x, pos.y + 1.5, pos.z]} color={effect.color || '#4488ff'} intensity={4} distance={3.5} decay={2} />
     </>
   );
 }
@@ -1030,6 +1086,10 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
             return <MagicCircle key={ key } effect = { effect } />;
           case 'energy_charge':
             return <EnergyCharge key={ key } effect = { effect } />;
+          case 'heal_ring':
+            return <HealRing key={key} effect={effect} />;
+          case 'buff_aura':
+            return <BuffAura key={key} effect={effect} />;
           default:
             return null;
         }

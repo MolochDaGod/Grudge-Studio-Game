@@ -6,8 +6,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "pnpm -r --if-present run build",
+    "build": "pnpm --filter @workspace/api-server run build",
+    "start": "node artifacts/api-server/dist/index.cjs",
     "build:game": "pnpm --filter @workspace/grudge-studio-game run build",
+    "build:all": "pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },

@@ -1,0 +1,10 @@
+# Exclude heavy game assets (3D models, images) — only api-server needs to deploy
+artifacts/grudge-studio-game/public/models/
+artifacts/grudge-studio-game/public/images/
+artifacts/grudge-studio-game/node_modules/
+artifacts/mockup-sandbox/
+attached_assets/
+.canvas/
+.history/
+.agents/
+node_modules/
