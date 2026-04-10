@@ -3,6 +3,11 @@ lockfileVersion: '9.0'
 settings:
   autoInstallPeers: false
   excludeLinksFromLockfile: false
+  onlyBuiltDependencies:
+    - '@swc/core'
+    - esbuild
+    - msw
+    - unrs-resolver
 
 catalogs:
   default:
