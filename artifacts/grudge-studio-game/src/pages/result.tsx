@@ -21,10 +21,12 @@ export default function Result() {
   const [playerName, setPlayerName] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  if (!battleResult) {
-    setLocation("/");
-    return null;
-  }
+  // Redirect home if there's no battle result (e.g. navigated directly)
+  useEffect(() => {
+    if (!battleResult) setLocation("/");
+  }, [battleResult, setLocation]);
+
+  if (!battleResult) return null;
 
   const isWin = battleResult === 'win';
 

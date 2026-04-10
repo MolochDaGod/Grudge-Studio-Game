@@ -34,7 +34,7 @@ type CanonicalBone =
   | 'rightupleg' | 'rightleg' | 'rightfoot' | 'righttoebase';
 
 const CANONICAL_ALIASES: Record<string, CanonicalBone> = {
-  // Mixamo style
+  // Mixamo style (after stripping mixamorig: prefix and lowercasing)
   'hips': 'hips', 'spine': 'spine', 'spine1': 'spine1', 'spine2': 'spine2',
   'neck': 'neck', 'head': 'head',
   'leftshoulder': 'leftshoulder', 'leftarm': 'leftarm',
@@ -45,7 +45,16 @@ const CANONICAL_ALIASES: Record<string, CanonicalBone> = {
   'leftfoot': 'leftfoot', 'lefttoebase': 'lefttoebase',
   'rightupleg': 'rightupleg', 'rightleg': 'rightleg',
   'rightfoot': 'rightfoot', 'righttoebase': 'righttoebase',
-  // Quaternius style
+  // Mixamo alternate naming (some exports use these)
+  'left_shoulder': 'leftshoulder', 'right_shoulder': 'rightshoulder',
+  'left_arm': 'leftarm', 'right_arm': 'rightarm',
+  'left_forearm': 'leftforearm', 'right_forearm': 'rightforearm',
+  'left_hand': 'lefthand', 'right_hand': 'righthand',
+  'left_upleg': 'leftupleg', 'right_upleg': 'rightupleg',
+  'left_leg': 'leftleg', 'right_leg': 'rightleg',
+  'left_foot': 'leftfoot', 'right_foot': 'rightfoot',
+  'left_toebase': 'lefttoebase', 'right_toebase': 'righttoebase',
+  // Quaternius Ultimate Animated pack style (Blender export)
   'fist_l': 'lefthand', 'fist_r': 'righthand',
   'arm_l': 'leftarm', 'arm_r': 'rightarm',
   'forearm_l': 'leftforearm', 'forearm_r': 'rightforearm',
@@ -53,13 +62,25 @@ const CANONICAL_ALIASES: Record<string, CanonicalBone> = {
   'leg_l': 'leftleg', 'leg_r': 'rightleg',
   'foot_l': 'leftfoot', 'foot_r': 'rightfoot',
   'thigh_l': 'leftupleg', 'thigh_r': 'rightupleg',
-  // RPG pack aliases
+  'body': 'spine', // Quaternius "Body" bone = Spine
+  // RPG Characters pack aliases
   'upperarm_l': 'leftarm', 'upperarm_r': 'rightarm',
   'lowerarm_l': 'leftforearm', 'lowerarm_r': 'rightforearm',
   'hand_l': 'lefthand', 'hand_r': 'righthand',
   'upperleg_l': 'leftupleg', 'upperleg_r': 'rightupleg',
   'lowerleg_l': 'leftleg', 'lowerleg_r': 'rightleg',
 };
+
+// Bones that should NEVER have position tracks retargeted (causes floating/explosion)
+// Only rotation (quaternion) tracks should be transferred for these.
+const ROTATION_ONLY_BONES = new Set<CanonicalBone>([
+  'leftarm', 'rightarm', 'leftforearm', 'rightforearm',
+  'lefthand', 'righthand', 'leftshoulder', 'rightshoulder',
+  'leftupleg', 'rightupleg', 'leftleg', 'rightleg',
+  'leftfoot', 'rightfoot', 'lefttoebase', 'righttoebase',
+  'neck', 'head',
+  'spine1', 'spine2',
+]);
 
 function toCanonical(normalized: string): CanonicalBone | null {
   return CANONICAL_ALIASES[normalized] ?? null;
@@ -97,7 +118,7 @@ export function retargetClip(
   for (const track of clip.tracks) {
     // Track names are like "boneName.position" or "boneName.quaternion"
     const dotIdx = track.name.indexOf('.');
-    if (dotIdx < 0) { newTracks.push(track.clone()); continue; }
+    if (dotIdx < 0) continue; // Skip tracks without property (shouldn't happen)
 
     const bonePart = track.name.substring(0, dotIdx);
     const propPart = track.name.substring(dotIdx); // ".position", ".quaternion", etc.
@@ -106,20 +127,49 @@ export function retargetClip(
     const sourceCanon = toCanonical(sourceNorm);
 
     if (!sourceCanon) {
-      // Can't map this bone — try direct name match as fallback
-      if (targetBoneNames.includes(bonePart)) {
-        newTracks.push(track.clone());
-      }
+      // Can't map this bone — DROP it (don't try direct name match,
+      // unmapped bones like fingers/toes cause deformation artifacts)
       continue;
     }
 
     const targetBoneName = targetMap.get(sourceCanon);
     if (!targetBoneName) continue; // No equivalent bone on target
 
+    // Drop position tracks for non-root bones — only Hips should have position.
+    // Mixamo bakes absolute position into every bone; on a different-sized
+    // skeleton this makes limbs explode outward or float.
+    if (propPart === '.position' && ROTATION_ONLY_BONES.has(sourceCanon)) {
+      continue;
+    }
+
+    // For Hips position: strip root motion (zero out X/Z movement)
+    // so characters don't walk off their tile during attack anims.
+    if (propPart === '.position' && sourceCanon === 'hips') {
+      const newTrack = track.clone();
+      newTrack.name = targetBoneName + propPart;
+      const values = newTrack.values as Float32Array;
+      // Get the first-frame position as the rest pose
+      const restX = values[0], restZ = values[2];
+      for (let i = 0; i < values.length; i += 3) {
+        // Lock X and Z to rest pose (no lateral/forward drift)
+        values[i]     = restX; // X
+        // Y (values[i+1]) keeps the bounce/height animation
+        values[i + 2] = restZ; // Z
+        // Apply scale correction
+        if (scaleRatio !== 1.0) {
+          values[i]     *= scaleRatio;
+          values[i + 1] *= scaleRatio;
+          values[i + 2] *= scaleRatio;
+        }
+      }
+      newTracks.push(newTrack);
+      continue;
+    }
+
     const newTrack = track.clone();
     newTrack.name = targetBoneName + propPart;
 
-    // Apply scale correction to position tracks
+    // Apply scale correction to any remaining position tracks
     if (propPart === '.position' && scaleRatio !== 1.0) {
       const values = newTrack.values as Float32Array;
       for (let i = 0; i < values.length; i++) {

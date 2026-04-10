@@ -10,12 +10,22 @@ const GRUDGE_ID_URL      = 'https://id.grudge-studio.com';
 const GRUDGE_GAME_API    = 'https://api.grudge-studio.com';
 const GRUDGE_ACCOUNT_URL = 'https://account.grudge-studio.com';
 
-// ── Token management (in-memory only, NOT localStorage) ──────────────────────
+// ── Token management (persisted to localStorage for session survival) ────────
 
-let _token: string | null = null;
+const TOKEN_KEY = 'grudge_auth_token';
+
+let _token: string | null = (() => {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+})();
 
 export function getToken(): string | null { return _token; }
-export function setToken(token: string | null) { _token = token; }
+export function setToken(token: string | null) {
+  _token = token;
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* storage unavailable */ }
+}
 
 function authHeaders(): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
