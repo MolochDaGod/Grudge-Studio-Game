@@ -569,6 +569,18 @@ function CharacterModelTextureLoader(props: CharacterModelInnerProps & { texture
   return <CharacterModelInner {...innerProps} rpgTexture={texture} />;
 }
 
+// Stable placeholder component — defined outside render to avoid remount loops
+function LoadingPlaceholder({ color }: { color: string }) {
+  return (
+    <group>
+      <mesh position={[0, 0.6, 0]}>
+        <capsuleGeometry args={[0.25, 0.6, 4, 8]} />
+        <meshBasicMaterial color={color} wireframe />
+      </mesh>
+    </group>
+  );
+}
+
 export function CharacterModel(props: CharacterModelProps) {
   const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
 
@@ -578,20 +590,12 @@ export function CharacterModel(props: CharacterModelProps) {
     return { resolvedPrimary: resolved.primary, resolvedSecondary: resolved.secondary };
   }, [props.weaponType, props.unit.weaponType, config]);
 
-  // Placeholder capsule shown while GLBs load
-  const LoadingPlaceholder = () => (
-    <group position={props.position}>
-      <mesh position={[0, 0.6, 0]}>
-        <capsuleGeometry args={[0.25, 0.6, 4, 8]} />
-        <meshBasicMaterial color={props.unit.isPlayerControlled ? '#4488ff' : '#ff4444'} wireframe />
-      </mesh>
-    </group>
-  );
+  const placeholderColor = props.unit.isPlayerControlled ? '#4488ff' : '#ff4444';
 
   // Voxel model branch — delegate to VoxelCharacterModel for skeleton-less models
   if (config.isVoxel && config.voxelModelUrl) {
     return (
-      <Suspense fallback={<LoadingPlaceholder />}>
+      <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
         <VoxelCharacterModel
           unit={props.unit}
           position={props.position}
@@ -611,7 +615,7 @@ export function CharacterModel(props: CharacterModelProps) {
   const texUrl = texSet?.diffuse ? textureAssetUrl(texSet.diffuse) : null;
   if (texUrl) {
     return (
-      <Suspense fallback={<LoadingPlaceholder />}>
+      <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
         <CharacterModelTextureLoader
           {...props}
           config={config}
@@ -624,7 +628,7 @@ export function CharacterModel(props: CharacterModelProps) {
     );
   }
   return (
-    <Suspense fallback={<LoadingPlaceholder />}>
+    <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
       <CharacterModelInner
         {...props}
         config={config}
@@ -637,21 +641,20 @@ export function CharacterModel(props: CharacterModelProps) {
 }
 
 // Preload all assets — only models actually used in CHARACTER_CONFIGS
-const modelIds = [
-  // Quaternius Fantasy Pack
-  'orc', 'dwarf',
-  // Quaternius RPG Characters Pack (actively used)
-  'ranger_rpg', 'cleric_rpg',
-  // Ultimate Animated Character Pack
-  'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
-  'pirate_male', 'zombie_male', 'zombie_female', 'soldier_male', 'wizard', 'witch',
-  'casual_bald', 'goblin_male', 'kimono_female',
-];
-const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
-                 'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
-try {
-  modelIds.forEach((id) => useGLTF.preload(C(id)));
-  weapIds.forEach((id)  => useGLTF.preload(W(id)));
-} catch (err) {
-  console.warn('[CharacterModel] Failed to preload some GLB assets:', err);
+// Wrapped in typeof check to avoid SSR/module-scope crashes
+if (typeof window !== 'undefined') {
+  const modelIds = [
+    'orc', 'dwarf', 'ranger_rpg', 'cleric_rpg',
+    'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
+    'pirate_male', 'zombie_male', 'zombie_female', 'soldier_male', 'wizard', 'witch',
+    'casual_bald', 'goblin_male', 'kimono_female',
+  ];
+  const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
+                   'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];
+  try {
+    modelIds.forEach((id) => useGLTF.preload(C(id)));
+    weapIds.forEach((id)  => useGLTF.preload(W(id)));
+  } catch {
+    // Preload failure is non-fatal — models load on demand via Suspense
+  }
 }
