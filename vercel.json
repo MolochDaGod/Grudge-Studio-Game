@@ -1,5 +1,6 @@
 {
   "framework": null,
+  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/grudge-studio-game run build",
   "outputDirectory": "artifacts/grudge-studio-game/dist",
   "routes": [
