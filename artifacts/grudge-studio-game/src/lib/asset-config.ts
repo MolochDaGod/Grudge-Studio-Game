@@ -23,9 +23,13 @@ export const OBJECT_STORE_API: string =
   import.meta.env.VITE_OBJECT_STORE_URL ??
   'https://molochdagod.github.io/ObjectStore/api/v1';
 
-/** When true, all asset helpers resolve to CDN instead of local paths */
+/**
+ * When true, all asset helpers resolve to CDN instead of local paths.
+ * Disabled by default until CORS is configured on R2 (assets.grudge-studio.com).
+ * Enable by setting VITE_USE_CDN=true in your .env or Vercel env vars.
+ */
 export const USE_CDN: boolean =
-  import.meta.env.VITE_USE_CDN === 'true' || import.meta.env.PROD;
+  import.meta.env.VITE_USE_CDN === 'true';
 
 // ── Path Helpers ─────────────────────────────────────────────────────────────
 
