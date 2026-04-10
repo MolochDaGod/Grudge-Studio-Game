@@ -360,11 +360,13 @@ export default function CharacterSelect() {
     const level = getLevelWithEdits(currentLevelId);
     const playerChars = characters.filter(c => selectedIds.includes(c.id));
 
-    // Pick an enemy faction that is different from the player's faction
-    const allFactionIds = [...new Set(charList.map(c => c.faction))];
-    const otherFactions = allFactionIds.filter(f => f !== selectedFaction);
+    // Pick enemy team from the FULL roster (not campaign-filtered)
+    // This ensures enemies are always available even when the player only has 3 heroes
+    const allChars = LOCAL_CHARACTERS;
+    const allFactionIds = [...new Set(allChars.map(c => c.faction))];
+    const otherFactions = allFactionIds.filter(f => f !== selectedFaction && f !== 'Pirates');
     const enemyFaction = otherFactions[Math.floor(Math.random() * otherFactions.length)];
-    const possibleEnemies = charList.filter(c => c.faction === enemyFaction);
+    const possibleEnemies = allChars.filter(c => c.faction === enemyFaction);
     const enemyChars = [...possibleEnemies].sort(() => 0.5 - Math.random()).slice(0, 3);
 
     let unitIdCounter = 1;

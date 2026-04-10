@@ -20,10 +20,10 @@ const THEME_PALETTE: Record<string, { bg: string; border: string; glow: string }
 };
 
 const GRID_LABELS: Record<string, string> = {
-  ruins:    '80 × 80',
-  orc:      '100 × 100',
-  elven:    '120 × 120',
-  medieval: '140 × 140',
+  ruins:    '40 × 40',
+  orc:      '50 × 50',
+  elven:    '60 × 60',
+  medieval: '70 × 70',
 };
 
 export default function LevelSelect() {
