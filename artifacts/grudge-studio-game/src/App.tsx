@@ -37,6 +37,7 @@ function Router() {
       <Route path="/">{() => <AuthGuard><Home /></AuthGuard>}</Route>
       <Route path="/teams">{() => <AuthGuard><TeamBuilder /></AuthGuard>}</Route>
       <Route path="/select">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
+      <Route path="/character">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
       <Route path="/level-select">{() => <AuthGuard><LevelSelect /></AuthGuard>}</Route>
       <Route path="/skill-tree">{() => <AuthGuard><SkillTree /></AuthGuard>}</Route>
       <Route path="/battle">{() => <AuthGuard><Battle /></AuthGuard>}</Route>
