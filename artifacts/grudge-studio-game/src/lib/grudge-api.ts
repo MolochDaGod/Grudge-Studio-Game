@@ -1,14 +1,12 @@
 /**
  * Grudge Backend API Client
- * Connects to the live Grudge Studio backend services:
- *   - id.grudge-studio.com   (auth / identity)
- *   - api.grudge-studio.com  (game API)
- *   - account.grudge-studio.com (profiles / social)
+ * Connects to the live Grudge Studio backend services.
+ * All URLs are configurable via VITE_ env vars (see .env.example).
  */
 
-const GRUDGE_ID_URL      = 'https://id.grudge-studio.com';
-const GRUDGE_GAME_API    = 'https://api.grudge-studio.com';
-const GRUDGE_ACCOUNT_URL = 'https://account.grudge-studio.com';
+const GRUDGE_ID_URL      = import.meta.env.VITE_AUTH_URL      || 'https://id.grudge-studio.com';
+const GRUDGE_GAME_API    = import.meta.env.VITE_API_URL       || 'https://api.grudge-studio.com';
+const GRUDGE_ACCOUNT_URL = import.meta.env.VITE_ACCOUNT_URL   || 'https://account.grudge-studio.com';
 
 // ── Token management (persisted to localStorage for session survival) ────────
 
