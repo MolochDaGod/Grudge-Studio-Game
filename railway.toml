@@ -1,5 +1,6 @@
 [build]
-builder = "railpack"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "pnpm --filter @workspace/grudge-studio-game dev"
+healthcheckPath = "/health"
+restartPolicyType = "on_failure"
