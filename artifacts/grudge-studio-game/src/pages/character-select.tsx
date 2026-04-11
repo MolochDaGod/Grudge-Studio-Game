@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { WeaponPicker } from "@/components/ui/weapon-picker";
 import { SkillLoadoutModal } from "@/components/ui/skill-loadout-modal";
@@ -278,15 +278,18 @@ export default function CharacterSelect() {
   const [, setLocation] = useLocation();
   // ── Campaign state ───────────────────────────────────────────────────────────
   const [campaign, setCampaign] = useState<CampaignState>(loadCampaignState);
-  const unlockedIds = new Set(getUnlockedHeroIds(campaign));
+  const unlockedIds = useMemo(() => new Set(getUnlockedHeroIds(campaign)), [campaign]);
   const nextLevelId = getNextCampaignLevel(campaign);
   const nextUnlockHero = nextLevelId ? getHeroUnlockedByLevel(campaign, nextLevelId) : null;
 
   // Filter characters: only show unlocked heroes (campaign-gated)
-  // If no faction chosen yet, show all for faction selection step
-  const characters = campaign.faction
-    ? LOCAL_CHARACTERS.filter(c => unlockedIds.has(c.id))
-    : LOCAL_CHARACTERS;
+  // Memoized to prevent infinite re-render from setAllCharacters
+  const characters = useMemo(
+    () => campaign.faction
+      ? LOCAL_CHARACTERS.filter(c => unlockedIds.has(c.id))
+      : LOCAL_CHARACTERS,
+    [campaign.faction, unlockedIds],
+  );
 
   // Step state: 'faction' → 'hero' → 'forge'
   const [step, setStep] = useState<"faction" | "hero" | "forge">("faction");
