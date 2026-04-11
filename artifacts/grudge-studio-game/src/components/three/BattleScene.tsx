@@ -2,6 +2,7 @@ import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Sky, Html } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
 import { CharacterModel, AnimState } from './CharacterModel';
@@ -10,6 +11,9 @@ import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
 import { CombatEffectsLayer, CombatEffectData } from './CombatEffects';
 import { NatureDecor } from './NatureDecor';
 import { SceneErrorBoundary } from './ErrorBoundary';
+import { PhysicsProvider } from './PhysicsProvider';
+import { PhysicsCharacter } from './PhysicsCharacter';
+import { RAPIER_TERRAIN } from '@/lib/physics/collision-groups';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
@@ -559,13 +563,20 @@ function WalkingUnit({
       onPointerEnter={e => { e.stopPropagation(); onHover?.(unit.id); }}
       onPointerLeave={e => { e.stopPropagation(); onUnhover?.(unit.id); }}
     >
-      <CharacterModel
-        unit={unit}
+      <PhysicsCharacter
+        characterId={unit.characterId}
+        isPlayer={unit.isPlayerControlled}
+        unitId={unit.id}
         position={[0, 0, 0]}
-        facingAngle={facingAngle}
-        isSelected={currentUnitId === unit.id}
-        animState={animState}
-      />
+      >
+        <CharacterModel
+          unit={unit}
+          position={[0, 0, 0]}
+          facingAngle={facingAngle}
+          isSelected={currentUnitId === unit.id}
+          animState={animState}
+        />
+      </PhysicsCharacter>
 
   { animState === 'hide' && (
     <mesh position={ [0, 0.06, 0] } rotation = { [-Math.PI / 2, 0, 0]} >
@@ -881,6 +892,16 @@ export function BattleScene({
       <color attach="background" args={[level.skyColor]} />
       <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
 
+      <PhysicsProvider gravity={[0, -9.81, 0]}>
+
+      {/* Ground collider — invisible Rapier rigid body for physics raycasts */}
+      <RigidBody type="fixed" colliders={false} collisionGroups={RAPIER_TERRAIN}>
+        <CuboidCollider
+          args={[gridW * tileSize, 0.1, gridH * tileSize]}
+          position={[centerX, -0.1, centerZ]}
+        />
+      </RigidBody>
+
       <SceneSky theme={theme as IslandTheme} fogColor={fogColor} />
 
       {/* Lighting */}
@@ -1009,6 +1030,8 @@ export function BattleScene({
           <CombatEffectsLayer effects={combatEffects} />
         </group>
       </Suspense>
+
+      </PhysicsProvider>
 
       {/* Post-processing: Bloom makes emissive materials & combat effects glow */}
       <EffectComposer>

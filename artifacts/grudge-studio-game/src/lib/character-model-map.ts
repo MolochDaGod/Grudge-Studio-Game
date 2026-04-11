@@ -119,6 +119,10 @@ export interface CharacterConfig {
   voxelScale?: number;
   /** Path to voxel model GLB (only used when isVoxel is true) */
   voxelModelUrl?: string;
+  /** Physics capsule radius (world units). Computed from scale if not set. */
+  bodyRadius?: number;
+  /** Physics capsule full height (world units). Computed from scale if not set. */
+  bodyHeight?: number;
   /**
    * Which asset pack this model comes from. Affects automatic weapon scaling.
    * - 'quaternius': native scale ~1.0, character scale ~0.72 (default)
