@@ -3,6 +3,13 @@ import { AnimState } from '@/components/three/CharacterModel';
 import { EffectType } from '@/components/three/CombatEffects';
 import { Skill, PassiveBonuses } from '@/lib/weapon-skills';
 import { getCoverAgainst, CoverInfo } from '@/lib/cover-system';
+import {
+  type ComputedStats,
+  calculateCombatDamage as attrCombatDamage,
+  calculateMitigation,
+  checkDebuffSuccess,
+  type CombatResult as AttrCombatResult,
+} from '@/lib/attribute-system';
 
 // ── Facing helpers ────────────────────────────────────────────────────────────
 
@@ -197,6 +204,91 @@ export function getAtkDuration(skill: Skill): number {
 export function isMobilitySkill(skill: Skill): boolean {
   return !!skill.mobilityType;
 }
+
+// ── Full Attribute-System Combat ────────────────────────────────────────────
+// Uses the exact same 8-attribute → 19 secondary stat → combat resolution
+// pipeline as grudgewarlords.com. Every game mode uses this math.
+
+/**
+ * Build a ComputedStats object from a TacticalUnit.
+ * TacticalUnit carries the computed values (hp, attack, defense, etc.)
+ * which were already derived from the 8 core attributes via calculateStats().
+ * This maps them into the ComputedStats shape for the combat resolver.
+ */
+export function unitToComputedStats(unit: TacticalUnit): ComputedStats {
+  // Extended stats are attached by the grudge-bridge when available
+  const ext = (unit as any)._computedStats as ComputedStats | undefined;
+  if (ext) return ext;
+
+  // Fallback: build from flat TacticalUnit fields
+  return {
+    health: unit.hp,
+    maxHealth: unit.maxHp,
+    mana: unit.mana,
+    maxMana: unit.maxMana,
+    stamina: unit.stamina,
+    maxStamina: unit.maxStamina,
+    damage: unit.attack,
+    defense: unit.defense,
+    blockChance: 0,
+    criticalChance: 0.05,
+    accuracy: 0.5,
+    resistance: 0,
+    blockFactor: 0.3,
+    criticalFactor: 1.5,
+    drainHealthFactor: 0,
+    drainManaFactor: 0,
+    reflectFactor: 0,
+    absorbHealthFactor: 0,
+    absorbManaFactor: 0,
+    defenseBreakFactor: 0,
+    blockBreakFactor: 0,
+    critEvasion: 0,
+  };
+}
+
+/**
+ * Full attribute-aware combat damage resolution.
+ * Uses the complete 8-step pipeline: variance → defense break → mitigation →
+ * block → crit → drain → reflect → absorb.
+ *
+ * Returns the full CombatResult with all combat events.
+ */
+export function resolveAttributeCombat(
+  attacker: TacticalUnit,
+  defender: TacticalUnit,
+  facingMultiplier?: number,
+  obstacles?: Set<string>,
+): AttrCombatResult {
+  const atkStats = unitToComputedStats(attacker);
+  const defStats = unitToComputedStats(defender);
+
+  // Apply facing modifier: rear attacks reduce effective defense by 50%
+  const facing = facingMultiplier ?? facingDefenseMultiplier(attacker, defender);
+  const modifiedDefStats: ComputedStats = facing > 1
+    ? { ...defStats, defense: Math.floor(defStats.defense * 0.5) }
+    : defStats;
+
+  // Apply cover reduction if available
+  let coverMod = 1.0;
+  if (obstacles) {
+    const cover = getCoverAgainst(attacker.position, defender.position, obstacles);
+    if (cover.isProtected) coverMod = cover.damageMultiplier;
+  }
+
+  const result = attrCombatDamage(atkStats, modifiedDefStats, true);
+
+  // Apply cover to final damage
+  if (coverMod < 1.0) {
+    result.finalDamage = Math.max(1, Math.floor(result.finalDamage * coverMod));
+  }
+
+  return result;
+}
+
+/** Re-export for convenience */
+export { checkDebuffSuccess } from '@/lib/attribute-system';
+export type { AttrCombatResult };
 
 /**
  * For dash attacks that don't return to origin, find the best adjacent tile
