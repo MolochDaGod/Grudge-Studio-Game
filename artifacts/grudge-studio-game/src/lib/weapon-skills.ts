@@ -1879,6 +1879,15 @@ export function getDefaultSkillLoadout(characterId: string): Record<SkillSlot, s
   return result;
 }
 
+/** Resolves the active weapon skill tree key for a unit, accounting for beast form. */
+export function getActiveWeaponType(characterId: string, activeForm?: string | null): string | undefined {
+  if (activeForm) {
+    const formKey = activeForm + '_form';
+    if (WEAPON_SKILL_TREES[formKey]) return formKey;
+  }
+  return CHARACTER_WEAPON_MAP[characterId];
+}
+
 // Get a skill by ID
 export function getSkillById(skillId: string): Skill | undefined {
   for (const tree of Object.values(WEAPON_SKILL_TREES)) {

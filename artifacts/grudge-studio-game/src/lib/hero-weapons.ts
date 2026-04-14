@@ -38,6 +38,21 @@ export const HERO_WEAPON_OPTIONS: Record<string, HeroWeaponOptions> = {
   faith_barrier:      ['sword',        'axe',         'spear'],
 };
 
+/**
+ * Form-specific weapon trees.
+ * When a Worg activates a beast form, these replace the normal weapon loadout.
+ */
+export const FORM_WEAPON_MAP: Record<string, string> = {
+  bear:    'bear_form',
+  raptor:  'raptor_form',
+  warbear: 'warbear_form',
+};
+
+export function getHeroWeaponOptionsForForm(formId: string): WeaponSkillTree[] {
+  const key = FORM_WEAPON_MAP[formId];
+  return key ? [WEAPON_SKILL_TREES[key]].filter(Boolean) : [];
+}
+
 export function getHeroWeaponOptions(characterId: string): WeaponSkillTree[] {
   const keys = HERO_WEAPON_OPTIONS[characterId] ?? ['sword', 'bow', 'fire_staff'];
   return keys.map(k => WEAPON_SKILL_TREES[k]).filter(Boolean);

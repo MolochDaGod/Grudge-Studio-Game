@@ -58,6 +58,8 @@ export type ModelId =
   // Original fantasy pack
   | 'orc' | 'elf' | 'human' | 'barbarian' | 'undead' | 'dwarf' | 'rogue' | 'mage'
   // RPG Characters pack
+  // Worge beast form models
+  | 'warbear' | 'werewolf' | 'raptor'
   | 'warrior_rpg' | 'ranger_rpg' | 'rogue_rpg' | 'wizard_rpg' | 'cleric_rpg' | 'monk_rpg'
   // Ultimate Animated Character Pack (Nov 2019)
   | 'blue_soldier_female' | 'blue_soldier_male'
@@ -129,7 +131,69 @@ export interface CharacterConfig {
    * - 'rpg': native scale ~1000×, character scale ~0.0072, weapons need ~86× multiplier
    */
   modelPackType?: ModelPackType;
+  /** If true, this config represents a beast form - weapons are hidden. */
+  isBeastForm?: boolean;
 }
+
+// -- Worge Form IDs --------------------------------------------------------
+export type WorgeFormId = 'bear' | 'raptor' | 'warbear';
+
+export interface WorgeFormDef {
+  formId: WorgeFormId;
+  label: string;
+  unlockLevel: number;
+  configKey: string;
+}
+
+/** Which forms each Worg can access and at what level. */
+export const WORGE_FORM_DEFS: WorgeFormDef[] = [
+  { formId: 'bear',    label: 'Bear Form',    unlockLevel: 1,  configKey: 'werewolf_form' },
+  { formId: 'raptor',  label: 'Raptor Form',  unlockLevel: 10, configKey: 'raptor_form' },
+  { formId: 'warbear', label: 'Warbear Form',  unlockLevel: 20, configKey: 'warbear_form' },
+];
+
+const BEAST_CLAWS: WeaponConfig = {
+  modelId: 'daggers', position: [0, 0, 0], rotation: [0, 0, 0], scale: 0,
+};
+
+/** Beast form character configs. */
+export const WORGE_FORM_CONFIGS: Record<string, CharacterConfig> = {
+  'werewolf_form': {
+    modelId: 'werewolf', scale: [1.2, 1.2, 1.2], materials: {},
+    primaryWeapon: BEAST_CLAWS, isBeastForm: true,
+    animMap: {
+      idle: 'GltfAnimation 0', walk: 'GltfAnimation 0', run: 'GltfAnimation 0',
+      attack1: 'GltfAnimation 0', attack2: 'GltfAnimation 0',
+      hurt: 'GltfAnimation 0', dead: 'GltfAnimation 0',
+    },
+    labelHeight: 2.4, hpRingHeight: 2.2, selectionRingRadius: 0.85,
+  },
+  'raptor_form': {
+    modelId: 'raptor', scale: [1.0, 1.0, 1.0], materials: {},
+    primaryWeapon: BEAST_CLAWS, isBeastForm: true,
+    animMap: {
+      idle: 'Idle', idle2: 'Idle2', walk: 'SlowWalk', run: 'FastWalk',
+      attack1: 'Attack', attack2: 'HeadSmash', special1: 'Roar',
+      emote: 'LegScratch', dead: 'Die',
+      hurt: 'Idle', stunned: 'Idle', victory: 'Roar',
+    },
+    labelHeight: 1.8, hpRingHeight: 1.6, selectionRingRadius: 0.65,
+  },
+  'warbear_form': {
+    modelId: 'warbear', scale: [0.012, 0.012, 0.012], materials: {},
+    primaryWeapon: BEAST_CLAWS, isBeastForm: true,
+    animMap: {
+      idle: 'warbear_stand', idle2: 'warbear_lobbyStand00',
+      walk: 'warbear_move', run: 'warbear_move',
+      attack1: 'warbear_attack00', attack2: 'warbear_attack01',
+      cast: 'warbear_activeSkill', special1: 'warbear_activeSkill',
+      special2: 'warbear_activeSkill_return',
+      hurt: 'warbear_hit', stunned: 'warbear_stun', dead: 'warbear_die',
+      emote: 'warbear_lobbyIntro', victory: 'warbear_lobbyStand01',
+    },
+    labelHeight: 2.8, hpRingHeight: 2.5, selectionRingRadius: 0.95,
+  },
+};
 
 // Weapon natural longest-axis lengths (from actual GLB vertex bounds):
 // greataxe=4.59z, fire_staff=7.63z, dark_staff=5.58z, daggers=0.91z,
@@ -914,8 +978,19 @@ export function getCharacterConfig(characterId: string): CharacterConfig {
   return CHARACTER_CONFIGS[characterId] ?? CHARACTER_CONFIGS['orcish-warrior'];
 }
 
+export function getFormConfig(characterId: string, formId: WorgeFormId | null): CharacterConfig {
+  if (!formId) return getCharacterConfig(characterId);
+  const def = WORGE_FORM_DEFS.find(d => d.formId === formId);
+  if (def && WORGE_FORM_CONFIGS[def.configKey]) return WORGE_FORM_CONFIGS[def.configKey];
+  return getCharacterConfig(characterId);
+}
+
 export function getAnimationName(state: AnimState, config: CharacterConfig): string {
   return config.animMap?.[state] ?? DEFAULT_ANIM_MAP[state] ?? 'Idle';
+}
+
+export function isWorge(characterId: string): boolean {
+  return characterId.endsWith('_worg');
 }
 
 // ── Weapon fallback map ─────────────────────────────────────────────────────
@@ -1055,4 +1130,8 @@ export const ALL_MODEL_URLS = [
   '/models/weapons/shield.glb',
   '/models/weapons/rusted_sword.glb',
   '/models/weapons/war_hammer.glb',
+  // Worge beast form models
+  '/models/characters/warbear.glb',
+  '/models/characters/werewolf.glb',
+  '/models/characters/raptor.glb',
 ];

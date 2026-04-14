@@ -7,9 +7,11 @@ import { GLTFLoader } from 'three-stdlib';
 import { TacticalUnit } from '@/store/use-game-store';
 import {
   getCharacterConfig,
+  getFormConfig,
   getAnimationName,
   CharacterConfig,
   AnimState,
+  WorgeFormId,
   AccessoryConfig,
   resolveWeaponConfig,
   WeaponConfig,
@@ -36,6 +38,8 @@ interface CharacterModelProps {
   targetWorldPos?: [number, number, number] | null;
   /** When true, show a targeting reticle ring at the character's feet */
   isTargeted?: boolean;
+  /** When set, the Worg renders in beast form instead of humanoid. */
+  activeForm?: WorgeFormId | null;
 }
 
 interface CharacterModelInnerProps extends CharacterModelProps {
@@ -582,7 +586,7 @@ function LoadingPlaceholder({ color }: { color: string }) {
 }
 
 export function CharacterModel(props: CharacterModelProps) {
-  const config = useMemo(() => getCharacterConfig(props.unit.characterId), [props.unit.characterId]);
+  const config = useMemo(() => props.activeForm ? getFormConfig(props.unit.characterId, props.activeForm) : getCharacterConfig(props.unit.characterId), [props.unit.characterId, props.activeForm]);
 
   // Resolve weapon model + secondary from the equipped weapon type (with fallbacks)
   const { resolvedPrimary, resolvedSecondary } = useMemo(() => {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Character } from '@workspace/api-client-react';
 import { SkillSlot } from '@/lib/weapon-skills';
+import type { WorgeFormId } from '@/lib/character-model-map';
 
 export interface TacticalUnit {
   id: string;
@@ -38,6 +39,8 @@ export interface TacticalUnit {
   statusImmunities: Record<string, number>;
   hasMoved: boolean;
   hasActed: boolean;
+  /** Active beast form for Worge characters (null = humanoid base form) */
+  activeForm?: WorgeFormId | null;
 }
 
 export type ActionMode = 'idle' | 'move' | 'skill_1' | 'skill_2' | 'skill_3' | 'skill_4' | 'skill_5';
@@ -189,6 +192,10 @@ export const useGameStore = create<GameState>((set) => ({
 
   markUltimateUsed: (unitId) => set((state) => ({
     usedUltimates: { ...state.usedUltimates, [unitId]: true }
+  })),
+
+  setActiveForm: (unitId, form) => set((state) => ({
+    units: state.units.map(u => u.id === unitId ? { ...u, activeForm: form } : u),
   })),
 
   applyStatus: (unitId, effect, duration) => set((state) => {

@@ -575,6 +575,7 @@ function WalkingUnit({
           facingAngle={facingAngle}
           isSelected={currentUnitId === unit.id}
           animState={animState}
+          activeForm={unit.activeForm}
         />
       </PhysicsCharacter>
 
