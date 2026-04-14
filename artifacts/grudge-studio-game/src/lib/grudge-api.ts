@@ -360,3 +360,14 @@ export async function prefetchGameData(): Promise<void> {
   ]);
   console.log('[ObjectStore] Game data prefetched');
 }
+
+// -- Beast Forms (ObjectStore) ------------------------------------------------
+export interface BeastFormDef { id: string; label: string; unlockLevel: number; modelGlb: string; configKey: string; statBonuses: Record<string, number>; weaponTree: string; }
+export async function fetchBeastForms(): Promise<Record<string, BeastFormDef> | null> { const data = await fetchObjectStore<{ forms: Record<string, BeastFormDef> }>('/v1/beast-forms', 'beastForms.json'); return data?.forms ?? null; }
+
+// -- OpenSea Integration ------------------------------------------------------
+const OPENSEA_API = 'https://api.opensea.io/api/v2';
+export interface OpenSeaNFT { identifier: string; collection: string; name: string; description: string; image_url: string; opensea_url: string; metadata_url: string; token_standard: string; }
+export async function fetchOpenSeaNFTs(walletAddress: string, chain = 'solana'): Promise<OpenSeaNFT[]> { try { const res = await fetch(OPENSEA_API + '/chain/' + chain + '/account/' + walletAddress + '/nfts?limit=50', { headers: { 'Accept': 'application/json' } }); if (!res.ok) return []; const data = await res.json() as { nfts: OpenSeaNFT[] }; return data.nfts ?? []; } catch { return []; } }
+export async function refreshOpenSeaMetadata(chain: string, contract: string, tokenId: string): Promise<boolean> { try { const res = await fetch(OPENSEA_API + '/chain/' + chain + '/contract/' + contract + '/nfts/' + tokenId + '/refresh', { method: 'POST' }); return res.ok; } catch { return false; } }
+export async function fetchOpenSeaCollection(slug: string): Promise<Record<string, unknown> | null> { try { const res = await fetch(OPENSEA_API + '/collections/' + slug, { headers: { 'Accept': 'application/json' } }); if (!res.ok) return null; return await res.json() as Record<string, unknown>; } catch { return null; } }

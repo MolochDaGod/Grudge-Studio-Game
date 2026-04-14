@@ -40,6 +40,7 @@ const CHARACTERS = [
     weakness: "No healing spells",
     faction: "Crusade",
     rarity: "rare",
+    formModels: { bear: { modelId: 'werewolf_form', unlockLevel: 1 }, raptor: { modelId: 'raptor_form', unlockLevel: 10 }, warbear: { modelId: 'warbear_form', unlockLevel: 20 } },
   },
   {
     id: "human_mage",
@@ -105,6 +106,7 @@ const CHARACTERS = [
     weakness: "Form-dependent abilities",
     faction: "Crusade",
     rarity: "epic",
+    formModels: { bear: { modelId: 'werewolf_form', unlockLevel: 1 }, raptor: { modelId: 'raptor_form', unlockLevel: 10 }, warbear: { modelId: 'warbear_form', unlockLevel: 20 } },
   },
   {
     id: "barbarian_mage",
@@ -170,6 +172,7 @@ const CHARACTERS = [
     weakness: "Extremely slow in all forms",
     faction: "Fabled",
     rarity: "legendary",
+    formModels: { bear: { modelId: 'werewolf_form', unlockLevel: 1 }, raptor: { modelId: 'raptor_form', unlockLevel: 10 }, warbear: { modelId: 'warbear_form', unlockLevel: 20 } },
   },
   {
     id: "dwarf_mage",
@@ -235,6 +238,7 @@ const CHARACTERS = [
     weakness: "Fragile base form",
     faction: "Fabled",
     rarity: "legendary",
+    formModels: { bear: { modelId: 'werewolf_form', unlockLevel: 1 }, raptor: { modelId: 'raptor_form', unlockLevel: 10 }, warbear: { modelId: 'warbear_form', unlockLevel: 20 } },
   },
   {
     id: "elf_mage",
@@ -300,6 +304,7 @@ const CHARACTERS = [
     weakness: "No healing spells",
     faction: "Legion",
     rarity: "legendary",
+    formModels: { bear: { modelId: 'werewolf_form', unlockLevel: 1 }, raptor: { modelId: 'raptor_form', unlockLevel: 10 }, warbear: { modelId: 'warbear_form', unlockLevel: 20 } },
   },
   {
     id: "orc_mage",
@@ -365,6 +370,7 @@ const CHARACTERS = [
     weakness: "No healing spells",
     faction: "Legion",
     rarity: "legendary",
+    formModels: { bear: { modelId: 'werewolf_form', unlockLevel: 1 }, raptor: { modelId: 'raptor_form', unlockLevel: 10 }, warbear: { modelId: 'warbear_form', unlockLevel: 20 } },
   },
   {
     id: "undead_mage",

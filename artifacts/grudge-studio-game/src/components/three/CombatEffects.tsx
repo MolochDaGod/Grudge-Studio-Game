@@ -1084,6 +1084,12 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
             return <GroundSlam key={ key } effect = { effect } />;
           case 'magic_circle':
             return <MagicCircle key={ key } effect = { effect } />;
+          case 'nature_projectile':
+            return <NatureProjectile key={key} effect={effect} />;
+          case 'beast_javelin':
+            return <BeastJavelin key={key} effect={effect} />;
+          case 'shockwave':
+            return <Shockwave key={key} effect={effect} />;
           case 'energy_charge':
             return <EnergyCharge key={ key } effect = { effect } />;
           case 'heal_ring':

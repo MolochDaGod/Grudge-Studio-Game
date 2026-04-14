@@ -125,6 +125,10 @@ export const CHARACTER_LORE: Record<string, { title: string; quote: string; back
     quote: '"I remember your face. I remember all their faces."',
     backstory: 'Shade Whisper was an assassin in life who was betrayed by the very people she served and buried in an unmarked grave. She returned as something that remembers every face that has ever crossed her path. Her spectral arrows bypass conventional armor. She moves through shadow like she was born in it — and in death, she was. She remembers all their faces. She visits all of them, eventually.'
   },
+  // ===== WORGE BEAST FORMS =====
+  'werewolf_form': { title: 'The Beast Unleashed', quote: '"Fur and fury. Bone and rage."', backstory: 'The primal bear form. Claws that rend steel, jaws that crush stone.' },
+  'raptor_form': { title: 'The Shadow That Hunts', quote: '"You felt the wind change. That was me."', backstory: 'Speed incarnate. Shredding defenses before prey knows the hunt has begun.' },
+  'warbear_form': { title: 'Titan of the Wild', quote: '"The mountain walks. The forest screams."', backstory: 'The pinnacle of Worge mastery. An elemental force, a living siege engine.' },
   // ===== PIRATES — SECRET HEROES =====
   'pirate_king': {
     title: 'The Scourge of the Seven Seas',
