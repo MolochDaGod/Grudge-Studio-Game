@@ -1,14 +1,17 @@
 /**
  * Grudge Backend API Client
  * Connects to the live Grudge Studio backend services:
- *   - id.grudge-studio.com   (auth / identity)
- *   - api.grudge-studio.com  (game API)
- *   - account.grudge-studio.com (profiles / social)
+ *   - id.grudge-studio.com       (auth / identity)
+ *   - api.grudge-studio.com      (game API)
+ *   - account.grudge-studio.com  (profiles / social)
+ *   - objectstore.grudge-studio.com (game data / weapon skills / assets)
  */
 
-const GRUDGE_ID_URL      = 'https://id.grudge-studio.com';
-const GRUDGE_GAME_API    = 'https://api.grudge-studio.com';
-const GRUDGE_ACCOUNT_URL = 'https://account.grudge-studio.com';
+const GRUDGE_ID_URL        = 'https://id.grudge-studio.com';
+const GRUDGE_GAME_API      = 'https://api.grudge-studio.com';
+const GRUDGE_ACCOUNT_URL   = 'https://account.grudge-studio.com';
+const OBJECTSTORE_WORKER   = 'https://objectstore.grudge-studio.com';
+const OBJECTSTORE_PAGES    = 'https://molochdagod.github.io/ObjectStore/api/v1';
 
 // ── Token management (in-memory only, NOT localStorage) ──────────────────────
 
@@ -239,4 +242,90 @@ export async function getSkillLoadout(
   } catch {
     return null;
   }
+}
+
+// ── ObjectStore Game Data ────────────────────────────────────────────────────
+// Fetches canonical game data from the ObjectStore Worker (production API)
+// with GitHub Pages fallback for static JSON.
+
+const _osCache = new Map<string, { data: unknown; at: number }>();
+const _OS_TTL = 10 * 60 * 1000; // 10 min
+
+async function fetchObjectStore<T>(workerPath: string, pagesFile: string): Promise<T | null> {
+  const cached = _osCache.get(workerPath);
+  if (cached && Date.now() - cached.at < _OS_TTL) return cached.data as T;
+
+  // Try Worker first (fast, has filtering + caching)
+  try {
+    const res = await fetch(`${OBJECTSTORE_WORKER}${workerPath}`);
+    if (res.ok) {
+      const data = await res.json() as T;
+      _osCache.set(workerPath, { data, at: Date.now() });
+      return data;
+    }
+  } catch { /* fall through */ }
+
+  // Fallback to GitHub Pages
+  try {
+    const res = await fetch(`${OBJECTSTORE_PAGES}/${pagesFile}`);
+    if (res.ok) {
+      const data = await res.json() as T;
+      _osCache.set(workerPath, { data, at: Date.now() });
+      return data;
+    }
+  } catch { /* fall through */ }
+
+  return (cached?.data as T) ?? null;
+}
+
+/** Fetch all weapon skills (17 types, 207 skills with cast times, projectiles, physics) */
+export function fetchWeaponSkills() {
+  return fetchObjectStore<Record<string, unknown>>('/v1/weapon-skills', 'weaponSkills.json');
+}
+
+/** Fetch weapon skill tree for a specific weapon type */
+export function fetchWeaponSkillTree(weaponType: string) {
+  return fetchObjectStore<Record<string, unknown>>(`/v1/weapon-skills/${weaponType}`, 'weaponSkills.json');
+}
+
+/** Fetch weapon types available for a class */
+export function fetchClassWeapons(className: string) {
+  return fetchObjectStore<Record<string, unknown>>(`/v1/weapon-skills/class/${className}`, 'weaponSkills.json');
+}
+
+/** Fetch any game data collection (weapons, armor, enemies, etc.) */
+export function fetchGameData(collection: string) {
+  return fetchObjectStore<Record<string, unknown>>(`/v1/game-data/${collection}`, `${collection}.json`);
+}
+
+/** Fetch enemies data */
+export function fetchEnemies() {
+  return fetchGameData('enemies');
+}
+
+/** Fetch classes data */
+export function fetchClasses() {
+  return fetchGameData('classes');
+}
+
+/** Fetch races data */
+export function fetchRaces() {
+  return fetchGameData('races');
+}
+
+/** List all available game data collections */
+export function fetchGameDataCollections() {
+  return fetchObjectStore<{ count: number; collections: Array<{ name: string; url: string }> }>('/v1/game-data', '');
+}
+
+/** Prefetch core game data into cache */
+export async function prefetchGameData(): Promise<void> {
+  await Promise.allSettled([
+    fetchWeaponSkills(),
+    fetchGameData('weapons'),
+    fetchGameData('classes'),
+    fetchGameData('races'),
+    fetchGameData('enemies'),
+  ]);
+  console.log('[ObjectStore] Game data prefetched');
 }
