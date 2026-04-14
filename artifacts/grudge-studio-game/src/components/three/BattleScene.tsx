@@ -2,13 +2,18 @@ import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Sky, Html } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
 import { CharacterModel, AnimState } from './CharacterModel';
+import { tickSequences } from '@/lib/animation-events';
 import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
 import { CombatEffectsLayer, CombatEffectData } from './CombatEffects';
 import { NatureDecor } from './NatureDecor';
 import { SceneErrorBoundary } from './ErrorBoundary';
+import { PhysicsProvider } from './PhysicsProvider';
+import { PhysicsCharacter } from './PhysicsCharacter';
+import { RAPIER_TERRAIN } from '@/lib/physics/collision-groups';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
 
@@ -29,6 +34,8 @@ interface BattleSceneProps {
   level: LevelDef;
   reachableTiles: Array<{x: number, y: number}>;
   attackableTiles: Array<{x: number, y: number}>;
+  /** Color hint for attackable zone overlay: red=enemy, purple=mobility, green=friendly */
+  attackableColor?: string;
   currentUnitId: string | null;
   actionMode: string;
   onTileClick: (x: number, y: number) => void;
@@ -44,6 +51,8 @@ interface BattleSceneProps {
   onUnitHover?: (unitId: string) => void;
   onUnitUnhover?: (unitId: string) => void;
   onMapRightClick?: (tx: number, ty: number, screenX: number, screenY: number) => void;
+  /** ID of the unit currently being hovered for attack targeting */
+  targetedUnitId?: string | null;
   walkPaths?: Record<string, GridPos[]>;
   onWalkComplete?: (unitId: string) => void;
   onWalkStep?: (unitId: string, tile: GridPos) => void;
@@ -52,6 +61,12 @@ interface BattleSceneProps {
 // ── Camera Shaker ─────────────────────────────────────────────────────────────
 // Listens for 'camera-shake' CustomEvents dispatched from battle logic.
 // Event detail: { intensity?: number; duration?: number }
+// ── Animation sequence ticker — drives combat event timing from useFrame ──────
+function SequenceTicker() {
+  useFrame(() => tickSequences());
+  return null;
+}
+
 function CameraShaker() {
   const { camera } = useThree();
   const shakeRef = useRef<{ intensity: number; duration: number; elapsed: number } | null>(null);
@@ -545,16 +560,23 @@ function WalkingUnit({
         e.stopPropagation();
         onRightClick?.(unit.id, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
       }}
-onPointerEnter = { e => { e.stopPropagation(); onHover?.(unit.id); }}
-onPointerLeave = { e => { e.stopPropagation(); onUnhover?.(unit.id); }}
+      onPointerEnter={e => { e.stopPropagation(); onHover?.(unit.id); }}
+      onPointerLeave={e => { e.stopPropagation(); onUnhover?.(unit.id); }}
     >
-      <CharacterModel
-        unit={unit}
+      <PhysicsCharacter
+        characterId={unit.characterId}
+        isPlayer={unit.isPlayerControlled}
+        unitId={unit.id}
         position={[0, 0, 0]}
-        facingAngle={facingAngle}
-        isSelected={currentUnitId === unit.id}
-        animState={animState}
-      />
+      >
+        <CharacterModel
+          unit={unit}
+          position={[0, 0, 0]}
+          facingAngle={facingAngle}
+          isSelected={currentUnitId === unit.id}
+          animState={animState}
+        />
+      </PhysicsCharacter>
 
   { animState === 'hide' && (
     <mesh position={ [0, 0.06, 0] } rotation = { [-Math.PI / 2, 0, 0]} >
@@ -825,15 +847,29 @@ function SceneSky({ theme, fogColor }: { theme: IslandTheme; fogColor: string })
 
 // ── Main BattleScene ─────────────────────────────────────────────────────────
 export function BattleScene({
-  units, level, reachableTiles, attackableTiles,
+  units, level, reachableTiles, attackableTiles, attackableColor,
   currentUnitId, actionMode, onTileClick, animStates,
   combatEffects = [], cameraFocus, cameraMode = 'free', onUnitDoubleClick,
   showUnitInfo = false, mapPings = [], onUnitRightClick, onUnitClick,
   onUnitHover, onUnitUnhover, onMapRightClick,
   walkPaths = {}, onWalkComplete, onWalkStep,
+  targetedUnitId,
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
+  const [showSkeletonDebug, setShowSkeletonDebug] = useState(false);
   const currentUnit = units.find(u => u.id === currentUnitId) ?? null;
+
+  // Shift+B toggles skeleton debug overlay
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'B' && e.shiftKey) {
+        setShowSkeletonDebug(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const { gridW, gridH, tileSize, fogColor, fogNear, fogFar, theme } = level;
   const centerX = (gridW * tileSize) / 2;
@@ -855,6 +891,16 @@ export function BattleScene({
     >
       <color attach="background" args={[level.skyColor]} />
       <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
+
+      <PhysicsProvider gravity={[0, -9.81, 0]}>
+
+      {/* Ground collider — invisible Rapier rigid body for physics raycasts */}
+      <RigidBody type="fixed" colliders={false} collisionGroups={RAPIER_TERRAIN}>
+        <CuboidCollider
+          args={[gridW * tileSize, 0.1, gridH * tileSize]}
+          position={[centerX, -0.1, centerZ]}
+        />
+      </RigidBody>
 
       <SceneSky theme={theme as IslandTheme} fogColor={fogColor} />
 
@@ -889,6 +935,7 @@ export function BattleScene({
       <pointLight position={[10, 15, centerZ * 2 - 10]}      color="#44ccaa" intensity={0.8} distance={tileSize * 20} />
       <pointLight position={[centerX * 2 - 10, 15, centerZ * 2 - 10]} color="#ff4422" intensity={0.8} distance={tileSize * 20} />
 
+        <SequenceTicker />
         <CameraShaker />
       <OrbitControls
         makeDefault
@@ -918,12 +965,18 @@ export function BattleScene({
       />
       <OceanPlane cx={centerX} cz={centerZ} />
 
-      <Suspense fallback={null}>
+      <Suspense fallback={
+        <mesh position={[centerX, 0.5, centerZ]}>
+          <boxGeometry args={[2, 1, 2]} />
+          <meshBasicMaterial color="#4488ff" wireframe />
+        </mesh>
+      }>
         <group>
           <TileGrid
             level={level}
             reachableTiles={reachableTiles}
             attackableTiles={attackableTiles}
+            attackableColor={attackableColor}
             onTileClick={onTileClick}
             hoveredTile={hoveredTile}
             setHoveredTile={setHoveredTile}
@@ -935,23 +988,41 @@ export function BattleScene({
           {/* Craftpix Stylized Nature — trees, rocks, bushes ringing the map border */}
           <NatureDecor gridW={gridW} gridH={gridH} tileSize={tileSize} />
 
-          {units.map(unit => (
-            <WalkingUnit
-              key={unit.id}
-              unit={unit}
-              tileSize={tileSize}
-              walkPath={walkPaths[unit.id]}
-              onWalkComplete={onWalkComplete}
-              onWalkStep={onWalkStep}
-              currentUnitId={currentUnitId}
-              animState={animStates[unit.id] || 'idle'}
-              onDoubleClick={onUnitDoubleClick}
-              onRightClick={onUnitRightClick}
-              onClick={onUnitClick}
-              onHover = { onUnitHover }
-              onUnhover = { onUnitUnhover }
-            />
-          ))}
+          {units.map(unit => {
+            // Compute targeting data: when a unit is being targeted, show reticle;
+            // when the active unit is attacking, provide target pos for look-at
+            const isThisTargeted = targetedUnitId === unit.id;
+            const activeUnit = currentUnitId ? units.find(u => u.id === currentUnitId) : null;
+            const targetUnit = targetedUnitId ? units.find(u => u.id === targetedUnitId) : null;
+            // If this is the active (attacking) unit and there's a hovered target, give it target pos
+            let targetWorldPosForLookAt: [number, number, number] | undefined;
+            if (unit.id === currentUnitId && targetUnit && targetUnit.hp > 0) {
+              targetWorldPosForLookAt = tileToWorld(targetUnit.position.x, targetUnit.position.y, tileSize, 0.9);
+            }
+            // Augment unit with targeting data (read by CharacterModel)
+            const augUnit = {
+              ...unit,
+              _targetWorldPos: targetWorldPosForLookAt ?? null,
+              _isTargeted: isThisTargeted,
+            };
+            return (
+              <WalkingUnit
+                key={unit.id}
+                unit={augUnit as any}
+                tileSize={tileSize}
+                walkPath={walkPaths[unit.id]}
+                onWalkComplete={onWalkComplete}
+                onWalkStep={onWalkStep}
+                currentUnitId={currentUnitId}
+                animState={animStates[unit.id] || 'idle'}
+                onDoubleClick={onUnitDoubleClick}
+                onRightClick={onUnitRightClick}
+                onClick={onUnitClick}
+                onHover={onUnitHover}
+                onUnhover={onUnitUnhover}
+              />
+            );
+          })}
 
           {showUnitInfo && <UnitMarkers units={units} tileSize={tileSize} />}
           {mapPings.length > 0 && <PingMarkers pings={mapPings} tileSize={tileSize} />}
@@ -959,6 +1030,8 @@ export function BattleScene({
           <CombatEffectsLayer effects={combatEffects} />
         </group>
       </Suspense>
+
+      </PhysicsProvider>
 
       {/* Post-processing: Bloom makes emissive materials & combat effects glow */}
       <EffectComposer>

@@ -67,7 +67,7 @@ export function CharacterCard({ character, onClick, selected, className }: Chara
     backstory: character.lore,
   };
 
-  const isSecret = character.faction === "Pirates";
+  const isSecret = (character.faction as string) === "Pirates";
 
   return (
     <motion.div

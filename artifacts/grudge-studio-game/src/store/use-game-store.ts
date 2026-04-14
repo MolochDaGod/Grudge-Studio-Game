@@ -19,6 +19,8 @@ export interface TacticalUnit {
   speed: number;
   move: number;
   range: number;
+  /** Equipped weapon type (e.g. 'sword', 'bow', 'greataxe'). Drives 3D model + animation selection. */
+  weaponType: string;
   position: { x: number; y: number };
   /** 0=N, 1=E, 2=S, 3=W */
   facing: 0 | 1 | 2 | 3;
@@ -39,6 +41,14 @@ export interface TacticalUnit {
 }
 
 export type ActionMode = 'idle' | 'move' | 'skill_1' | 'skill_2' | 'skill_3' | 'skill_4' | 'skill_5';
+
+/** Pre-battle staging data — stored between character-select and level-select */
+export interface PendingSquad {
+  selectedIds: string[];
+  selectedFaction: string;
+  weaponByCharId: Record<string, string>;
+  loadoutByCharId: Record<string, Record<SkillSlot, string>>;
+}
 
 export interface GameState {
   phase: 'home' | 'squad-select' | 'battle' | 'result';
@@ -62,10 +72,13 @@ export interface GameState {
   skillCooldowns: Record<string, Record<string, number>>;
   usedUltimates: Record<string, boolean>;
   currentLevelId: string;
+  /** Staging area: hero selection data carried to level-select for battle init */
+  pendingSquad: PendingSquad | null;
 
   setPhase: (phase: GameState['phase']) => void;
   setAllCharacters: (characters: Character[]) => void;
   setPlayerSquad: (squadIds: string[]) => void;
+  setPendingSquad: (data: PendingSquad) => void;
   initBattle: (units: TacticalUnit[]) => void;
   setUnits: (units: TacticalUnit[]) => void;
   updateUnit: (id: string, updates: Partial<TacticalUnit>) => void;
@@ -112,10 +125,12 @@ export const useGameStore = create<GameState>((set) => ({
   skillCooldowns: {},
   usedUltimates: {},
   currentLevelId: 'ruins',
+  pendingSquad: null,
 
   setPhase: (phase) => set({ phase }),
   setAllCharacters: (characters) => set({ allCharacters: characters }),
   setPlayerSquad: (squadIds) => set({ playerSquad: squadIds }),
+  setPendingSquad: (data) => set({ pendingSquad: data, phase: 'squad-select' }),
   
   initBattle: (units) => set({ 
     units, 
@@ -227,5 +242,6 @@ export const useGameStore = create<GameState>((set) => ({
     equippedSkills: {},
     skillCooldowns: {},
     usedUltimates: {},
+    pendingSquad: null,
   })
 }));

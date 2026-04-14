@@ -1,0 +1,29 @@
+{
+  "framework": null,
+  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/grudge-studio-game run build",
+  "outputDirectory": "artifacts/grudge-studio-game/dist",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/api/game/(.*)", "dest": "https://api.grudge-studio.com/$1" },
+    { "src": "/api/auth/(.*)", "dest": "https://id.grudge-studio.com/auth/$1" },
+    { "src": "/api/account/(.*)", "dest": "https://account.grudge-studio.com/$1" },
+    { "src": "/api/assets/(.*)", "dest": "https://assets.grudge-studio.com/$1" },
+    { "src": "/api/(.*)", "status": 404 },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/models/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }
+      ]
+    },
+    {
+      "source": "/images/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,15 @@
 import { TacticalUnit } from '@/store/use-game-store';
 import { AnimState } from '@/components/three/CharacterModel';
 import { EffectType } from '@/components/three/CombatEffects';
-import { Skill } from '@/lib/weapon-skills';
+import { Skill, PassiveBonuses } from '@/lib/weapon-skills';
+import { getCoverAgainst, CoverInfo } from '@/lib/cover-system';
+import {
+  type ComputedStats,
+  calculateCombatDamage as attrCombatDamage,
+  calculateMitigation,
+  checkDebuffSuccess,
+  type CombatResult as AttrCombatResult,
+} from '@/lib/attribute-system';
 
 // ── Facing helpers ────────────────────────────────────────────────────────────
 
@@ -47,23 +55,88 @@ export function isFrontAttack(
   return facingDefenseMultiplier(attacker, defender) === 1.0;
 }
 
-// ── Damage calculation ────────────────────────────────────────────────────────
+// ── Damage calculation ──────────────────────────────────────────────────────
 
 export function calculateDamage(
   attacker: TacticalUnit,
   defender: TacticalUnit,
   isCrit = false,
+  obstacles?: Set<string>,
+  attackerPassives?: PassiveBonuses,
+  defenderPassives?: PassiveBonuses,
 ): number {
+  const atkBonus = attackerPassives?.attack ?? 0;
+  const defBonus = defenderPassives?.defense ?? 0;
+  const dmgReduction = defenderPassives?.damageReduction ?? 0;
+
   const facingMult = facingDefenseMultiplier(attacker, defender);
+  const totalDef = (defender.defense + defBonus);
   const effectiveDef = facingMult > 1
-    ? Math.floor(defender.defense * 0.5)
-    : defender.defense;
+    ? Math.floor(totalDef * 0.5)
+    : totalDef;
   let damage = Math.max(
     1,
-    attacker.attack - effectiveDef + Math.floor(Math.random() * 6) - 2,
+    (attacker.attack + atkBonus) - effectiveDef + Math.floor(Math.random() * 6) - 2,
   );
   if (isCrit) damage = Math.floor(damage * 2);
+  // Apply passive damage reduction
+  if (dmgReduction > 0) {
+    damage = Math.max(1, Math.floor(damage * (1 - dmgReduction)));
+  }
+  // Apply cover reduction if obstacles provided
+  if (obstacles) {
+    const cover = getCoverAgainst(attacker.position, defender.position, obstacles);
+    if (cover.isProtected) {
+      damage = Math.max(1, Math.floor(damage * cover.damageMultiplier));
+    }
+  }
   return damage;
+}
+
+/**
+ * Roll passive combat checks: dodge, enhanced crit, enhanced block, counter-attack, quick-attack.
+ * Returns a result object that the caller uses to modify combat flow.
+ */
+export interface PassiveCombatResult {
+  dodged: boolean;
+  critChance: number;      // modified crit chance (base + passive)
+  blockChance: number;     // modified block chance (base + passive)
+  counterAttack: boolean;  // should the defender counter-attack after being hit?
+  counterDmgMult: number;  // counter damage multiplier
+  quickAttack: boolean;    // should the attacker strike a second time?
+}
+
+export function resolvePassiveCombat(
+  baseCritChance: number,
+  baseBlockChance: number,
+  isFront: boolean,
+  attackerPassives?: PassiveBonuses,
+  defenderPassives?: PassiveBonuses,
+): PassiveCombatResult {
+  const dodge = defenderPassives?.dodge ?? 0;
+  const dodged = Math.random() < dodge;
+
+  const critChance = baseCritChance + (attackerPassives?.critBonus ?? 0);
+  const blockChance = isFront
+    ? baseBlockChance + (defenderPassives?.blockBonus ?? 0)
+    : 0; // can only block from front
+
+  const counterChance = defenderPassives?.counter ?? 0;
+  const counterAttack = !dodged && Math.random() < counterChance;
+  const counterDmgMult = defenderPassives?.counterDmg ?? 0.5;
+
+  const quickAttack = Math.random() < (attackerPassives?.quickAttack ?? 0);
+
+  return { dodged, critChance, blockChance, counterAttack, counterDmgMult, quickAttack };
+}
+
+/** Get cover info between attacker and defender (convenience re-export) */
+export function getCombatCover(
+  attacker: TacticalUnit,
+  defender: TacticalUnit,
+  obstacles: Set<string>,
+): CoverInfo {
+  return getCoverAgainst(attacker.position, defender.position, obstacles);
 }
 
 // ── Effect mapping ────────────────────────────────────────────────────────────
@@ -96,6 +169,13 @@ export function getEffectType(skill: Skill, weaponType?: string): EffectType {
 // ── Anim state for skills ─────────────────────────────────────────────────────
 
 export function getSkillAnimState(skill: Skill): AnimState {
+  // Mobility skills
+  if (skill.mobilityType === 'team_jump') return 'attack4';  // Jump animation
+  if (skill.mobilityType === 'flight')    return 'special2'; // Jump/fly animation
+  if (skill.mobilityType === 'teleport')  return 'cast';     // Cast/blink animation
+  // Dash-strike skills
+  if (skill.attackType === 'dash' && skill.dmgMultiplier) return 'attack1';
+  // Normal combat
   if (skill.tags.includes('ultimate')) return 'special1';
   if (skill.tags.includes('heal') || skill.tags.includes('buff')) return 'cast';
   if (skill.aoe) return 'attack3';
@@ -105,11 +185,141 @@ export function getSkillAnimState(skill: Skill): AnimState {
 
 /** Attack animation duration by skill type (ms) */
 export function getAtkDuration(skill: Skill): number {
+  // Mobility skills have their own timing
+  if (skill.mobilityType === 'team_jump') return 700;
+  if (skill.mobilityType === 'flight')    return 900;
+  if (skill.mobilityType === 'teleport')  return 550;
+  // Dash-strike: longer to account for dash-out + hold + return
+  if (skill.attackType === 'dash' && skill.returnsToOrigin) return 1400;
+  if (skill.attackType === 'dash') return 1200;
+  // Normal combat
   if (skill.tags?.includes('ultimate')) return 1600;
   if (skill.aoe) return 1400;
   if (skill.range > 2) return 1250;
   if (skill.tags?.includes('heal') || skill.tags?.includes('buff')) return 1100;
   return 1050;
+}
+
+/** Check if a skill is a mobility/movement skill (targets empty tiles, not enemies) */
+export function isMobilitySkill(skill: Skill): boolean {
+  return !!skill.mobilityType;
+}
+
+// ── Full Attribute-System Combat ────────────────────────────────────────────
+// Uses the exact same 8-attribute → 19 secondary stat → combat resolution
+// pipeline as grudgewarlords.com. Every game mode uses this math.
+
+/**
+ * Build a ComputedStats object from a TacticalUnit.
+ * TacticalUnit carries the computed values (hp, attack, defense, etc.)
+ * which were already derived from the 8 core attributes via calculateStats().
+ * This maps them into the ComputedStats shape for the combat resolver.
+ */
+export function unitToComputedStats(unit: TacticalUnit): ComputedStats {
+  // Extended stats are attached by the grudge-bridge when available
+  const ext = (unit as any)._computedStats as ComputedStats | undefined;
+  if (ext) return ext;
+
+  // Fallback: build from flat TacticalUnit fields
+  return {
+    health: unit.hp,
+    maxHealth: unit.maxHp,
+    mana: unit.mana,
+    maxMana: unit.maxMana,
+    stamina: unit.stamina,
+    maxStamina: unit.maxStamina,
+    damage: unit.attack,
+    defense: unit.defense,
+    blockChance: 0,
+    criticalChance: 0.05,
+    accuracy: 0.5,
+    resistance: 0,
+    blockFactor: 0.3,
+    criticalFactor: 1.5,
+    drainHealthFactor: 0,
+    drainManaFactor: 0,
+    reflectFactor: 0,
+    absorbHealthFactor: 0,
+    absorbManaFactor: 0,
+    defenseBreakFactor: 0,
+    blockBreakFactor: 0,
+    critEvasion: 0,
+  };
+}
+
+/**
+ * Full attribute-aware combat damage resolution.
+ * Uses the complete 8-step pipeline: variance → defense break → mitigation →
+ * block → crit → drain → reflect → absorb.
+ *
+ * Returns the full CombatResult with all combat events.
+ */
+export function resolveAttributeCombat(
+  attacker: TacticalUnit,
+  defender: TacticalUnit,
+  facingMultiplier?: number,
+  obstacles?: Set<string>,
+): AttrCombatResult {
+  const atkStats = unitToComputedStats(attacker);
+  const defStats = unitToComputedStats(defender);
+
+  // Apply facing modifier: rear attacks reduce effective defense by 50%
+  const facing = facingMultiplier ?? facingDefenseMultiplier(attacker, defender);
+  const modifiedDefStats: ComputedStats = facing > 1
+    ? { ...defStats, defense: Math.floor(defStats.defense * 0.5) }
+    : defStats;
+
+  // Apply cover reduction if available
+  let coverMod = 1.0;
+  if (obstacles) {
+    const cover = getCoverAgainst(attacker.position, defender.position, obstacles);
+    if (cover.isProtected) coverMod = cover.damageMultiplier;
+  }
+
+  const result = attrCombatDamage(atkStats, modifiedDefStats, true);
+
+  // Apply cover to final damage
+  if (coverMod < 1.0) {
+    result.finalDamage = Math.max(1, Math.floor(result.finalDamage * coverMod));
+  }
+
+  return result;
+}
+
+/** Re-export for convenience */
+export { checkDebuffSuccess } from '@/lib/attribute-system';
+export type { AttrCombatResult };
+
+/**
+ * For dash attacks that don't return to origin, find the best adjacent tile
+ * near the target for the attacker to land on after striking.
+ */
+export function findDashLandingTile(
+  target: { x: number; y: number },
+  origin: { x: number; y: number },
+  gridW: number,
+  gridH: number,
+  occupied: Set<string>,
+  obstacles: Set<string>,
+): { x: number; y: number } {
+  const dirs = [[0,1],[0,-1],[1,0],[-1,0]] as const;
+  // Prefer the tile that's on the attacker's approach side
+  const dx = origin.x - target.x;
+  const dy = origin.y - target.y;
+  const sorted = [...dirs].sort((a, b) => {
+    // Score: prefer tile in direction of origin (attacker's approach side)
+    const scoreA = a[0] * Math.sign(dx) + a[1] * Math.sign(dy);
+    const scoreB = b[0] * Math.sign(dx) + b[1] * Math.sign(dy);
+    return scoreB - scoreA;
+  });
+  for (const [ddx, ddy] of sorted) {
+    const nx = target.x + ddx, ny = target.y + ddy;
+    const key = `${nx},${ny}`;
+    if (nx >= 0 && ny >= 0 && nx < gridW && ny < gridH && !occupied.has(key) && !obstacles.has(key)) {
+      return { x: nx, y: ny };
+    }
+  }
+  return origin; // fallback: stay at origin if no adjacent tile is free
 }
 
 // ── BFS path for movement ─────────────────────────────────────────────────────

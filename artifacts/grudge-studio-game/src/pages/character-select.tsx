@@ -1,18 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useGetCharacters } from "@workspace/api-client-react";
 import { WeaponPicker } from "@/components/ui/weapon-picker";
 import { SkillLoadoutModal } from "@/components/ui/skill-loadout-modal";
 import { FantasyButton } from "@/components/ui/fantasy-button";
-import { useGameStore, TacticalUnit } from "@/store/use-game-store";
+import { useGameStore } from "@/store/use-game-store";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, ArrowLeft, Skull, Sword, Shield, Clock, Target, Zap, Heart, ChevronRight, Star } from "lucide-react";
+import { ArrowLeft, Sword, Shield, Clock, Target, Zap, Heart, ChevronRight, Star } from "lucide-react";
 import { CHARACTER_LORE } from "@/lib/lore";
 import { getHeroWeaponOptions } from "@/lib/hero-weapons";
 import { WEAPON_SKILL_TREES, SkillSlot, SLOT_LABELS, TIER_STYLES, WeaponSkillTree, Skill } from "@/lib/weapon-skills";
-import { getLevelWithEdits } from "@/lib/levels";
 import { cn } from "@/lib/utils";
-import { Character } from "@workspace/api-client-react";
+import { CHARACTERS as LOCAL_CHARACTERS, type GameCharacter } from "@/lib/characters";
+import {
+  loadCampaignState, chooseFaction, getUnlockedHeroIds,
+  getNextCampaignLevel, getHeroUnlockedByLevel,
+  SELECTABLE_FACTIONS, type FactionId, type CampaignState,
+} from "@/lib/campaign";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -111,7 +114,7 @@ function HeroCard({
   disabled,
   equipped,
 }: {
-  character: Character;
+  character: GameCharacter;
   selected: boolean;
   onClick: () => void;
   disabled: boolean;
@@ -273,7 +276,20 @@ function HeroCard({
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function CharacterSelect() {
   const [, setLocation] = useLocation();
-  const { data: characters, isLoading, error } = useGetCharacters();
+  // ── Campaign state ───────────────────────────────────────────────────────────
+  const [campaign, setCampaign] = useState<CampaignState>(loadCampaignState);
+  const unlockedIds = useMemo(() => new Set(getUnlockedHeroIds(campaign)), [campaign]);
+  const nextLevelId = getNextCampaignLevel(campaign);
+  const nextUnlockHero = nextLevelId ? getHeroUnlockedByLevel(campaign, nextLevelId) : null;
+
+  // Filter characters: only show unlocked heroes (campaign-gated)
+  // Memoized to prevent infinite re-render from setAllCharacters
+  const characters = useMemo(
+    () => campaign.faction
+      ? LOCAL_CHARACTERS.filter(c => unlockedIds.has(c.id))
+      : LOCAL_CHARACTERS,
+    [campaign.faction, unlockedIds],
+  );
 
   // Step state: 'faction' → 'hero' → 'forge'
   const [step, setStep] = useState<"faction" | "hero" | "forge">("faction");
@@ -285,15 +301,21 @@ export default function CharacterSelect() {
   const [weaponByCharId, setWeaponByCharId] = useState<Record<string, string>>({});
   const [loadoutByCharId, setLoadoutByCharId] = useState<Record<string, Record<SkillSlot, string>>>({});
 
-  const { initBattle, setAllCharacters, setPlayerSquad, setEquippedSkills, currentLevelId } = useGameStore();
+  const { setPendingSquad, setAllCharacters, currentLevelId } = useGameStore();
 
   useEffect(() => {
-    if (characters) setAllCharacters(characters);
+    setAllCharacters(characters as any);
   }, [characters, setAllCharacters]);
 
-  const factionChars = characters?.filter(c => c.faction === selectedFaction) ?? [];
+  const charList = characters;
+  const factionChars = charList.filter(c => c.faction === selectedFaction);
 
   const handleFactionSelect = (factionId: string) => {
+    // If player hasn't chosen a campaign faction yet, lock it in
+    if (!campaign.faction && SELECTABLE_FACTIONS.includes(factionId as FactionId)) {
+      const newState = chooseFaction(factionId as FactionId);
+      setCampaign(newState);
+    }
     setSelectedFaction(factionId);
     setStep("hero");
     setSelectedIds([]);
@@ -335,83 +357,14 @@ export default function CharacterSelect() {
   };
 
   const handleStartBattle = () => {
-    if (selectedIds.length !== 3 || !characters) return;
-    setPlayerSquad(selectedIds);
-    const level = getLevelWithEdits(currentLevelId);
-    const playerChars = characters.filter(c => selectedIds.includes(c.id));
+    if (selectedIds.length !== 3 || characters.length === 0) return;
 
-    // Pick an enemy faction that is different from the player's faction
-    const allFactionIds = [...new Set(characters.map(c => c.faction))];
-    const otherFactions = allFactionIds.filter(f => f !== selectedFaction);
-    const enemyFaction = otherFactions[Math.floor(Math.random() * otherFactions.length)];
-    const possibleEnemies = characters.filter(c => c.faction === enemyFaction);
-    const enemyChars = [...possibleEnemies].sort(() => 0.5 - Math.random()).slice(0, 3);
-
-    let unitIdCounter = 1;
-    const createTacticalUnit = (char: typeof characters[0], isPlayer: boolean, index: number): TacticalUnit => {
-      const speed = char.speed;
-      const move = Math.max(12, Math.floor(speed / 7) * 3);
-      const range = char.role === 'Ranger' ? 8 : char.role === 'Mage' ? 7 : char.role === 'Worg' ? 3 : 2;
-      const spawn = isPlayer ? level.playerSpawn : level.enemySpawn;
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = Math.min(spawn.xMax, spawn.xMin + col * 3);
-      const y = Math.min(spawn.yMax, spawn.yMin + row * 5);
-      const maxMana    = Math.round(Math.max(20, 10 + speed * 3));
-      const maxStamina = Math.round(Math.max(40, 30 + speed * 2));
-      return {
-        id: `unit_${unitIdCounter++}`,
-        characterId: char.id,
-        name: char.name,
-        race: char.race,
-        role: char.role,
-        hp: char.hp,
-        maxHp: char.hp,
-        mana: maxMana,
-        maxMana,
-        stamina: maxStamina,
-        maxStamina,
-        attack: char.attack,
-        defense: char.defense,
-        speed,
-        move,
-        range,
-        position: { x, y },
-        facing: (isPlayer ? 1 : 3) as 0 | 1 | 2 | 3,
-        isPlayerControlled: isPlayer,
-        specialAbility: char.specialAbility,
-        specialAbilityDescription: char.specialAbilityDescription,
-        specialAbilityCooldown: 0,
-        ct: Math.floor(Math.random() * 20),
-        faction: char.faction,
-        rarity: char.rarity,
-        statusEffects: [],
-        statusDurations: {},
-        hasMoved: false,
-        hasActed: false,
-      };
-    };
-
-    const playerUnits = playerChars.map((c, i) => createTacticalUnit(c, true, i));
-    const enemyUnits  = enemyChars.map((c, i) => createTacticalUnit(c, false, i));
-    initBattle([...playerUnits, ...enemyUnits]);
-
-    playerUnits.forEach((unit, i) => {
-      const charId = playerChars[i].id;
-      const chosenLoadout = loadoutByCharId[charId];
-      if (chosenLoadout) {
-        setEquippedSkills(unit.id, chosenLoadout);
-      } else {
-        const weaponType = weaponByCharId[charId];
-        const tree = weaponType ? WEAPON_SKILL_TREES[weaponType] : undefined;
-        if (tree) {
-          const loadout = {} as Record<SkillSlot, string>;
-          for (const slot of tree.slots) {
-            if (slot.skills.length > 0) loadout[slot.slot as SkillSlot] = slot.skills[0].id;
-          }
-          setEquippedSkills(unit.id, loadout);
-        }
-      }
+    // Stage the squad data — battle init happens in level-select after the player picks a map
+    setPendingSquad({
+      selectedIds,
+      selectedFaction: selectedFaction ?? '',
+      weaponByCharId: { ...weaponByCharId },
+      loadoutByCharId: { ...loadoutByCharId },
     });
 
     setLocation("/level-select");
@@ -420,24 +373,7 @@ export default function CharacterSelect() {
   const pendingHero = pendingHeroId ? characters?.find(c => c.id === pendingHeroId) : null;
   const activeFaction = FACTIONS.find(f => f.id === selectedFaction);
 
-  // ── Loading / Error ──────────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <p className="font-display text-xl animate-pulse">Summoning Champions...</p>
-      </div>
-    );
-  }
-  if (error || !characters) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-destructive">
-        <Skull className="w-16 h-16" />
-        <h2 className="font-display text-3xl">The archives are sealed</h2>
-        <FantasyButton onClick={() => window.location.reload()}>Retry</FantasyButton>
-      </div>
-    );
-  }
+  // Characters are embedded — always available, no loading/error states needed
 
   return (
     <>

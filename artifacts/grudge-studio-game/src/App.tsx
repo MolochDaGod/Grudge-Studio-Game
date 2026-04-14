@@ -19,6 +19,7 @@ import Admin from "@/pages/admin";
 import ToonAdmin from "@/pages/toon-admin";
 import MapEditor from "@/pages/map-editor";
 import IslandPage from "@/pages/island";
+import DungeonPage from "@/pages/dungeon";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/">{() => <AuthGuard><Home /></AuthGuard>}</Route>
       <Route path="/teams">{() => <AuthGuard><TeamBuilder /></AuthGuard>}</Route>
       <Route path="/select">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
+      <Route path="/character">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
       <Route path="/level-select">{() => <AuthGuard><LevelSelect /></AuthGuard>}</Route>
       <Route path="/skill-tree">{() => <AuthGuard><SkillTree /></AuthGuard>}</Route>
       <Route path="/battle">{() => <AuthGuard><Battle /></AuthGuard>}</Route>
@@ -46,6 +48,7 @@ function Router() {
       <Route path="/toonadmin" component={ToonAdmin} />
       <Route path="/map-editor/:levelId" component={MapEditor} />
       <Route path="/island">{() => <AuthGuard><IslandPage /></AuthGuard>}</Route>
+      <Route path="/dungeon">{() => <AuthGuard><DungeonPage /></AuthGuard>}</Route>
       <Route component={NotFound} />
     </Switch>
   );

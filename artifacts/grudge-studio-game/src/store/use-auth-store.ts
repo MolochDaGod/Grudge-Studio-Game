@@ -112,12 +112,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   restoreSession: async () => {
     set({ isLoading: true });
-    const result = await verifyToken();
-    if (result) {
-      set(applyAuth(result));
-      get().fetchCharacters();
-      get().fetchCrew();
-    } else {
+    try {
+      const result = await verifyToken();
+      if (result) {
+        set(applyAuth(result));
+        get().fetchCharacters();
+        get().fetchCrew();
+      } else {
+        set({ isLoading: false });
+      }
+    } catch {
+      // Network error or backend offline — don't leave user stuck on spinner
       set({ isLoading: false });
     }
   },
