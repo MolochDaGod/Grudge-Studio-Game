@@ -450,6 +450,9 @@ importers:
       leva:
         specifier: ^0.10.1
         version: 0.10.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       stats.js:
         specifier: ^0.17.0
         version: 0.17.0

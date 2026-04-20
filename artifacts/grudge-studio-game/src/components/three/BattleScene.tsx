@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useMemo, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Sky, Html } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
@@ -14,6 +14,7 @@ import { SceneErrorBoundary } from './ErrorBoundary';
 import { PhysicsProvider } from './PhysicsProvider';
 import { PhysicsCharacter } from './PhysicsCharacter';
 import { StylizedWater } from './StylizedWater';
+import { SlashTrailLayer, pickSlashForWeapon, type ActiveSlash } from './SlashTrail';
 import { RAPIER_TERRAIN } from '@/lib/physics/collision-groups';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
@@ -908,7 +909,55 @@ export function BattleScene({
 }: BattleSceneProps) {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
   const [showSkeletonDebug, setShowSkeletonDebug] = useState(false);
+  const [slashes, setSlashes] = useState<ActiveSlash[]>([]);
   const currentUnit = units.find(u => u.id === currentUnitId) ?? null;
+
+  // Listen for `slash-spawn` events (fired from combat.tsx when an attack lands).
+  // Payload: { attackerId, targetX?, targetY?, weaponType? }.
+  // We translate the tile coords into world space and push a SlashTrail onto
+  // the scene for its self-expiring cycle.
+  useEffect(() => {
+    const onSpawn = (e: Event) => {
+      const d = (e as CustomEvent).detail as {
+        attackerId?: string;
+        x?: number; y?: number;
+        weaponType?: string;
+        effect?: string;
+        tint?: string;
+        scale?: number;
+      } | undefined;
+      if (!d) return;
+      const attacker = units.find(u => u.id === d.attackerId);
+      if (!attacker) return;
+      // Default to a point between attacker and target tile centres.
+      const [ax, , az] = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize);
+      const [tx, , tz] = d.x != null && d.y != null
+        ? tileToWorld(d.x, d.y, level.tileSize)
+        : [ax, 0, az];
+      const wx = (ax + tx) / 2;
+      const wz = (az + tz) / 2;
+      const wy = 1.2;   // mid-body height
+      setSlashes(prev => [
+        ...prev,
+        {
+          id:        `slash_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          effect:    d.effect ?? pickSlashForWeapon(d.weaponType ?? attacker.weaponType),
+          position:  [wx, wy, wz],
+          rotation:  (Math.random() - 0.5) * 1.2,
+          scale:     d.scale ?? 2.2,
+          tint:      d.tint ?? '#ffffff',
+          spawnedAt: performance.now(),
+        },
+      ]);
+    };
+    window.addEventListener('slash-spawn', onSpawn);
+    return () => window.removeEventListener('slash-spawn', onSpawn);
+  }, [units, level.tileSize]);
+
+  const handleSlashExpire = useCallback(
+    (id: string) => setSlashes(prev => prev.filter(s => s.id !== id)),
+    [],
+  );
 
   // Shift+B toggles skeleton debug overlay
   useEffect(() => {
@@ -1046,6 +1095,9 @@ export function BattleScene({
           />
 
           <ScenePropLayer props={level.props} />
+
+          {/* Weapon slash-trail sprites — fired by 'slash-spawn' CustomEvents. */}
+          <SlashTrailLayer slashes={slashes} onExpire={handleSlashExpire} />
 
           {/* Craftpix Stylized Nature — trees, rocks, bushes ringing the map border */}
           <NatureDecor gridW={gridW} gridH={gridH} tileSize={tileSize} />

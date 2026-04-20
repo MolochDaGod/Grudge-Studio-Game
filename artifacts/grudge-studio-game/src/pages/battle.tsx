@@ -776,6 +776,19 @@ export default function Battle() {
           returnMs: Math.max(200, atkDurMs - hitMs - 130),
         },
       }));
+      // Fire the sprite-sheet slash trail at impact moment (one per strike).
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('slash-spawn', {
+          detail: {
+            attackerId: attacker.id,
+            x: target.position.x,
+            y: target.position.y,
+            weaponType,
+            tint: isCrit ? '#ffe080' : effectColor,
+            scale: skill.tags.includes('ultimate') ? 3.2 : 2.2,
+          },
+        }));
+      }, hitMs);
     }
 
     // At impact point: spawn effects + trigger target reaction

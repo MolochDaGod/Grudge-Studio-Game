@@ -1,0 +1,12 @@
+{
+  "name": "slash6",
+  "atlas": "slash6.png",
+  "cols": 4,
+  "rows": 3,
+  "frameCount": 11,
+  "frameWidth": 256,
+  "frameHeight": 144,
+  "atlasWidth": 1024,
+  "atlasHeight": 432,
+  "duration": 0.4
+}

@@ -1,0 +1,130 @@
+{
+  "version": "1.0.0",
+  "description": "Grudge Studio slash-FX atlas library. Each entry is a grid-packed sprite sheet. See SlashTrail.tsx for runtime usage.",
+  "frameFormat": {
+    "width": 256,
+    "height": 144
+  },
+  "effects": {
+    "slash": {
+      "name": "slash",
+      "atlas": "slash.png",
+      "cols": 4,
+      "rows": 3,
+      "frameCount": 12,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 1024,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash10": {
+      "name": "slash10",
+      "atlas": "slash10.png",
+      "cols": 4,
+      "rows": 3,
+      "frameCount": 10,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 1024,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash2": {
+      "name": "slash2",
+      "atlas": "slash2.png",
+      "cols": 3,
+      "rows": 3,
+      "frameCount": 9,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 768,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash3": {
+      "name": "slash3",
+      "atlas": "slash3.png",
+      "cols": 4,
+      "rows": 3,
+      "frameCount": 12,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 1024,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash4": {
+      "name": "slash4",
+      "atlas": "slash4.png",
+      "cols": 4,
+      "rows": 3,
+      "frameCount": 12,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 1024,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash5": {
+      "name": "slash5",
+      "atlas": "slash5.png",
+      "cols": 4,
+      "rows": 3,
+      "frameCount": 11,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 1024,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash6": {
+      "name": "slash6",
+      "atlas": "slash6.png",
+      "cols": 4,
+      "rows": 3,
+      "frameCount": 11,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 1024,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash7": {
+      "name": "slash7",
+      "atlas": "slash7.png",
+      "cols": 3,
+      "rows": 2,
+      "frameCount": 6,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 768,
+      "atlasHeight": 288,
+      "duration": 0.4
+    },
+    "slash8": {
+      "name": "slash8",
+      "atlas": "slash8.png",
+      "cols": 3,
+      "rows": 3,
+      "frameCount": 8,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 768,
+      "atlasHeight": 432,
+      "duration": 0.4
+    },
+    "slash9": {
+      "name": "slash9",
+      "atlas": "slash9.png",
+      "cols": 3,
+      "rows": 3,
+      "frameCount": 9,
+      "frameWidth": 256,
+      "frameHeight": 144,
+      "atlasWidth": 768,
+      "atlasHeight": 432,
+      "duration": 0.4
+    }
+  }
+}
