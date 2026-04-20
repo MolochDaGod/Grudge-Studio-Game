@@ -109,7 +109,7 @@ export interface AccessoryConfig {
   scale: number;
 }
 
-export type ModelPackType = 'quaternius' | 'rpg';
+export type ModelPackType = 'quaternius' | 'rpg' | 'cc';
 
 export interface CharacterConfig {
   modelId: ModelId;
@@ -339,8 +339,10 @@ export const CC_RIG_META: Record<string, CCRigMeta> = {
   mixamo_generic:             { bboxY:  88.10, motionClip: 'sit-talk-378944' },
 };
 
-/** Target character height in world units (≈1.6 fits comfortably in a 1×1 tile). */
-const CC_TARGET_HEIGHT = 1.6;
+/** Target character height in world units — matches levels.ts `tileSize = 1.5`
+ *  so CC heroes fit neatly inside a single tile cube without spilling arms into
+ *  the next square. All 4 levels in levels.ts use TS = 1.5. */
+const CC_TARGET_HEIGHT = 1.5;
 
 /** Build an animMap that routes every AnimState to the single mocap clip this
  *  CC GLB ships, with T-Pose as a safe fallback for death/idle2. Keeps rigged
@@ -396,7 +398,8 @@ export function voxelCharacter(
 }
 
 /** Build a CharacterConfig for a CC-rigged hero. Ensures the hero is the right
- *  size to land centered inside a 1×1 tile, with proper label/ring heights. */
+ *  size to land centered inside a 1×1 tile, with proper label/ring heights,
+ *  and weapons auto-upscaled via `modelPackType: 'cc'`. */
 export function ccCharacter(
   modelId: ModelId,
   weapon: WeaponConfig,
@@ -409,8 +412,11 @@ export function ccCharacter(
 ): CharacterConfig {
   const meta = CC_RIG_META[modelId as string];
   if (!meta) throw new Error(`ccCharacter: unknown CC model id "${modelId}"`);
-  const s = (CC_TARGET_HEIGHT * (opts.heightMultiplier ?? 1.0)) / meta.bboxY;
+  const heightMult = opts.heightMultiplier ?? 1.0;
+  const s = (CC_TARGET_HEIGHT * heightMult) / meta.bboxY;
   const offsetZ = meta.pivotZ ? -meta.pivotZ * s : 0;
+  // Weapons are left at Quaternius-baseline scale here; resolveWeaponConfig()
+  // auto-compensates for the small char scale at attach-time.
   return {
     modelId,
     scale: [s, s, s],
@@ -419,9 +425,10 @@ export function ccCharacter(
     secondaryWeapon: opts.secondaryWeapon,
     animMap: opts.animMap ?? ccAnimMap(meta.motionClip),
     modelOffset: [0, 0, offsetZ],
-    labelHeight: CC_TARGET_HEIGHT * (opts.heightMultiplier ?? 1.0) + 0.30,
-    hpRingHeight: CC_TARGET_HEIGHT * (opts.heightMultiplier ?? 1.0) + 0.10,
+    labelHeight: CC_TARGET_HEIGHT * heightMult + 0.30,
+    hpRingHeight: CC_TARGET_HEIGHT * heightMult + 0.10,
     selectionRingRadius: 0.45,
+    modelPackType: 'cc',
   };
 }
 
@@ -637,7 +644,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
       Ranger_Texture: { color: '#c8e8b0', emissive: '#006600', emissiveIntensity: 0.05, roughness: 0.75 },
       Bow_Texture:    { color: '#c0b060', roughness: 0.8 },
     },
-    primaryWeapon: { modelId: 'bow', position: [0,0,0], rotation: [Math.PI/2, Math.PI/2, 0], scale: 19 },
+    primaryWeapon: WEAPON_DEFAULTS.bow,
     // RPG pack has embedded weapon-specific clips — use them as overrides
     animMap: {
       idle2: 'Idle_Weapon', attack1: 'Bow_Attack_Shoot', attack2: 'Bow_Attack_Shoot',
@@ -823,7 +830,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     materials: {
       Cleric_Texture: { color: '#e8e0c8', emissive: '#886600', emissiveIntensity: 0.08, roughness: 0.7 },
     },
-    primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
+    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
     animMap: {
       attack1: 'Staff_Attack', attack2: 'Punch', cast: 'Spell1',
       special1: 'Spell2', stunned: 'RecieveHit', block: 'Idle_Weapon',
@@ -839,8 +846,8 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     scale: [0.0072, 0.0072, 0.0072],
     textures: { diffuse: 'models/characters/rpg-textures/warrior.png' },
     materials: {},
-    primaryWeapon: { modelId: 'sword', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 56 },
-    secondaryWeapon: { modelId: 'shield', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 24, attachBone: 'Fist.L' },
+    primaryWeapon: WEAPON_DEFAULTS.sword,
+    secondaryWeapon: { ...WEAPON_DEFAULTS.shield, attachBone: 'Fist.L' },
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -850,7 +857,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     scale: [0.0072, 0.0072, 0.0072],
     textures: { diffuse: 'models/characters/rpg-textures/rogue.png' },
     materials: {},
-    primaryWeapon: { modelId: 'daggers', position: [0, 0, 0], rotation: [Math.PI / 2, 0, Math.PI / 6], scale: 43 },
+    primaryWeapon: WEAPON_DEFAULTS.daggers,
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -860,7 +867,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     scale: [0.0072, 0.0072, 0.0072],
     textures: { diffuse: 'models/characters/rpg-textures/wizard.png' },
     materials: {},
-    primaryWeapon: { modelId: 'fire_staff', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 15 },
+    primaryWeapon: WEAPON_DEFAULTS.fire_staff,
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -870,7 +877,7 @@ export const CHARACTER_CONFIGS: Record<string, CharacterConfig> = {
     scale: [0.0072, 0.0072, 0.0072],
     textures: { diffuse: 'models/characters/rpg-textures/monk.png' },
     materials: {},
-    primaryWeapon: { modelId: 'war_hammer', position: [0, 0, 0], rotation: [Math.PI / 2, 0, 0], scale: 19 },
+    primaryWeapon: WEAPON_DEFAULTS.war_hammer,
     modelPackType: 'rpg',
     labelHeight: 1.58, hpRingHeight: 1.40, selectionRingRadius: 0.48,
   },
@@ -913,38 +920,62 @@ export const WEAPON_FALLBACK: Record<string, string> = {
 // Weapon types that automatically add a shield as secondary weapon.
 const SHIELD_COMBO_WEAPONS = new Set(['sword_shield']);
 
-/** RPG pack models need ~86× weapon scale compared to Quaternius models. */
-const RPG_WEAPON_SCALE_MULTIPLIER = 86;
+/**
+ * Quaternius is the reference pack WEAPON_DEFAULTS scales were authored
+ * against. Any rig whose character scale differs gets a compensating factor
+ * so the weapon renders the same *world* size at attach-time, independent of
+ * the model's native size.
+ */
+const QUATERNIUS_BASELINE_CHAR_SCALE = 0.72;
+
+/** Compute the weapon local-scale compensation factor for a rig:
+ *  factor = baselineCharScale / actualCharScale
+ *  Quaternius → 1 (pass-through), RPG/CC → automatically larger. */
+function weaponScaleFactor(config: CharacterConfig): number {
+  const chScale = config.scale?.[0] ?? QUATERNIUS_BASELINE_CHAR_SCALE;
+  if (chScale <= 0.0001) return 1;
+  return QUATERNIUS_BASELINE_CHAR_SCALE / chScale;
+}
+
+function scaleWeapon<T extends WeaponConfig>(w: T, factor: number): T {
+  return factor === 1 ? w : { ...w, scale: w.scale * factor };
+}
 
 /**
  * Resolve a weapon type string into a concrete WeaponConfig + optional shield.
- * Handles fallback for missing GLBs and auto-scales for RPG-pack models.
+ * Handles fallback for missing GLBs and auto-scales every rig by the ratio of
+ * its character scale to the Quaternius baseline (no per-pack magic numbers).
  */
 export function resolveWeaponConfig(
   weaponType: string | undefined,
   config: CharacterConfig,
 ): { primary: WeaponConfig; secondary?: SecondaryWeaponConfig } {
+  const factor = weaponScaleFactor(config);
+
   if (!weaponType) {
-    return { primary: config.primaryWeapon, secondary: config.secondaryWeapon };
+    // Character spawned without an equipped weapon type (e.g. AI enemies) —
+    // the per-hero primaryWeapon is already in Quaternius baseline scale, so
+    // apply the same factor rather than returning it as-is.
+    return {
+      primary: scaleWeapon(config.primaryWeapon, factor),
+      secondary: config.secondaryWeapon ? scaleWeapon(config.secondaryWeapon, factor) : undefined,
+    };
   }
 
   // Resolve fallback if no GLB for this weapon type
   const resolvedType = WEAPON_DEFAULTS[weaponType] ? weaponType : (WEAPON_FALLBACK[weaponType] ?? weaponType);
   const baseConfig = WEAPON_DEFAULTS[resolvedType] ?? config.primaryWeapon;
+  const primary: WeaponConfig = scaleWeapon(baseConfig, factor);
 
-  // Auto-scale for RPG pack models
-  const isRpg = config.modelPackType === 'rpg';
-  const primary: WeaponConfig = isRpg
-    ? { ...baseConfig, scale: baseConfig.scale * RPG_WEAPON_SCALE_MULTIPLIER }
-    : baseConfig;
-
-  // Auto-add shield for combo weapon types
-  let secondary: SecondaryWeaponConfig | undefined = config.secondaryWeapon;
+  // Auto-add shield for combo weapon types, using the per-hero secondary as
+  // override if provided.
+  let secondary: SecondaryWeaponConfig | undefined =
+    config.secondaryWeapon ? scaleWeapon(config.secondaryWeapon, factor) : undefined;
   if (SHIELD_COMBO_WEAPONS.has(weaponType)) {
     const shieldBase = WEAPON_DEFAULTS.shield;
     secondary = {
       ...shieldBase,
-      scale: isRpg ? shieldBase.scale * RPG_WEAPON_SCALE_MULTIPLIER : shieldBase.scale,
+      scale: shieldBase.scale * factor,
       attachBone: 'Fist.L',
     };
   }
