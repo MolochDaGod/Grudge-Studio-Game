@@ -61,6 +61,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "catalog:",
     "next-themes": "^0.4.6",
+    "postprocessing": "^6.39.1",
     "react": "catalog:",
     "react-day-picker": "^9.11.1",
     "react-dom": "catalog:",
@@ -68,9 +69,11 @@
     "react-icons": "^5.4.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
+    "simplex-noise": "^4.0.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "catalog:",
     "three": "^0.183.2",
+    "three-mesh-bvh": "^0.9.9",
     "three-pathfinding": "^1.3.0",
     "three-stdlib": "^2.36.1",
     "tw-animate-css": "^1.4.0",
@@ -80,6 +83,9 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.3.0",
+    "@gltf-transform/extensions": "^4.3.0",
+    "@gltf-transform/functions": "^4.3.0",
     "@replit/vite-plugin-cartographer": "catalog:",
     "@replit/vite-plugin-dev-banner": "catalog:",
     "@replit/vite-plugin-runtime-error-modal": "catalog:",
@@ -88,7 +94,10 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/stats.js": "^0.17.4",
     "@vitejs/plugin-react": "catalog:",
+    "leva": "^0.10.1",
+    "stats.js": "^0.17.0",
     "tailwindcss": "catalog:",
     "vite": "catalog:"
   }
