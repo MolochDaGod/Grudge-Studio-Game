@@ -29,22 +29,34 @@ export interface BodyDimensions {
 const BASE_RADIUS = 0.30;
 const BASE_HEIGHT = 1.30;
 
+/** Minimum sane capsule dims so Rapier doesn't reject near-zero colliders. */
+const MIN_RADIUS = 0.15;
+const MIN_HEIGHT = 0.80;
+
 /**
  * Get physics body dimensions for a character.
  *
  * Priority:
- * 1. Explicit `bodyRadius` / `bodyHeight` on CharacterConfig
- * 2. Computed from config scale (BASE_* × scaleY)
+ * 1. Explicit `bodyRadius` / `bodyHeight` on CharacterConfig (preferred).
+ * 2. Computed from config scale (BASE_* × scale) — works for Quaternius
+ *    at ~0.72 scale but breaks for non-Quaternius packs with tiny internal
+ *    scales (RPG ~0.0072, Reallusion CC ~0.015). For those we clamp to a
+ *    sane floor so Rapier builds a real capsule instead of rejecting the
+ *    collider and crashing the whole PhysicsCharacter subtree (which was
+ *    making CC hero meshes + HP bars invisible in battle).
  */
 export function getBodyDimensions(characterId: string): BodyDimensions {
   const config = getCharacterConfig(characterId);
 
-  // Scale factor — use Y component as the height reference
-  const scaleY = config.scale[1];
+  const scaleY  = config.scale[1];
   const scaleXZ = Math.max(config.scale[0], config.scale[2]);
 
-  const radius = config.bodyRadius ?? BASE_RADIUS * scaleXZ;
-  const fullHeight = config.bodyHeight ?? BASE_HEIGHT * scaleY;
+  const rawRadius     = config.bodyRadius ?? BASE_RADIUS * scaleXZ;
+  const rawFullHeight = config.bodyHeight ?? BASE_HEIGHT  * scaleY;
+
+  // Clamp to minimums so non-Quaternius packs still produce valid capsules.
+  const radius     = Math.max(MIN_RADIUS, rawRadius);
+  const fullHeight = Math.max(MIN_HEIGHT, rawFullHeight);
 
   // Capsule geometry: cylinder height = total - 2 × radius (the sphere caps)
   const cylinderHeight = Math.max(0.1, fullHeight - radius * 2);

@@ -398,6 +398,11 @@ export function voxelCharacter(
     labelHeight: 1.85,
     hpRingHeight: 1.60,
     selectionRingRadius: 0.45,
+    // Explicit physics dims — VoxelCharacterModel auto-scales the mesh to ~1.4
+    // world units, so we give Rapier a sane capsule instead of deriving from
+    // the config scale [1,1,1].
+    bodyRadius: 0.35,
+    bodyHeight: 1.4,
   };
 }
 
@@ -433,6 +438,11 @@ export function ccCharacter(
     hpRingHeight: CC_TARGET_HEIGHT * heightMult + 0.10,
     selectionRingRadius: 0.45,
     modelPackType: 'cc',
+    // Explicit physics dims — config.scale[0] ≈ 0.015 for CC rigs, which the
+    // scale-based body formula would turn into a 0.02-unit capsule that
+    // Rapier rejects. Match CC_TARGET_HEIGHT × heightMult instead.
+    bodyRadius: 0.35,
+    bodyHeight: CC_TARGET_HEIGHT * heightMult,
   };
 }
 

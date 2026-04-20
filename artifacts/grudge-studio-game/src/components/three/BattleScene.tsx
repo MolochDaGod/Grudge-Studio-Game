@@ -563,21 +563,34 @@ function WalkingUnit({
       onPointerEnter={e => { e.stopPropagation(); onHover?.(unit.id); }}
       onPointerLeave={e => { e.stopPropagation(); onUnhover?.(unit.id); }}
     >
-      <PhysicsCharacter
-        characterId={unit.characterId}
-        isPlayer={unit.isPlayerControlled}
-        unitId={unit.id}
-        position={[0, 0, 0]}
+      <SceneErrorBoundary
+        fallback={
+          <CharacterModel
+            unit={unit}
+            position={[0, 0, 0]}
+            facingAngle={facingAngle}
+            isSelected={currentUnitId === unit.id}
+            animState={animState}
+            activeForm={unit.activeForm}
+          />
+        }
       >
-        <CharacterModel
-          unit={unit}
+        <PhysicsCharacter
+          characterId={unit.characterId}
+          isPlayer={unit.isPlayerControlled}
+          unitId={unit.id}
           position={[0, 0, 0]}
-          facingAngle={facingAngle}
-          isSelected={currentUnitId === unit.id}
-          animState={animState}
-          activeForm={unit.activeForm}
-        />
-      </PhysicsCharacter>
+        >
+          <CharacterModel
+            unit={unit}
+            position={[0, 0, 0]}
+            facingAngle={facingAngle}
+            isSelected={currentUnitId === unit.id}
+            animState={animState}
+            activeForm={unit.activeForm}
+          />
+        </PhysicsCharacter>
+      </SceneErrorBoundary>
 
   { animState === 'hide' && (
     <mesh position={ [0, 0.06, 0] } rotation = { [-Math.PI / 2, 0, 0]} >
