@@ -13,9 +13,17 @@ import { NatureDecor } from './NatureDecor';
 import { SceneErrorBoundary } from './ErrorBoundary';
 import { PhysicsProvider } from './PhysicsProvider';
 import { PhysicsCharacter } from './PhysicsCharacter';
+import { StylizedWater } from './StylizedWater';
 import { RAPIER_TERRAIN } from '@/lib/physics/collision-groups';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
+import {
+  generateThemeGroundTexture,
+  generateThemeGroundNormal,
+  diamondSquareHeightmap,
+  applyHeightmapToPlane,
+  type GroundTheme,
+} from '@/lib/procedural-textures';
 
 export type CameraMode = 'tactical' | 'free' | 'third-person' | 'rts';
 
@@ -688,29 +696,15 @@ function PingMarkers({ pings, tileSize }: { pings: MapPing[]; tileSize: number }
   );
 }
 
-// ── Animated ocean plane ─────────────────────────────────────────────────────
-function OceanPlane({ cx, cz }: { cx: number; cz: number }) {
-  const matRef = useRef<THREE.MeshStandardMaterial>(null!);
-  useFrame(({ clock }) => {
-    if (matRef.current) {
-      const t = clock.getElapsedTime();
-      matRef.current.emissiveIntensity = 0.06 + 0.04 * Math.sin(t * 0.7);
-    }
-  });
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -1.5, cz]} receiveShadow>
-      <planeGeometry args={[3000, 3000]} />
-      <meshStandardMaterial
-        ref={matRef}
-        color="#0a5080"
-        emissive="#1478a8"
-        emissiveIntensity={0.07}
-        roughness={0.18}
-        metalness={0.35}
-      />
-    </mesh>
-  );
-}
+// ── Per-theme stylized water presets ────────────────────────────────────
+const WATER_BY_THEME: Record<GroundTheme, {
+  deep: string; shallow: string; foam: string; waveAmp: number;
+}> = {
+  ruins:    { deep: '#0a3046', shallow: '#3088aa', foam: '#e0f0ff', waveAmp: 0.08 },
+  orc:      { deep: '#2a0810', shallow: '#aa3020', foam: '#ffdab0', waveAmp: 0.14 }, // lava-ish
+  elven:    { deep: '#0a3828', shallow: '#30b080', foam: '#e0ffe8', waveAmp: 0.07 },
+  medieval: { deep: '#083042', shallow: '#2888b4', foam: '#e8f4ff', waveAmp: 0.09 },
+};
 
 // ── Island base + rocky border per theme ─────────────────────────────────────
 type IslandTheme = 'ruins' | 'orc' | 'elven' | 'medieval';
@@ -731,6 +725,36 @@ function IslandEnvironment({
   const islandW = gridW * tileSize + border * 2;
   const islandH = gridH * tileSize + border * 2;
   const t = THEME_BORDER[theme] ?? THEME_BORDER.medieval;
+
+  // Stylized procedural albedo + normal map, generated once per theme.
+  const groundAlbedo = useMemo(
+    () => generateThemeGroundTexture(theme as GroundTheme, 512, 12345 + theme.charCodeAt(0)),
+    [theme],
+  );
+  const groundNormal = useMemo(
+    () => generateThemeGroundNormal(512, 12345 + theme.charCodeAt(0), 2.5),
+    [theme],
+  );
+  // Higher tiling for big planes so the texture reads as detail, not a mural.
+  useMemo(() => {
+    const tiling = Math.max(6, Math.round(Math.max(islandW, islandH) / 12));
+    groundAlbedo.repeat.set(tiling, tiling);
+    groundNormal.repeat.set(tiling, tiling);
+  }, [groundAlbedo, groundNormal, islandW, islandH]);
+
+  // Diamond-Square heightmap on the island plane — subtle rolling terrain
+  // around the perimeter, completely flat under the tactical grid.
+  const islandGeometry = useMemo(() => {
+    const geo = new THREE.PlaneGeometry(islandW, islandH, 128, 128);
+    const { data, size: hsize } = diamondSquareHeightmap(7, 0.65, 31337 + theme.charCodeAt(0));
+    applyHeightmapToPlane(
+      geo, data, hsize,
+      theme === 'orc' ? 0.9 : 1.4,           // maxHeight
+      gridW * tileSize + 2,                  // playable width (leave 1 tile margin)
+      gridH * tileSize + 2,                  // playable height
+    );
+    return geo;
+  }, [islandW, islandH, gridW, gridH, tileSize, theme]);
 
   // Random rocks around the border
   const rocks = useMemo(() => {
@@ -791,10 +815,23 @@ function IslandEnvironment({
 
   return (
     <>
-      {/* Island base */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.08, cz]} receiveShadow>
-        <planeGeometry args={[islandW, islandH]} />
-        <meshStandardMaterial color={t.base} roughness={0.92} metalness={0} />
+      {/* Island base — stylized textured plane with Diamond-Square heightmap
+          (flat under the tactical grid, rolling around the perimeter). */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[cx, -0.08, cz]}
+        geometry={islandGeometry}
+        receiveShadow
+        castShadow
+      >
+        <meshStandardMaterial
+          map={groundAlbedo}
+          normalMap={groundNormal}
+          normalScale={new THREE.Vector2(0.8, 0.8)}
+          color={t.base}
+          roughness={0.95}
+          metalness={0}
+        />
       </mesh>
 
       {/* Rocks scattered around the border */}
@@ -971,13 +1008,24 @@ export function BattleScene({
         maxDist={maxDist}
       />
 
-      {/* Island + ocean */}
+      {/* Island + stylized water */}
       <IslandEnvironment
         cx={centerX} cz={centerZ}
         gridW={gridW} gridH={gridH} tileSize={tileSize}
         theme={theme as IslandTheme}
       />
-      <OceanPlane cx={centerX} cz={centerZ} />
+      {(() => {
+        const w = WATER_BY_THEME[theme as GroundTheme] ?? WATER_BY_THEME.medieval;
+        return (
+          <StylizedWater
+            position={[centerX, -1.5, centerZ]}
+            colorDeep={w.deep}
+            colorShallow={w.shallow}
+            colorFoam={w.foam}
+            waveAmp={w.waveAmp}
+          />
+        );
+      })()}
 
       <Suspense fallback={
         <mesh position={[centerX, 0.5, centerZ]}>

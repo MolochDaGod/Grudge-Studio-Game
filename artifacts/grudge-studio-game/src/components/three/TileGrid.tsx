@@ -1,6 +1,11 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { LevelDef } from '@/lib/levels';
+import {
+  generateThemeGroundTexture,
+  generateThemeGroundNormal,
+  type GroundTheme,
+} from '@/lib/procedural-textures';
 
 export { GRID_W, GRID_H, TILE_SIZE } from './TileGrid.constants';
 
@@ -32,7 +37,7 @@ const COLOR_LIGHT   = new THREE.Color(0x3a3a45);
 const COLOR_BLOCKED = new THREE.Color(0x1a1218);
 
 export function TileGrid({ level, reachableTiles, attackableTiles, attackableColor, onTileClick, hoveredTile, setHoveredTile, onRightClick }: TileGridProps) {
-  const { gridW, gridH, tileSize, obstacleTiles, groundColor, groundColor2 } = level;
+  const { gridW, gridH, tileSize, obstacleTiles, groundColor, groundColor2, theme } = level;
   const instRef = useRef<THREE.InstancedMesh>(null!);
   const totalTiles = gridW * gridH;
 
@@ -43,11 +48,29 @@ export function TileGrid({ level, reachableTiles, attackableTiles, attackableCol
   const colorLight = useMemo(() => new THREE.Color(groundColor2), [groundColor2]);
   const colorBlock = useMemo(() => COLOR_BLOCKED.clone(), []);
 
+  // Stylized per-theme procedural ground texture (same helper IslandEnvironment
+  // uses, same seed, so tiles and perimeter visually match).
+  const tileAlbedo = useMemo(
+    () => generateThemeGroundTexture(theme as GroundTheme, 256, 12345 + theme.charCodeAt(0)),
+    [theme],
+  );
+  const tileNormal = useMemo(
+    () => generateThemeGroundNormal(256, 12345 + theme.charCodeAt(0), 1.8),
+    [theme],
+  );
+
   // Initialize instance matrices and colors
   useEffect(() => {
     const mesh = instRef.current;
     if (!mesh) return;
     const obsH = level.wallHeight ?? OBSTACLE_H_DEFAULT;
+    // Deterministic per-tile colour jitter so the instanced floor reads as
+    // organic variation instead of a flat chessboard.
+    const jitter = (x: number, y: number) => {
+      const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      return 0.86 + (s - Math.floor(s)) * 0.28; // 0.86–1.14
+    };
+    const tmp = new THREE.Color();
     let idx = 0;
     for (let x = 0; x < gridW; x++) {
       for (let y = 0; y < gridH; y++) {
@@ -57,8 +80,9 @@ export function TileGrid({ level, reachableTiles, attackableTiles, attackableCol
         dummy.scale.set(tileSize * 0.96, h, tileSize * 0.96);
         dummy.updateMatrix();
         mesh.setMatrixAt(idx, dummy.matrix);
-        const col = isObs ? colorBlock : ((x + y) % 2 === 0 ? colorDark : colorLight);
-        mesh.setColorAt(idx, col);
+        const base = isObs ? colorBlock : ((x + y) % 2 === 0 ? colorDark : colorLight);
+        tmp.copy(base).multiplyScalar(isObs ? 1.0 : jitter(x, y));
+        mesh.setColorAt(idx, tmp);
         idx++;
       }
     }
@@ -110,10 +134,16 @@ export function TileGrid({ level, reachableTiles, attackableTiles, attackableCol
 
   return (
     <group>
-      {/* Instanced tiles */}
+      {/* Instanced tiles — stylized textured cubes with per-instance colour jitter */}
       <instancedMesh ref={instRef} args={[undefined, undefined, totalTiles]} receiveShadow castShadow>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial roughness={0.85} metalness={0.1} />
+        <meshStandardMaterial
+          map={tileAlbedo}
+          normalMap={tileNormal}
+          normalScale={new THREE.Vector2(0.5, 0.5)}
+          roughness={0.9}
+          metalness={0.05}
+        />
       </instancedMesh>
 
       {/* Ground plane */}
