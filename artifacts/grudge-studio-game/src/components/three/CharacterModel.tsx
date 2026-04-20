@@ -263,7 +263,15 @@ function CharacterModelInner({
     if (!action) {
       action = actions['Idle'] ?? actions['CharacterArmature|Idle'] ?? null;
     }
-    // Fallback 2: first available action (e.g. CC rigs only ship one mocap clip)
+    // Fallback 2: first non-T-Pose action (CC rigs ship with exactly one mocap
+    // clip + one `0_T-Pose` each; we prefer the mocap so AI enemies aren't frozen)
+    if (!action) {
+      const nonTpose = Object.entries(actions).find(
+        ([name, a]) => !!a && !/T[-_]?Pose/i.test(name),
+      );
+      action = nonTpose?.[1] ?? null;
+    }
+    // Fallback 3: absolute first available action (T-Pose accepted as last resort)
     if (!action) {
       const first = Object.values(actions).find(a => !!a);
       action = first ?? null;

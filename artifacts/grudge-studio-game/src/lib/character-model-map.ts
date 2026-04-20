@@ -344,19 +344,23 @@ export const CC_RIG_META: Record<string, CCRigMeta> = {
  *  the next square. All 4 levels in levels.ts use TS = 1.5. */
 const CC_TARGET_HEIGHT = 1.5;
 
-/** Build an animMap that routes every AnimState to the single mocap clip this
- *  CC GLB ships, with T-Pose as a safe fallback for death/idle2. Keeps rigged
- *  heroes visibly animating until per-weapon FBX clips retarget in via
- *  animation-library.ts. */
+/** Build a MINIMAL animMap for CC heroes.
+ *
+ *  Layering in buildAnimMap() goes: DEFAULT_ANIM_MAP → WEAPON_ANIM_DEFAULTS →
+ *  config.animMap → user overrides. If we populate every AnimState here,
+ *  we clobber the weapon-specific FBX clip names in layer 2 and the player's
+ *  sword attack will play the mocap clip instead of `ssAttack1`. So we only
+ *  set the states that FBX weapon sets DON'T provide (emote, victory,
+ *  stunned/frozen/dead, hide). Everything else is left to weapon FBX + the
+ *  non-T-Pose fallback in CharacterModel. */
 function ccAnimMap(motionClip: string): Partial<Record<AnimState, string>> {
   return {
-    idle:     motionClip, idle2: '0_T-Pose',   emote:   motionClip,
-    walk:     motionClip, run:   motionClip,   sneak:   motionClip, hide: '0_T-Pose',
-    attack1:  motionClip, attack2: motionClip, attack3: motionClip, attack4: motionClip,
-    cast:     motionClip,
-    hurt:     motionClip, stunned: '0_T-Pose', poisoned: motionClip, block: '0_T-Pose', frozen: '0_T-Pose',
-    dead:     '0_T-Pose', victory: motionClip,
-    special1: motionClip, special2: motionClip,
+    emote:    motionClip,
+    victory:  motionClip,
+    dead:     '0_T-Pose',
+    stunned:  '0_T-Pose',
+    frozen:   '0_T-Pose',
+    hide:     '0_T-Pose',
   };
 }
 
