@@ -19,10 +19,11 @@ import {
 } from '@/lib/character-model-map';
 import { applyTextureSet, textureUrlToSet } from '@/lib/texture-manager';
 import { buildAnimMap } from '@/lib/animation-retarget';
-import { collectBoneNames } from '@/lib/animation-retarget';
+import { collectBoneNames, retargetClip } from '@/lib/animation-retarget';
 import { loadWeaponAnimations, hasExternalAnimations } from '@/lib/animation-library';
 import { characterModelUrl, weaponModelUrl, textureAssetUrl } from '@/lib/asset-config';
 import { VoxelCharacterModel } from './VoxelCharacterModel';
+import { SceneErrorBoundary } from './ErrorBoundary';
 
 export type { AnimState };
 
@@ -113,6 +114,50 @@ function applyMaterialOverrides(
   });
 }
 
+/** Alternate bone names we'll try when the primary bone isn't found.
+ * Covers Quaternius (Fist.R), Mixamo (mixamorig:RightHand), RPG pack (hand_r),
+ * and Reallusion Character Creator (CC_Base_R_Hand_NNN / CC_Base_L_Hand_NNN). */
+const BONE_ALIASES: Record<string, (RegExp | string)[]> = {
+  'Fist.R': [
+    'Fist.R', 'Fist_R', 'hand_r', 'Hand.R', 'Hand_R',
+    'RightHand', 'mixamorig:RightHand', 'mixamorig1:RightHand',
+    /^CC_Base_R_Hand(_\d+)?$/,
+  ],
+  'Fist.L': [
+    'Fist.L', 'Fist_L', 'hand_l', 'Hand.L', 'Hand_L',
+    'LeftHand', 'mixamorig:LeftHand', 'mixamorig1:LeftHand',
+    /^CC_Base_L_Hand(_\d+)?$/,
+  ],
+  'Head': [
+    'Head', 'mixamorig:Head', 'mixamorig1:Head',
+    /^CC_Base_Head(_\d+)?$/,
+  ],
+  'Shoulder.L': [
+    'Shoulder.L', 'Shoulder_L', 'LeftShoulder', 'mixamorig:LeftShoulder',
+    /^CC_Base_L_Clavicle(_\d+)?$/,
+  ],
+  'Shoulder.R': [
+    'Shoulder.R', 'Shoulder_R', 'RightShoulder', 'mixamorig:RightShoulder',
+    /^CC_Base_R_Clavicle(_\d+)?$/,
+  ],
+  'Spine': [
+    'Spine', 'Spine1', 'Spine_01', 'mixamorig:Spine',
+    /^CC_Base_Spine0?1(_\d+)?$/,
+  ],
+};
+
+function resolveBone(charScene: THREE.Object3D, boneName: string): THREE.Object3D | null {
+  const aliases = BONE_ALIASES[boneName] ?? [boneName];
+  let found: THREE.Object3D | null = null;
+  charScene.traverse((o) => {
+    if (found) return;
+    for (const a of aliases) {
+      if (typeof a === 'string' ? o.name === a : a.test(o.name)) { found = o; return; }
+    }
+  });
+  return found;
+}
+
 function attachToBone(
   charScene: THREE.Object3D,
   weapScene: THREE.Object3D,
@@ -121,8 +166,7 @@ function attachToBone(
   rot: [number, number, number],
   scale: number,
 ) {
-  let bone: THREE.Object3D | null = null;
-  charScene.traverse((o) => { if (o.name === boneName) bone = o; });
+  const bone = resolveBone(charScene, boneName);
   if (!bone) return;
   const prev = (bone as THREE.Object3D).children.filter((c) => c.userData.isWeapon);
   prev.forEach((p) => (bone as THREE.Object3D).remove(p));
@@ -163,6 +207,19 @@ function CharacterModelInner({
     return clone;
   }, [rawChar, config, rpgTexture]);
 
+  // Retarget embedded clips for non-standard rigs (e.g. Reallusion CC) so that
+  // Mixamo-style track names can still drive the skeleton. Safe no-op for rigs
+  // whose tracks already match.
+  const retargetedEmbedded = useMemo(() => {
+    const bones = collectBoneNames(charScene);
+    const usesCC = bones.some(b => b.startsWith('CC_Base_'));
+    if (!usesCC) return animations;
+    return animations.map(clip => {
+      try { return retargetClip(clip, bones, bones, 1.0); }
+      catch { return clip; }
+    });
+  }, [animations, charScene]);
+
   const groupRef  = useRef<THREE.Group>(null!);
   const starsRef  = useRef<THREE.Group>(null!);
   const poisonRef = useRef<THREE.Mesh>(null!);
@@ -183,11 +240,11 @@ function CharacterModelInner({
 
   // Merge: external FBX clips take priority, embedded GLB clips fill gaps
   const mergedAnimations = React.useMemo(() => {
-    if (externalClips.length === 0) return animations;
+    if (externalClips.length === 0) return retargetedEmbedded;
     const externalNames = new Set(externalClips.map(c => c.name));
-    const kept = animations.filter(a => !externalNames.has(a.name));
+    const kept = retargetedEmbedded.filter(a => !externalNames.has(a.name));
     return [...externalClips, ...kept];
-  }, [animations, externalClips]);
+  }, [retargetedEmbedded, externalClips]);
 
   const { actions } = useAnimations(mergedAnimations, groupRef);
 
@@ -202,9 +259,14 @@ function CharacterModelInner({
     const name = resolvedAnimMap[animState] ?? 'Idle';
     // Some GLBs (Quaternius RPG pack) prefix every clip with "CharacterArmature|"
     let action = actions[name] ?? actions[`CharacterArmature|${name}`];
-    // Fallback: if the requested clip doesn't exist in this GLB, use Idle
+    // Fallback 1: canonical Idle
     if (!action) {
       action = actions['Idle'] ?? actions['CharacterArmature|Idle'] ?? null;
+    }
+    // Fallback 2: first available action (e.g. CC rigs only ship one mocap clip)
+    if (!action) {
+      const first = Object.values(actions).find(a => !!a);
+      action = first ?? null;
     }
     if (!action) return;
     Object.values(actions).forEach((a) => { if (a && a !== action) a.fadeOut(0.25); });
@@ -245,9 +307,8 @@ function CharacterModelInner({
     const attached: Array<{ bone: THREE.Object3D; child: THREE.Object3D }> = [];
 
     for (const acc of config.accessoryAttachments) {
-      // Find the target bone
-      let targetBone: THREE.Object3D | null = null;
-      charScene.traverse((o) => { if (o.name === acc.bone) targetBone = o; });
+      // Resolve the target bone via alias list (handles Quaternius/Mixamo/CC rigs)
+      const targetBone = resolveBone(charScene, acc.bone);
       if (!targetBone) continue;
 
       const bone: THREE.Object3D = targetBone; // capture for closure
@@ -437,9 +498,11 @@ function CharacterModelInner({
   const hpRingY = config.hpRingHeight ?? sy * 2.05;
   const ringRad = config.selectionRingRadius ?? Math.max(sx, sz) * 0.58;
 
+  const offset = config.modelOffset ?? [0, 0, 0];
+
   return (
     <group ref={groupRef} position={position}>
-      <group scale={[sx, sy, sz]}>
+      <group scale={[sx, sy, sz]} position={offset}>
         <primitive object={charScene} />
       </group>
 
@@ -599,17 +662,19 @@ export function CharacterModel(props: CharacterModelProps) {
   // Voxel model branch — delegate to VoxelCharacterModel for skeleton-less models
   if (config.isVoxel && config.voxelModelUrl) {
     return (
-      <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
-        <VoxelCharacterModel
-          unit={props.unit}
-          position={props.position}
-          facingAngle={props.facingAngle}
-          isSelected={props.isSelected}
-          animState={props.animState}
-          modelUrl={config.voxelModelUrl}
-          voxelScale={config.voxelScale}
-        />
-      </Suspense>
+      <SceneErrorBoundary fallback={<LoadingPlaceholder color={placeholderColor} />}>
+        <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
+          <VoxelCharacterModel
+            unit={props.unit}
+            position={props.position}
+            facingAngle={props.facingAngle}
+            isSelected={props.isSelected}
+            animState={props.animState}
+            modelUrl={config.voxelModelUrl}
+            voxelScale={config.voxelScale}
+          />
+        </Suspense>
+      </SceneErrorBoundary>
     );
   }
 
@@ -619,28 +684,32 @@ export function CharacterModel(props: CharacterModelProps) {
   const texUrl = texSet?.diffuse ? textureAssetUrl(texSet.diffuse) : null;
   if (texUrl) {
     return (
+      <SceneErrorBoundary fallback={<LoadingPlaceholder color={placeholderColor} />}>
+        <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
+          <CharacterModelTextureLoader
+            {...props}
+            config={config}
+            textureUrl={texUrl}
+            rpgTexture={null}
+            resolvedPrimary={resolvedPrimary}
+            resolvedSecondary={resolvedSecondary}
+          />
+        </Suspense>
+      </SceneErrorBoundary>
+    );
+  }
+  return (
+    <SceneErrorBoundary fallback={<LoadingPlaceholder color={placeholderColor} />}>
       <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
-        <CharacterModelTextureLoader
+        <CharacterModelInner
           {...props}
           config={config}
-          textureUrl={texUrl}
           rpgTexture={null}
           resolvedPrimary={resolvedPrimary}
           resolvedSecondary={resolvedSecondary}
         />
       </Suspense>
-    );
-  }
-  return (
-    <Suspense fallback={<LoadingPlaceholder color={placeholderColor} />}>
-      <CharacterModelInner
-        {...props}
-        config={config}
-        rpgTexture={null}
-        resolvedPrimary={resolvedPrimary}
-        resolvedSecondary={resolvedSecondary}
-      />
-    </Suspense>
+    </SceneErrorBoundary>
   );
 }
 
@@ -648,10 +717,19 @@ export function CharacterModel(props: CharacterModelProps) {
 // Wrapped in typeof check to avoid SSR/module-scope crashes
 if (typeof window !== 'undefined') {
   const modelIds = [
-    'orc', 'dwarf', 'ranger_rpg', 'cleric_rpg',
-    'knight_male', 'knight_golden_male', 'viking_male', 'ninja_male', 'ninja_female',
-    'pirate_male', 'zombie_male', 'zombie_female', 'soldier_male', 'wizard', 'witch',
-    'casual_bald', 'goblin_male', 'kimono_female',
+    // Legacy packs still in use (Worge beast forms, Pirates faith_barrier)
+    'cleric_rpg', 'warbear', 'werewolf', 'raptor',
+    // New CC rig heroes (Apr-2026 upload) — covers all 27 API heroes
+    'swordman', 'assassin_male', 'assassin_female',
+    'dwarf_male', 'elf_male', 'elf_female',
+    'goblin_new', 'goblin_backstabber_male', 'goblin_backstabber_female',
+    'human_battle_mage_male', 'human_battle_mage_female',
+    'lizardfolk_male',
+    'night_stalker_male', 'night_stalker_female',
+    'orc_scout_male', 'orc_scout_female',
+    'vampire_aristocrat_male', 'vampire_aristocrat_female',
+    'undead_grave_knight_male', 'undead_grave_knight_female',
+    'vampire_female', 'werewolf_mixamo',
   ];
   const weapIds = ['greataxe', 'fire_staff', 'dark_staff', 'daggers', 'greatsword',
                    'bow', 'sword', 'shield', 'rusted_sword', 'war_hammer'];

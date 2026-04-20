@@ -1,0 +1,386 @@
+{
+  "assassin_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "0_T-Pose(0)"
+    ]
+  },
+  "assassin_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "0_T-Pose(0)"
+    ]
+  },
+  "mixamo_generic": {
+    "usesCCBones": false,
+    "ccRightHand": [],
+    "ccLeftHand": [],
+    "ccHead": [],
+    "externalTextureUris": [],
+    "clips": [
+      "sit-talk-378944"
+    ]
+  },
+  "dwarf_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "sit-talk-378944"
+    ]
+  },
+  "elf_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_081"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_038"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "dance-graceful-378939"
+    ]
+  },
+  "elf_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "walk-think-378989"
+    ]
+  },
+  "goblin_new": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "relax-378947"
+    ]
+  },
+  "goblin_backstabber_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "f_h_magespellcast_05"
+    ]
+  },
+  "goblin_backstabber_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "birdcage-378914"
+    ]
+  },
+  "human_battle_mage_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "change-pose-379001"
+    ]
+  },
+  "human_battle_mage_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "walk-think-378989"
+    ]
+  },
+  "lizardfolk_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "walk-relaxed-2loop-378986"
+    ]
+  },
+  "night_stalker_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "dance-graceful-378939"
+    ]
+  },
+  "night_stalker_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "crouch_walk_r_againstwall"
+    ]
+  },
+  "orc_scout_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "walk-2loop-379004"
+    ]
+  },
+  "orc_scout_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "relax-378947"
+    ]
+  },
+  "swordman": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "relax-378947"
+    ]
+  },
+  "vampire_aristocrat_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "stand-talk-378997"
+    ]
+  },
+  "vampire_aristocrat_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "walk-think-378989"
+    ]
+  },
+  "undead_grave_knight_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_072"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "relax-378947"
+    ]
+  },
+  "undead_grave_knight_male": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_066"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_039"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "birdcage-378914"
+    ]
+  },
+  "vampire_female": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_081"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_038"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "0_T-Pose(0)"
+    ]
+  },
+  "werewolf_mixamo": {
+    "usesCCBones": true,
+    "ccRightHand": [
+      "CC_Base_R_Hand_078"
+    ],
+    "ccLeftHand": [
+      "CC_Base_L_Hand_055"
+    ],
+    "ccHead": [
+      "CC_Base_Head_038"
+    ],
+    "externalTextureUris": [],
+    "clips": [
+      "0_T-Pose",
+      "male-idle_279398"
+    ]
+  }
+}

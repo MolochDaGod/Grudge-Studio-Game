@@ -10,6 +10,8 @@ const STRIP_PREFIXES = [
   /^CharacterArmature\|/i,
   /^Armature\|/i,
   /^Root\//i,
+  // Reallusion Character Creator rigs use CC_Base_* prefix
+  /^CC_Base_/i,
 ];
 
 export function normalizeBoneName(name: string): string {
@@ -19,6 +21,8 @@ export function normalizeBoneName(name: string): string {
   }
   // Unify common suffixes: .L/.R → _L/_R
   n = n.replace(/\.L$/i, '_L').replace(/\.R$/i, '_R');
+  // Reallusion CC bones carry a numeric id suffix (e.g. "R_Hand_072") — strip it
+  n = n.replace(/_\d+$/, '');
   // Lowercase for comparison
   return n.toLowerCase();
 }
@@ -69,6 +73,28 @@ const CANONICAL_ALIASES: Record<string, CanonicalBone> = {
   'hand_l': 'lefthand', 'hand_r': 'righthand',
   'upperleg_l': 'leftupleg', 'upperleg_r': 'rightupleg',
   'lowerleg_l': 'leftleg', 'lowerleg_r': 'rightleg',
+  // Reallusion Character Creator rig (after stripping CC_Base_ and numeric suffix)
+  'hip':            'hips',
+  'spine01':        'spine1',
+  'spine02':        'spine2',
+  'necktwist01':    'neck',
+  'necktwist02':    'neck',
+  'l_clavicle':     'leftshoulder',
+  'r_clavicle':     'rightshoulder',
+  'l_upperarm':     'leftarm',
+  'r_upperarm':     'rightarm',
+  'l_forearm':      'leftforearm',
+  'r_forearm':      'rightforearm',
+  'l_hand':         'lefthand',
+  'r_hand':         'righthand',
+  'l_thigh':        'leftupleg',
+  'r_thigh':        'rightupleg',
+  'l_calf':         'leftleg',
+  'r_calf':         'rightleg',
+  'l_foot':         'leftfoot',
+  'r_foot':         'rightfoot',
+  'l_toebase':      'lefttoebase',
+  'r_toebase':      'righttoebase',
 };
 
 // Bones that should NEVER have position tracks retargeted (causes floating/explosion)
