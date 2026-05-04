@@ -387,12 +387,14 @@ function WalkingUnit({
   currentUnitId, animState, onDoubleClick, onRightClick, onClick,
   onHover, onUnhover,
 }: WalkingUnitProps) {
+  // Outer group exists purely for raycast/event bubbling — it stays at origin.
+  // Live world position is owned by `worldPosRef` and consumed by
+  // PhysicsCharacter, because Rapier RigidBodies do NOT inherit parent
+  // group transforms (so animating outerRef.position would never reach
+  // the visible model).
   const outerRef = useRef<THREE.Group>(null);
-
-  // Stable initial world pos – only used on mount; all subsequent
-  // position changes are done imperatively to avoid R3F prop overrides.
-  const initWorldPos = useRef(
-    tileToWorld(unit.position.x, unit.position.y, tileSize) as [number, number, number]
+  const worldPosRef = useRef<THREE.Vector3>(
+    new THREE.Vector3(...tileToWorld(unit.position.x, unit.position.y, tileSize)),
   );
 
   type WS = {
@@ -416,6 +418,14 @@ function WalkingUnit({
   };
   const dashRef = useRef<DashState | null>(null);
   const _dashPos = useRef(new THREE.Vector3());
+
+  // Re-seat the unit when its tile position changes via store (teleport,
+  // respawn, level reset, etc.) and no walk/dash is in flight.
+  useEffect(() => {
+    if (wsRef.current?.active || dashRef.current) return;
+    const [wx, wy, wz] = tileToWorld(unit.position.x, unit.position.y, tileSize);
+    worldPosRef.current.set(wx, wy, wz);
+  }, [unit.position.x, unit.position.y, tileSize]);
 
   // Stable ref to animState so useFrame (closure) always reads the latest value
   const animStateRef = useRef(animState);
@@ -444,9 +454,8 @@ function WalkingUnit({
         returnMs: number;
       }>;
       if (evt.detail.unitId !== unit.id) return;
-      if (!outerRef.current) return;
       if (wsRef.current?.active) return; // don't dash while walking
-      const home = outerRef.current.position.clone();
+      const home = worldPosRef.current.clone();
       const toDir = new THREE.Vector3(
         evt.detail.targetX - home.x,
         0,
@@ -483,41 +492,41 @@ function WalkingUnit({
       toVec: new THREE.Vector3(tx, ty, tz),
       active: true,
     };
-    // Snap group to walk starting tile immediately (before first frame renders)
-    if (outerRef.current) outerRef.current.position.set(sx, sy, sz);
+    // Snap live world pos to walk starting tile immediately (before first frame renders)
+    worldPosRef.current.set(sx, sy, sz);
     setFacingAngle(calcWalkFacingAngle(walkPath[0], walkPath[1]));
   }, [walkPath, tileSize]);
 
   useFrame((_, delta) => {
     // ── Melee dash takes priority over idle; never fires during a walk ──────────
     const dash = dashRef.current;
-    if (dash && outerRef.current && !wsRef.current?.active) {
+    if (dash && !wsRef.current?.active) {
       const elapsed = performance.now() - dash.startTime;
       const totalMs = dash.forwardMs + dash.holdMs + dash.returnMs;
       if (elapsed >= totalMs) {
-        outerRef.current.position.copy(dash.from);
+        worldPosRef.current.copy(dash.from);
         dashRef.current = null;
       } else if (elapsed < dash.forwardMs) {
         // Rush forward with ease-in-out
         const t = elapsed / dash.forwardMs;
         const eased = t * t * (3 - 2 * t);
         _dashPos.current.lerpVectors(dash.from, dash.to, eased);
-        outerRef.current.position.copy(_dashPos.current);
+        worldPosRef.current.copy(_dashPos.current);
       } else if (elapsed < dash.forwardMs + dash.holdMs) {
         // Hold at impact point
-        outerRef.current.position.copy(dash.to);
+        worldPosRef.current.copy(dash.to);
       } else {
         // Spring back with ease-out cubic
         const t = (elapsed - dash.forwardMs - dash.holdMs) / dash.returnMs;
         const eased = 1 - Math.pow(1 - Math.min(1, t), 3);
         _dashPos.current.lerpVectors(dash.to, dash.from, eased);
-        outerRef.current.position.copy(_dashPos.current);
+        worldPosRef.current.copy(_dashPos.current);
       }
       return; // skip walk logic entirely during dash
     }
 
     const ws = wsRef.current;
-    if (!ws || !ws.active || !outerRef.current) return;
+    if (!ws || !ws.active) return;
 
     const spd = animStateRef.current === 'run' ? RUN_SPEED
       : animStateRef.current === 'sneak' ? SNEAK_SPEED
@@ -527,7 +536,7 @@ function WalkingUnit({
     if (ws.stepT >= 1) {
       ws.stepT -= 1;
       // Land exactly on current target tile
-      outerRef.current.position.copy(ws.toVec);
+      worldPosRef.current.copy(ws.toVec);
       ws.stepIdx++;
 
       // Fire tile-entry event (traps, abilities)
@@ -555,14 +564,13 @@ function WalkingUnit({
         : animStateRef.current === 'sneak' ? SNEAK_BOB
           : WALK_BOB;
       _walkPos.current.y += Math.abs(Math.sin(ws.stepT * Math.PI)) * bob;
-      outerRef.current.position.copy(_walkPos.current);
+      worldPosRef.current.copy(_walkPos.current);
     }
   });
 
   return (
     <group
-      ref={outerRef}
-      position={initWorldPos.current}
+      ref= { outerRef }
       onClick={e => { e.stopPropagation(); onClick?.(unit.id); }}
       onDoubleClick={e => { e.stopPropagation(); onDoubleClick?.(unit.id); }}
       onContextMenu={e => {
@@ -589,6 +597,7 @@ function WalkingUnit({
           isPlayer={unit.isPlayerControlled}
           unitId={unit.id}
           position={[0, 0, 0]}
+worldPosRef = { worldPosRef }
         >
           <CharacterModel
             unit={unit}

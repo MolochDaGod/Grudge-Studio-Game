@@ -29,8 +29,15 @@ interface PhysicsCharacterProps {
   isPlayer: boolean;
   /** Unit ID for combat hit callbacks */
   unitId: string;
-  /** World-space position (updated by walk system, etc.) */
+  /** World-space position (static fallback; ignored when `worldPosRef` is provided) */
   position: [number, number, number];
+  /**
+   * Optional live world-position ref. When supplied, this drives the kinematic
+   * body each frame instead of the static `position` prop. Required for any
+   * caller that animates position imperatively (walks, dashes, knock-backs)
+   * — Rapier RigidBodies do NOT inherit parent group transforms.
+   */
+  worldPosRef?: React.RefObject<THREE.Vector3>;
   /** Called when a weapon hitbox collides with this character in the cannon-es world */
   onCombatHit?: (data: { attackerUnitId: string; collideEvent: any }) => void;
   /** Children (CharacterModel, etc.) */
@@ -42,6 +49,7 @@ export function PhysicsCharacter({
   isPlayer,
   unitId,
   position,
+  worldPosRef,
   onCombatHit,
   children,
 }: PhysicsCharacterProps) {
@@ -50,6 +58,21 @@ export function PhysicsCharacter({
 
   const dims = useMemo(() => getBodyDimensions(characterId), [characterId]);
   const collisionGroups = isPlayer ? RAPIER_PLAYER : RAPIER_ENEMY;
+
+  // ── Live position ref: prefer caller-supplied worldPosRef, else fall back
+  //    to the static `position` prop (kept in sync via effect).
+  const internalPosRef = useRef(
+    new THREE.Vector3(
+      worldPosRef?.current?.x ?? position[0],
+      worldPosRef?.current?.y ?? position[1],
+      worldPosRef?.current?.z ?? position[2],
+    ),
+  );
+  useEffect(() => {
+    if (!worldPosRef) internalPosRef.current.set(...position);
+  }, [position, worldPosRef]);
+
+  const livePos = () => worldPosRef?.current ?? internalPosRef.current;
 
   // ── Cannon-ES target body (for weapon hitbox detection) ─────────────────
   useEffect(() => {
@@ -62,8 +85,9 @@ export function PhysicsCharacter({
     });
     cannonBodyRef.current = body;
 
-    // Set initial position
-    body.position.set(position[0], position[1] + dims.feetOffset, position[2]);
+    // Set initial position from the live source
+    const p = livePos();
+    body.position.set(p.x, p.y + dims.feetOffset, p.z);
 
     return () => {
       if (cannonBodyRef.current) {
@@ -73,38 +97,29 @@ export function PhysicsCharacter({
     };
   }, [unitId, isPlayer, dims, onCombatHit]);
 
-  // ── Sync position each frame ────────────────────────────────────────────
-  const posRef = useRef(new THREE.Vector3(...position));
-  useEffect(() => {
-    posRef.current.set(...position);
-  }, [position]);
-
   useFrame(() => {
-    // Sync Rapier kinematic body
+    const p = livePos();
     if (rigidBodyRef.current) {
       rigidBodyRef.current.setNextKinematicTranslation({
-        x: posRef.current.x,
-        y: posRef.current.y + dims.feetOffset,
-        z: posRef.current.z,
+        x: p.x,
+        y: p.y + dims.feetOffset,
+        z: p.z,
       });
     }
-
-    // Sync Cannon-ES target body
     if (cannonBodyRef.current) {
-      cannonBodyRef.current.position.set(
-        posRef.current.x,
-        posRef.current.y + dims.feetOffset,
-        posRef.current.z,
-      );
+      cannonBodyRef.current.position.set(p.x, p.y + dims.feetOffset, p.z);
     }
   });
 
+  // Initial RigidBody mount position — pulls from live source so the body
+  // never spawns at origin then teleports on frame 1.
+  const initial = livePos();
   return (
     <RigidBody
       ref={rigidBodyRef}
       type="kinematicPosition"
       colliders={false}
-      position={[position[0], position[1] + dims.feetOffset, position[2]]}
+  position = { [initial.x, initial.y + dims.feetOffset, initial.z]}
       collisionGroups={collisionGroups}
     >
       <CapsuleCollider args={[dims.halfHeight, dims.radius]} />

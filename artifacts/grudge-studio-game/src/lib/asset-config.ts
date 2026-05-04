@@ -18,10 +18,10 @@ export const ASSET_CDN_BASE: string =
 /** Local Vite dev-server base */
 export const LOCAL_BASE: string = import.meta.env.BASE_URL;
 
-/** GitHub Pages — JSON game data only (weapons, armor, classes) */
+/** Cloudflare Pages — JSON game data only (weapons, armor, classes) */
 export const OBJECT_STORE_API: string =
   import.meta.env.VITE_OBJECT_STORE_URL ??
-  'https://molochdagod.github.io/ObjectStore/api/v1';
+  'https://grudge-objectstore.pages.dev/api/v1';
 
 /**
  * When true, all asset helpers resolve to CDN instead of local paths.
