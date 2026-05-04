@@ -76,7 +76,7 @@ export default function Battle() {
     | { kind: 'map'; tx: number; ty: number; x: number; y: number };
   const [contextMenu, setContextMenu] = useState<CtxMenu | null>(null);
 
-  const CAMERA_META: Record<CameraMode, { label: string; icon: JSX.Element; next: CameraMode }> = {
+  const CAMERA_META: Record<CameraMode, { label: string; icon: React.ReactNode; next: CameraMode }> = {
     'tactical':     { label: 'Tactical', icon: <Layers className="w-3.5 h-3.5" />, next: 'third-person' },
     'free':         { label: 'Free',     icon: <Eye className="w-3.5 h-3.5" />,    next: 'tactical' },
     'third-person': { label: '3rd',      icon: <User className="w-3.5 h-3.5" />,   next: 'rts' },

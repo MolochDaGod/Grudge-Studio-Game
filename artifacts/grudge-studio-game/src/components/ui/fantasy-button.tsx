@@ -34,7 +34,7 @@ const FantasyButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
           sizes[size],
           className
         )}
-        {...props}
+        {...(props as any)}
       >
         <span className="relative z-10 flex items-center gap-2">{props.children}</span>
         {/* Subtle overlay shine effect */}

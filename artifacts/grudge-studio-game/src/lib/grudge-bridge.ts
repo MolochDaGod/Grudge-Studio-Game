@@ -54,7 +54,7 @@ function extractAttributes(char: GrudgeCharacter): CharacterAttributes {
  */
 function resolveWeaponType(char: GrudgeCharacter): string {
   // If the character has an explicit weapon type in stats, use it
-  const explicitWeapon = char.stats?.weaponType as string | undefined;
+  const explicitWeapon = char.stats?.weaponType != null ? String(char.stats.weaponType) : undefined;
   if (explicitWeapon) return explicitWeapon.toLowerCase();
 
   // Otherwise, derive from class
@@ -185,8 +185,8 @@ export function grudgeCharToTacticalUnit(
     specialAbilityDescription: getSpecialAbilityDesc(char.class),
     specialAbilityCooldown: 0,
     ct: 0,
-    faction: char.stats?.faction as string ?? (isPlayerControlled ? 'Crusade' : 'Legion'),
-    rarity: char.stats?.rarity as string ?? 'rare',
+    faction: char.stats?.faction != null ? String(char.stats.faction) : (isPlayerControlled ? 'Crusade' : 'Legion'),
+    rarity: char.stats?.rarity != null ? String(char.stats.rarity) : 'rare',
     statusEffects: [],
     statusDurations: {},
     statusImmunities: {},

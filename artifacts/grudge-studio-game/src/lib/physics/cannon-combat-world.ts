@@ -26,7 +26,7 @@ export const combatWorld = new CANNON.World({
 });
 
 // Low iteration count — we only need overlap detection, not stable stacking
-combatWorld.solver.iterations = 1;
+(combatWorld.solver as any).iterations = 1;
 combatWorld.broadphase = new CANNON.NaiveBroadphase();
 
 // Forward beginContact/endContact to individual bodies (annihilate pattern)

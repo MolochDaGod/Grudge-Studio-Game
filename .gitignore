@@ -49,3 +49,8 @@ Thumbs.db
 .local/
 .vercel
 .env*.local
+
+# Large bundled assets / scratch files (exceed GitHub 100MB limit)
+attached_assets/Toon_RTS.zip
+gbux.png
+.history/
