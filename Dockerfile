@@ -1,4 +1,4 @@
-# ── Stage 1: Build ────────────────────────────────────────────────────────────
+# ── Stage 1: Build ────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -8,61 +8,23 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY .npmrc* ./
 
-# Copy all workspace packages (needed for monorepo resolution)
+# Copy workspace packages needed for api-server
 COPY lib/ lib/
-COPY artifacts/ artifacts/
+COPY artifacts/api-server/ artifacts/api-server/
 
-# Install dependencies
-RUN pnpm install --no-frozen-lockfile
+# Install dependencies (--ignore-scripts avoids pnpm v10 build blocking)
+RUN pnpm install --no-frozen-lockfile --ignore-scripts
 
-# Build the game frontend
-ARG BASE_PATH=/
-ENV BASE_PATH=${BASE_PATH}
-RUN pnpm --filter @workspace/grudge-studio-game run build
+# Build the api-server
+RUN pnpm --filter @workspace/api-server run build
 
-# ── Stage 2: Serve ────────────────────────────────────────────────────────────
-FROM nginx:alpine AS production
+# ── Stage 2: Run ──────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS production
 
-# Copy built static files
-COPY --from=builder /app/artifacts/grudge-studio-game/dist /usr/share/nginx/html
+WORKDIR /app
+COPY --from=builder /app/artifacts/api-server/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 
-# SPA routing: all paths → index.html
-COPY <<'EOF' /etc/nginx/conf.d/default.conf
-server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # Gzip compression for 3D assets
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/octet-stream model/gltf-binary;
-    gzip_min_length 1000;
-
-    # Cache static assets aggressively (GLB, FBX, PNG, etc.)
-    location ~* \.(glb|fbx|gltf|bin|png|jpg|webp|woff2|wasm)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Cache JS/CSS with content hash
-    location ~* \.(js|css)$ {
-        expires 7d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # SPA fallback: all routes → index.html
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Health check endpoint
-    location /health {
-        return 200 'ok';
-        add_header Content-Type text/plain;
-    }
-}
-EOF
-
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["node", "dist/index.cjs"]

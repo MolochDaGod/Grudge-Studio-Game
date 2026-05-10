@@ -1,6 +1,10 @@
 [build]
-builder = "dockerfile"
+builder = "nixpacks"
+buildCommand = "corepack enable && pnpm install --ignore-scripts --no-frozen-lockfile && pnpm --filter @workspace/api-server run build"
 
 [deploy]
-healthcheckPath = "/health"
+startCommand = "node dist/index.cjs"
+healthcheckPath = "/api/healthz"
+healthcheckTimeout = 60
 restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
