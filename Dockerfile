@@ -7,24 +7,25 @@ WORKDIR /app
 # Copy workspace root configs
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY .npmrc* ./
+COPY tsconfig.base.json ./
 
-# Copy workspace packages needed for api-server
+# Copy all workspace packages (needed for monorepo resolution)
 COPY lib/ lib/
-COPY artifacts/api-server/ artifacts/api-server/
+COPY artifacts/grudge-studio-game/ artifacts/grudge-studio-game/
 
 # Install dependencies (--ignore-scripts avoids pnpm v10 build blocking)
 RUN pnpm install --no-frozen-lockfile --ignore-scripts
 
-# Build the api-server
-RUN pnpm --filter @workspace/api-server run build
+# Build the grudge-studio-game
+RUN pnpm --filter @workspace/grudge-studio-game run build
 
 # ── Stage 2: Run ──────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS production
 
-WORKDIR /app
-COPY --from=builder /app/artifacts/api-server/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+RUN apk add --no-cache nginx
 
-ENV NODE_ENV=production
-EXPOSE 3000
-CMD ["node", "dist/index.cjs"]
+WORKDIR /app
+COPY --from=builder /app/artifacts/grudge-studio-game/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
