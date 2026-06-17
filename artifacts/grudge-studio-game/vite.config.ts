@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT) || 5173;
 
 export default defineConfig({
-  base: "/",
+  base: process.env.VITE_BASE_PATH ?? "/game/",
   plugins: [
     react(),
     tailwindcss(),
@@ -17,6 +17,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@assets": path.resolve(__dirname, "..", "..", "attached_assets"),
+      "@workspace/vfx-sandbox": path.resolve(__dirname, "..", "vfx-sandbox", "src"),
     },
     dedupe: ["react", "react-dom", "three", "@react-three/fiber", "@react-three/drei"],
   },

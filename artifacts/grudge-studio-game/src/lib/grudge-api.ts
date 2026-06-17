@@ -133,7 +133,8 @@ export function logout() {
 // ── Characters ───────────────────────────────────────────────────────────────
 
 export interface GrudgeCharacter {
-  id: number;
+  /** Backend character UUID (api-server) or numeric id (legacy). */
+  id: string | number;
   grudge_id: string;
   name: string;
   race: string;
@@ -143,8 +144,27 @@ export interface GrudgeCharacter {
   stats: Record<string, number>;
 }
 
+function normalizeCharacter(
+  raw: Record<string, unknown>,
+  grudgeId?: string | null,
+): GrudgeCharacter {
+  const stats = (raw.stats ?? raw.attributes ?? {}) as Record<string, number>;
+  return {
+    id: (raw.id ?? raw.character_id ?? '') as string | number,
+    grudge_id: String(raw.grudge_id ?? grudgeId ?? ''),
+    name: String(raw.name ?? 'Unknown'),
+    race: String(raw.race ?? raw.raceId ?? raw.race_id ?? 'human'),
+    class: String(raw.class ?? raw.classId ?? raw.class_id ?? 'warrior'),
+    level: Number(raw.level ?? 1),
+    gold: Number(raw.gold ?? 0),
+    stats,
+  };
+}
+
 export async function getMyCharacters(): Promise<GrudgeCharacter[]> {
-  return apiFetch(`${GRUDGE_GAME_API}/characters`);
+  const profile = await getIdentityProfile().catch(() => null);
+  const rows = await apiFetch<Record<string, unknown>[]>(`${GRUDGE_GAME_API}/characters`);
+  return rows.map((row) => normalizeCharacter(row, profile?.grudge_id));
 }
 
 export async function createCharacter(name: string, race: string, charClass: string): Promise<GrudgeCharacter> {

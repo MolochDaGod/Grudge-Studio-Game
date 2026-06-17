@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/vfx-sandbox",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/three": "^0.183.1",
+    "typescript": "~5.9.2"
+  }
+}

@@ -20,6 +20,10 @@ import ToonAdmin from "@/pages/toon-admin";
 import MapEditor from "@/pages/map-editor";
 import IslandPage from "@/pages/island";
 import DungeonPage from "@/pages/dungeon";
+import WorldPage from "@/pages/world";
+import HudPage from "@/pages/hud";
+import PanelPage from "@/pages/panel";
+import VfxSandboxPage from "@/pages/vfx-sandbox";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -49,6 +53,13 @@ function Router() {
       <Route path="/map-editor/:levelId" component={MapEditor} />
       <Route path="/island">{() => <AuthGuard><IslandPage /></AuthGuard>}</Route>
       <Route path="/dungeon">{() => <AuthGuard><DungeonPage /></AuthGuard>}</Route>
+      <Route path="/world" component={WorldPage} />
+      <Route path="/hud" component={HudPage} />
+      <Route path="/panel" component={PanelPage} />
+      <Route path="/vfx" component={VfxSandboxPage} />
+      <Route path="/3dfx" component={VfxSandboxPage} />
+      <Route path="/spells" component={VfxSandboxPage} />
+      <Route path="/spellbook" component={VfxSandboxPage} />
       <Route component={NotFound} />
     </Switch>
   );

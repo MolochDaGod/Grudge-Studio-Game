@@ -9,6 +9,10 @@
  */
 
 import { getMyCharacters, type GrudgeCharacter } from '@/lib/grudge-api';
+import {
+  mapCharacterModelId,
+  tacticalUnitId,
+} from '@/lib/character-identity';
 import { TacticalUnit } from '@/store/use-game-store';
 import {
   type CharacterAttributes,
@@ -161,7 +165,7 @@ export function grudgeCharToTacticalUnit(
   const weaponType = resolveWeaponType(char);
 
   return {
-    id: `grudge_${char.id}`,
+    id: tacticalUnitId(char),
     characterId: mapCharacterModelId(char),
     name: char.name,
     race: char.race,
@@ -193,20 +197,6 @@ export function grudgeCharToTacticalUnit(
     hasMoved: false,
     hasActed: false,
   };
-}
-
-/**
- * Map a GrudgeCharacter to a 3D model ID in CHARACTER_CONFIGS.
- * Uses race_class pattern (e.g., "human_warrior", "orc_mage").
- */
-function mapCharacterModelId(char: GrudgeCharacter): string {
-  const race = char.race.toLowerCase();
-  const cls = char.class.toLowerCase();
-  // Map to the existing CHARACTER_CONFIGS IDs
-  const id = `${race}_${cls}`;
-  // Check if this ID exists in our static roster, fallback to generic
-  const exists = CHARACTERS.find(c => c.id === id);
-  return exists ? id : `${race}_warrior`;
 }
 
 function getSpecialAbility(classId: string): string {

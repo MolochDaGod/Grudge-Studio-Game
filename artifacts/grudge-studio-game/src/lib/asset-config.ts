@@ -42,9 +42,16 @@ function clean(path: string): string {
  * @example assetUrl('/models/characters/orc.glb')
  */
 export function assetUrl(path: string): string {
-  return USE_CDN
-    ? `${ASSET_CDN_BASE}${clean(path)}`
-    : `${LOCAL_BASE}${path.replace(/^\//, '')}`;
+  if (USE_CDN) {
+    return `${ASSET_CDN_BASE}${clean(path)}`;
+  }
+  // Absolute /assets/* paths must include the Vite base (e.g. /game) — otherwise
+  // they resolve to the domain root and 404 on Vercel (/assets vs /game/assets).
+  const base = LOCAL_BASE.replace(/\/$/, '');
+  if (path.startsWith('/assets/') || path.startsWith('/anims/')) {
+    return `${base}${path}`;
+  }
+  return `${LOCAL_BASE}${path.replace(/^\//, '')}`;
 }
 
 /** Always resolve to local BASE_URL (e.g. for bundled public/ files) */
