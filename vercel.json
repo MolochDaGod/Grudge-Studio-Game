@@ -24,7 +24,7 @@
     { "source": "/game/images/:path*", "destination": "/images/:path*" },
     { "source": "/game/favicon-32.png", "destination": "/favicon-32.png" },
     { "source": "/game/favicon-192.png", "destination": "/favicon-192.png" },
-    { "source": "/game/:path*", "destination": "/index.html" }
+    { "source": "/game/:path((?!.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
