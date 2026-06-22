@@ -3,7 +3,7 @@
   "framework": null,
   "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
   "buildCommand": "VITE_BASE_PATH=/game/ pnpm --filter @workspace/grudge-studio-game run build",
-  "outputDirectory": "artifacts/grudge-studio-game/dist",
+  "outputDirectory": "../grudge-studio-game/dist",
   "redirects": [
     { "source": "/", "destination": "/game/", "permanent": false },
     { "source": "/3dfx", "destination": "/game/vfx", "permanent": false },
