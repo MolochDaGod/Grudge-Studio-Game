@@ -1,8 +1,8 @@
 packages:
-  - artifacts/*
-  - lib/*
-  - lib/integrations/*
-  - scripts
+  # Vercel deploys the game SPA only — keep workspace scoped to buildable packages.
+  - artifacts/grudge-studio-game
+  - artifacts/vfx-sandbox
+  - lib/api-client-react
 
 autoInstallPeers: false
 

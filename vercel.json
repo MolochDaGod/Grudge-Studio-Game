@@ -1,7 +1,8 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/grudge-studio-game run build",
+  "buildCommand": "VITE_BASE_PATH=/game/ pnpm --filter @workspace/grudge-studio-game run build",
   "outputDirectory": "artifacts/grudge-studio-game/dist",
   "redirects": [
     { "source": "/", "destination": "/game/", "permanent": false },
@@ -9,20 +10,21 @@
     { "source": "/spells", "destination": "/game/spells", "permanent": false },
     { "source": "/spellbook", "destination": "/game/spells", "permanent": false }
   ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/assets/(.*)", "dest": "/game/assets/$1" },
-    { "src": "/anims/(.*)", "dest": "/game/anims/$1" },
-    { "src": "/api/game/(.*)", "dest": "https://api.grudge-studio.com/$1" },
-    { "src": "/api/auth/(.*)", "dest": "https://id.grudge-studio.com/auth/$1" },
-    { "src": "/api/account/(.*)", "dest": "https://account.grudge-studio.com/$1" },
-    { "src": "/api/assets/(.*)", "dest": "https://assets.grudge-studio.com/$1" },
-    { "src": "/api/(.*)", "status": 404 },
-    { "src": "/game/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/game/models/(.*)", "dest": "/models/$1" },
-    { "src": "/game/images/(.*)", "dest": "/images/$1" },
-    { "src": "/game/(.*)", "dest": "/index.html" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/favicon-32.png", "destination": "/game/favicon-32.png" },
+    { "source": "/favicon-192.png", "destination": "/game/favicon-192.png" },
+    { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
+    { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
+    { "source": "/api/game/:path*", "destination": "https://api.grudge-studio.com/:path*" },
+    { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
+    { "source": "/api/account/:path*", "destination": "https://account.grudge-studio.com/:path*" },
+    { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
+    { "source": "/game/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/game/models/:path*", "destination": "/models/:path*" },
+    { "source": "/game/images/:path*", "destination": "/images/:path*" },
+    { "source": "/game/favicon-32.png", "destination": "/favicon-32.png" },
+    { "source": "/game/favicon-192.png", "destination": "/favicon-192.png" },
+    { "source": "/game/:path*", "destination": "/index.html" }
   ],
   "headers": [
     {
