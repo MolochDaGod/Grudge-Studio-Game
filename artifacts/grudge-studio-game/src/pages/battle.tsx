@@ -1280,7 +1280,7 @@ export default function Battle() {
       <div className="absolute top-0 left-0 right-0 z-30 h-[52px] bg-[#0a0a10]/96 backdrop-blur-sm border-b border-white/10 flex items-center px-3 gap-3">
         {/* Game label */}
         <div className="shrink-0 font-display text-[9px] uppercase tracking-[0.2em] text-white/20 whitespace-nowrap">
-          Realm of Grudges
+          Grudge Triad
         </div>
         <div className="shrink-0 w-px h-5 bg-white/10" />
 

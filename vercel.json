@@ -4,8 +4,13 @@
   "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
   "buildCommand": "VITE_BASE_PATH=/game/ pnpm --filter @workspace/grudge-studio-game run build",
   "outputDirectory": "../grudge-studio-game/dist",
+  "env": {
+    "VITE_USE_CDN": "true",
+    "VITE_ASSET_CDN_URL": "https://assets.grudge-studio.com"
+  },
   "redirects": [
     { "source": "/", "destination": "/game/", "permanent": false },
+    { "source": "/combat", "destination": "/game/triad", "permanent": false },
     { "source": "/3dfx", "destination": "/game/vfx", "permanent": false },
     { "source": "/spells", "destination": "/game/spells", "permanent": false },
     { "source": "/spellbook", "destination": "/game/spells", "permanent": false }

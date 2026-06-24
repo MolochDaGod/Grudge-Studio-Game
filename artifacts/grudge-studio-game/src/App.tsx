@@ -13,6 +13,7 @@ import CharacterSelect from "@/pages/character-select";
 import LevelSelect from "@/pages/level-select";
 import SkillTree from "@/pages/skill-tree";
 import Battle from "@/pages/battle";
+import GrudgeTriadPage from "@/pages/triad";
 import Result from "@/pages/result";
 import Leaderboard from "@/pages/leaderboard";
 import Admin from "@/pages/admin";
@@ -45,6 +46,8 @@ function Router() {
       <Route path="/character">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
       <Route path="/level-select">{() => <AuthGuard><LevelSelect /></AuthGuard>}</Route>
       <Route path="/skill-tree">{() => <AuthGuard><SkillTree /></AuthGuard>}</Route>
+      <Route path="/triad">{() => <AuthGuard><GrudgeTriadPage /></AuthGuard>}</Route>
+      <Route path="/combat">{() => <AuthGuard><GrudgeTriadPage /></AuthGuard>}</Route>
       <Route path="/battle">{() => <AuthGuard><Battle /></AuthGuard>}</Route>
       <Route path="/result">{() => <AuthGuard><Result /></AuthGuard>}</Route>
       <Route path="/leaderboard" component={Leaderboard} />
@@ -64,6 +67,24 @@ function Router() {
     </Switch>
   );
 }
+
+// Consume Grudge ID SSO token from WCS / fleet launcher (?token= & ?grudgeId=)
+(function consumeFleetAuth() {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (!token) return;
+  try {
+    localStorage.setItem('grudge_auth_token', token);
+    const grudgeId = params.get('grudgeId');
+    if (grudgeId) localStorage.setItem('grudge_id', grudgeId);
+    params.delete('token');
+    params.delete('grudgeId');
+    const qs = params.toString();
+    const clean = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+    window.history.replaceState(null, '', clean);
+  } catch { /* ignore */ }
+})();
 
 function App() {
   const restoreSession = useAuthStore(s => s.restoreSession);
