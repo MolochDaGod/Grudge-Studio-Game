@@ -94,7 +94,7 @@ export default function Login() {
           <h1 className="font-display text-3xl font-bold text-white uppercase tracking-[0.2em]">
             Grudge Studio
           </h1>
-          <p className="text-white/30 text-sm tracking-wider uppercase">Realm of Grudges</p>
+          <p className="text-white/30 text-sm tracking-wider uppercase">Grudge Tactics</p>
         </div>
 
         {/* Login card */}
