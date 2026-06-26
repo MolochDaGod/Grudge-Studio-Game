@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "alias": ["tactics.grudge-studio.com"],
+  "alias": ["game.grudge-studio.com", "tactics.grudge-studio.com"],
   "framework": null,
   "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
   "buildCommand": "VITE_BASE_PATH=/game/ pnpm --filter @workspace/grudge-studio-game run build",
