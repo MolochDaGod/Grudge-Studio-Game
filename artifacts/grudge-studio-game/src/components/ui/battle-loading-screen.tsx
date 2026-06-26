@@ -79,7 +79,7 @@ export function BattleLoadingScreen({ levelName, onDone }: BattleLoadingScreenPr
       <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
 
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 px-4">
-        <p className="font-display text-xs uppercase tracking-[0.4em] text-primary/70">Realm of Grudges</p>
+        <p className="font-display text-xs uppercase tracking-[0.4em] text-primary/70">Grudge Tactics</p>
         <h1 className="font-display text-5xl md:text-6xl font-bold text-white uppercase tracking-widest text-center drop-shadow-[0_0_30px_rgba(200,160,60,0.6)]">
           {levelName}
         </h1>
