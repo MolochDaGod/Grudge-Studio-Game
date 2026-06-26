@@ -1,0 +1,45 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "alias": ["tactics.grudge-studio.com"],
+  "framework": null,
+  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile",
+  "buildCommand": "VITE_BASE_PATH=/game/ pnpm --filter @workspace/grudge-studio-game run build",
+  "outputDirectory": "../grudge-studio-game/dist",
+  "env": {
+    "VITE_USE_CDN": "true",
+    "VITE_ASSET_CDN_URL": "https://assets.grudge-studio.com"
+  },
+  "redirects": [
+    { "source": "/", "destination": "/game/", "permanent": false },
+    { "source": "/combat", "destination": "/game/triad", "permanent": false },
+    { "source": "/3dfx", "destination": "/game/vfx", "permanent": false },
+    { "source": "/spells", "destination": "/game/spells", "permanent": false },
+    { "source": "/spellbook", "destination": "/game/spells", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/favicon-32.png", "destination": "/game/favicon-32.png" },
+    { "source": "/favicon-192.png", "destination": "/game/favicon-192.png" },
+    { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
+    { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
+    { "source": "/api/game/:path*", "destination": "https://api.grudge-studio.com/:path*" },
+    { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
+    { "source": "/api/account/:path*", "destination": "https://account.grudge-studio.com/:path*" },
+    { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
+    { "source": "/game/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/game/models/:path*", "destination": "/models/:path*" },
+    { "source": "/game/images/:path*", "destination": "/images/:path*" },
+    { "source": "/game/favicon-32.png", "destination": "/favicon-32.png" },
+    { "source": "/game/favicon-192.png", "destination": "/favicon-192.png" },
+    { "source": "/game/:path((?!.*\\..*).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/models/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }]
+    },
+    {
+      "source": "/images/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }]
+    }
+  ]
+}
