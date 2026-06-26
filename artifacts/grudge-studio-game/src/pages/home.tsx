@@ -137,7 +137,7 @@ export default function Home() {
             className="w-48 h-48 md:w-64 md:h-64 object-contain mb-[-40px] drop-shadow-2xl animate-float"
           />
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-primary to-yellow-700 drop-shadow-[0_5px_25px_rgba(0,0,0,1)] uppercase tracking-widest text-glow mb-4">
-            Realm of Grudges
+            Grudge Tactics
           </h1>
           <p className="text-xl md:text-2xl text-white/80 font-serif italic max-w-2xl mx-auto border-y border-primary/30 py-4">
             "Enter the dark fantasy where clans clash, old gods stir, and grudges are settled in blood."
