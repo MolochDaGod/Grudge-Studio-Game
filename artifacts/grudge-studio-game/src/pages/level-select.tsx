@@ -1,22 +1,10 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useGameStore, TacticalUnit } from '@/store/use-game-store';
+import { useGameStore } from '@/store/use-game-store';
 import { FantasyButton } from '@/components/ui/fantasy-button';
-import { LEVELS, getLevelWithEdits } from '@/lib/levels';
+import { LEVELS } from '@/lib/levels';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CHARACTERS as LOCAL_CHARACTERS } from '@/lib/characters';
-import { WEAPON_SKILL_TREES, SkillSlot } from '@/lib/weapon-skills';
-
-/** Default weapon type by hero role — used for AI enemies so they load the
- *  right Mixamo FBX weapon clip set and play real combat animations instead
- *  of looping their idle mocap. */
-const DEFAULT_WEAPON_BY_ROLE: Record<string, string> = {
-  Warrior: 'sword_shield',
-  Worg:    'greataxe',
-  Mage:    'fire_staff',
-  Ranger:  'bow',
-};
 
 const THEME_IMAGES: Record<string, string> = {
   ruins:    'image_1773522056852.png',   // Ruin pack preview
@@ -41,7 +29,7 @@ const GRID_LABELS: Record<string, string> = {
 
 export default function LevelSelect() {
   const [, setLocation] = useLocation();
-  const { setCurrentLevelId, pendingSquad, initBattle, setPlayerSquad, setEquippedSkills } = useGameStore();
+  const { setCurrentLevelId, pendingSquad } = useGameStore();
 
   // Guard: redirect if no squad was staged from character-select
   useEffect(() => {
@@ -51,106 +39,7 @@ export default function LevelSelect() {
   const handleSelectLevel = (levelId: string) => {
     if (!pendingSquad) return;
     setCurrentLevelId(levelId);
-
-    // ── Build battle units with the SELECTED level's spawn zones ──────
-    const level = getLevelWithEdits(levelId);
-    const { selectedIds, selectedFaction, weaponByCharId, loadoutByCharId } = pendingSquad;
-
-    const playerChars = LOCAL_CHARACTERS.filter(c => selectedIds.includes(c.id));
-    setPlayerSquad(selectedIds);
-
-    // Pick enemy faction from full roster
-    const allFactionIds = [...new Set(LOCAL_CHARACTERS.map(c => c.faction))];
-    const otherFactions = allFactionIds.filter(f => f !== selectedFaction && f !== 'Pirates');
-    const enemyFaction = otherFactions[Math.floor(Math.random() * otherFactions.length)];
-    const possibleEnemies = LOCAL_CHARACTERS.filter(c => c.faction === enemyFaction);
-    const enemyChars = [...possibleEnemies].sort(() => 0.5 - Math.random()).slice(0, 3);
-
-    let unitIdCounter = 1;
-    const createTacticalUnit = (char: typeof LOCAL_CHARACTERS[0], isPlayer: boolean, index: number): TacticalUnit => {
-      const speed = char.speed;
-      const move = Math.max(12, Math.floor(speed / 7) * 3);
-      const range = char.role === 'Ranger' ? 8 : char.role === 'Mage' ? 7 : char.role === 'Worg' ? 3 : 2;
-      const spawn = isPlayer ? level.playerSpawn : level.enemySpawn;
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = Math.min(spawn.xMax, spawn.xMin + col * 3);
-      const y = Math.min(spawn.yMax, spawn.yMin + row * 5);
-      const maxMana    = Math.round(Math.max(20, 10 + speed * 3));
-      const maxStamina = Math.round(Math.max(40, 30 + speed * 2));
-      const chosenWeapon = isPlayer
-        ? (weaponByCharId[char.id] ?? DEFAULT_WEAPON_BY_ROLE[char.role] ?? '')
-        : (DEFAULT_WEAPON_BY_ROLE[char.role] ?? '');
-      return {
-        id: `unit_${unitIdCounter++}`,
-        characterId: char.id,
-        name: char.name,
-        race: char.race,
-        role: char.role,
-        hp: char.hp,
-        maxHp: char.hp,
-        mana: maxMana,
-        maxMana,
-        stamina: maxStamina,
-        maxStamina,
-        attack: char.attack,
-        defense: char.defense,
-        speed,
-        move,
-        range,
-        weaponType: chosenWeapon,
-        position: { x, y },
-        facing: (isPlayer ? 1 : 3) as 0 | 1 | 2 | 3,
-        isPlayerControlled: isPlayer,
-        specialAbility: char.specialAbility,
-        specialAbilityDescription: char.specialAbilityDescription,
-        specialAbilityCooldown: 0,
-        ct: Math.floor(Math.random() * 20),
-        faction: char.faction,
-        rarity: char.rarity,
-        statusEffects: [],
-        statusDurations: {},
-        statusImmunities: {},
-        hasMoved: false,
-        hasActed: false,
-      };
-    };
-
-    const playerUnits = playerChars.map((c, i) => createTacticalUnit(c, true, i));
-    const enemyUnits  = enemyChars.map((c, i) => createTacticalUnit(c, false, i));
-    initBattle([...playerUnits, ...enemyUnits]);
-
-    // Helper: first-skill-per-slot loadout from a weapon-skill tree
-    const defaultLoadoutFor = (weaponType: string): Record<SkillSlot, string> | null => {
-      const tree = WEAPON_SKILL_TREES[weaponType];
-      if (!tree) return null;
-      const loadout = {} as Record<SkillSlot, string>;
-      for (const slot of tree.slots) {
-        if (slot.skills.length > 0) loadout[slot.slot as SkillSlot] = slot.skills[0].id;
-      }
-      return loadout;
-    };
-
-    // Apply weapon skill loadouts — players get their chosen loadout or the
-    // default-per-weapon; enemies get the default-per-weapon for their auto
-    // role weapon so the AI can fire real skills.
-    playerUnits.forEach((unit, i) => {
-      const charId = playerChars[i].id;
-      const chosenLoadout = loadoutByCharId[charId];
-      if (chosenLoadout) {
-        setEquippedSkills(unit.id, chosenLoadout);
-      } else {
-        const weaponType = unit.weaponType;
-        const loadout = weaponType ? defaultLoadoutFor(weaponType) : null;
-        if (loadout) setEquippedSkills(unit.id, loadout);
-      }
-    });
-    enemyUnits.forEach(unit => {
-      const loadout = unit.weaponType ? defaultLoadoutFor(unit.weaponType) : null;
-      if (loadout) setEquippedSkills(unit.id, loadout);
-    });
-
-    setLocation('/battle');
+    setLocation('/deploy');
   };
 
   if (!pendingSquad) return null;

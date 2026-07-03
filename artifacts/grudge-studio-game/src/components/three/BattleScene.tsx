@@ -18,6 +18,15 @@ import { SlashTrailLayer, pickSlashForWeapon, type ActiveSlash } from './SlashTr
 import { RAPIER_TERRAIN } from '@/lib/physics/collision-groups';
 import { TacticalUnit } from '@/store/use-game-store';
 import { LevelDef } from '@/lib/levels';
+import type { BuildPlacement } from '@/lib/lane-deploy';
+import type { BuildCatalogEntry } from '@/lib/build-catalog';
+import { getBackTowerZone } from '@/lib/lane-deploy';
+import {
+  DeployOverlays,
+  BuildPlacementLayer,
+  BackTowerMarker,
+  type DeployOverlayTile,
+} from './DeployOverlays';
 import {
   generateThemeGroundTexture,
   generateThemeGroundNormal,
@@ -65,6 +74,11 @@ interface BattleSceneProps {
   walkPaths?: Record<string, GridPos[]>;
   onWalkComplete?: (unitId: string) => void;
   onWalkStep?: (unitId: string, tile: GridPos) => void;
+  /** Lane deploy / path preview overlays */
+  deployOverlays?: DeployOverlayTile[];
+  buildPlacements?: BuildPlacement[];
+  buildCatalog?: BuildCatalogEntry[];
+  showBackTower?: boolean;
 }
 
 // ── Camera Shaker ─────────────────────────────────────────────────────────────
@@ -915,7 +929,12 @@ export function BattleScene({
   onUnitHover, onUnitUnhover, onMapRightClick,
   walkPaths = {}, onWalkComplete, onWalkStep,
   targetedUnitId,
+  deployOverlays,
+  buildPlacements = [],
+  buildCatalog = [],
+  showBackTower = false,
 }: BattleSceneProps) {
+  const backTower = getBackTowerZone(level);
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
   const [showSkeletonDebug, setShowSkeletonDebug] = useState(false);
   const [slashes, setSlashes] = useState<ActiveSlash[]>([]);
@@ -1099,6 +1118,27 @@ export function BattleScene({
           />
 
           <ScenePropLayer props={level.props} />
+
+          {(showBackTower || deployOverlays?.length) && (
+            <BackTowerMarker
+              x={backTower.x}
+              y={backTower.y}
+              tileSize={tileSize}
+              label={backTower.label}
+            />
+          )}
+
+          {deployOverlays && deployOverlays.length > 0 && (
+            <DeployOverlays tiles={deployOverlays} tileSize={tileSize} />
+          )}
+
+          {buildPlacements.length > 0 && buildCatalog.length > 0 && (
+            <BuildPlacementLayer
+              placements={buildPlacements}
+              catalog={buildCatalog}
+              tileSize={tileSize}
+            />
+          )}
 
           {/* Weapon slash-trail sprites — fired by 'slash-spawn' CustomEvents. */}
           <SlashTrailLayer slashes={slashes} onExpire={handleSlashExpire} />

@@ -30,6 +30,19 @@ import {
   type CombatEventType,
 } from "@/lib/animation-events";
 import { getCoverAgainst, type CoverInfo } from "@/lib/cover-system";
+import {
+  getLanesForLevel,
+  defaultDeployPlan,
+  isNearBackTower,
+  type DeployPlan,
+  type LaneId,
+} from "@/lib/lane-deploy";
+import { BUILD_CATALOG, getBuildEntry } from "@/lib/build-catalog";
+import {
+  LaneDeployPanel,
+  placeBuildAtTile,
+  type DeployPanelMode,
+} from "@/components/deploy/LaneDeployPanel";
 
 const BASE = import.meta.env.BASE_URL;
 const UI = (path: string) => `${BASE}images/ui/${path}`;
@@ -45,6 +58,8 @@ export default function Battle() {
     setSkillCooldown, tickSkillCooldowns, markUltimateUsed,
     applyStatus, tickStatusEffects,
     currentLevelId, rotateFacing,
+    pendingSquad, deployPlan, setDeployPlan,
+    deployPanelOpen, setDeployPanelOpen,
   } = useGameStore();
 
   const level: LevelDef = getLevelWithEdits(currentLevelId);
@@ -70,6 +85,26 @@ export default function Battle() {
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
   // After finishing a walk without acting yet, pulse skill buttons
   const [postMoveGlow, setPostMoveGlow] = useState(false);
+  const [deployPanelMode, setDeployPanelMode] = useState<DeployPanelMode>('deploy');
+  const [deploySelectedHeroId, setDeploySelectedHeroId] = useState<string | null>(null);
+  const [deploySelectedBuildId, setDeploySelectedBuildId] = useState<string | null>(null);
+  const [commandPlan, setCommandPlan] = useState<DeployPlan>(() =>
+    deployPlan ?? defaultDeployPlan(level, pendingSquad?.selectedIds ?? units.filter(u => u.isPlayerControlled).map(u => u.characterId)),
+  );
+
+  const lanes = useMemo(() => getLanesForLevel(level), [level]);
+  const laneOverlayTiles = useMemo(() => {
+    const tiles: Array<{ x: number; y: number; color: string; kind: 'deploy' | 'path' }> = [];
+    for (const lane of lanes) {
+      for (const t of lane.deploySlots) tiles.push({ ...t, color: lane.color, kind: 'deploy' });
+      for (const t of lane.marchPath) tiles.push({ ...t, color: lane.color, kind: 'path' });
+    }
+    return tiles;
+  }, [lanes]);
+
+  useEffect(() => {
+    if (deployPlan) setCommandPlan(deployPlan);
+  }, [deployPlan]);
 
   type CtxMenu =
     | { kind: 'portrait' | 'unit'; unit: TacticalUnit; x: number; y: number }
@@ -113,10 +148,27 @@ export default function Battle() {
       }
 
       if (e.key === 'Escape') {
+        if (deployPanelOpen) {
+          setDeployPanelOpen(false);
+          return;
+        }
         setActionMode('idle');
         setAttackableTiles([]);
         setReachableTiles([]);
         return;
+      }
+
+      if ((e.key === 'e' || e.key === 'E') && !deployPanelOpen) {
+        const commandUnit = units.find(u => u.id === currentUnitId && u.isPlayerControlled && u.hp > 0)
+          ?? units.find(u => u.id === inspectedUnitId && u.isPlayerControlled && u.hp > 0);
+        if (commandUnit && isNearBackTower(level, commandUnit.position)) {
+          setDeployPanelOpen(true);
+          setCameraMode('rts');
+          setActionMode('idle');
+          setAttackableTiles([]);
+          setReachableTiles([]);
+          return;
+        }
       }
 
       const unit = units.find(u => u.id === currentUnitId);
@@ -154,7 +206,45 @@ export default function Battle() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [currentUnitId, units, actionMode, walkPaths, equippedSkills]);
+  }, [currentUnitId, units, actionMode, walkPaths, equippedSkills, deployPanelOpen, inspectedUnitId, level, setDeployPanelOpen, setActionMode, setAttackableTiles, setReachableTiles]);
+
+  const commandPostUnit = useMemo(() => {
+    const id = currentUnitId && units.find(u => u.id === currentUnitId && u.isPlayerControlled)?.id
+      ? currentUnitId
+      : inspectedUnitId;
+    return id ? units.find(u => u.id === id && u.isPlayerControlled && u.hp > 0) : null;
+  }, [currentUnitId, inspectedUnitId, units]);
+
+  const nearCommandTower = commandPostUnit
+    ? isNearBackTower(level, commandPostUnit.position)
+    : false;
+
+  const handleCommandPlanChange = useCallback((next: DeployPlan) => {
+    setCommandPlan(next);
+    setDeployPlan(next);
+  }, [setDeployPlan]);
+
+  const handleDeployTileClick = useCallback((x: number, y: number) => {
+    if (!deployPanelOpen) return;
+    if (deployPanelMode === 'build' && deploySelectedBuildId) {
+      const entry = getBuildEntry(deploySelectedBuildId);
+      if (!entry) return;
+      const next = placeBuildAtTile(commandPlan, entry, { x, y });
+      if (next) handleCommandPlanChange(next);
+      return;
+    }
+    if (deployPanelMode !== 'deploy' || !deploySelectedHeroId) return;
+    const laneForTile = lanes.find(l => l.deploySlots.some(t => t.x === x && t.y === y));
+    if (!laneForTile) return;
+    handleCommandPlanChange({
+      ...commandPlan,
+      assignments: commandPlan.assignments.map(a =>
+        a.characterId === deploySelectedHeroId
+          ? { ...a, laneId: laneForTile.id as LaneId, spawn: { x, y } }
+          : a,
+      ),
+    });
+  }, [deployPanelOpen, deployPanelMode, deploySelectedBuildId, deploySelectedHeroId, lanes, commandPlan, handleCommandPlanChange]);
 
   // Close context menu when clicking anywhere else
   useEffect(() => {
@@ -561,6 +651,10 @@ export default function Battle() {
 
   // Actions
   const handleTileClick = (x: number, y: number) => {
+    if (deployPanelOpen) {
+      handleDeployTileClick(x, y);
+      return;
+    }
     if (!currentUnitId) return;
     const unit = units.find(u => u.id === currentUnitId);
     if (!unit || !unit.isPlayerControlled) return;
@@ -1430,8 +1524,61 @@ export default function Battle() {
           walkPaths={walkPaths}
           onWalkComplete={onWalkComplete}
           onWalkStep={onWalkStep}
+          showBackTower
+          deployOverlays={deployPanelOpen ? laneOverlayTiles : undefined}
+          buildPlacements={commandPlan.builds}
+          buildCatalog={BUILD_CATALOG}
         />
       </div>
+
+      {/* Command tower hint — walk ally to back tower, press E */}
+      <AnimatePresence>
+        {nearCommandTower && !deployPanelOpen && (
+          <motion.div
+            key="tower-hint"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="absolute z-25 pointer-events-none"
+            style={{ top: 64, left: '50%', transform: 'translateX(-50%)' }}
+          >
+            <div className="flex items-center gap-2 rounded-full border border-violet-500/40 bg-violet-950/80 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.35)] backdrop-blur-sm">
+              <span className="rounded border border-violet-400/50 px-1.5 py-0.5 text-[10px] font-mono">E</span>
+              Command Tower — RTS Deploy &amp; Build
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* In-battle command post overlay (same panel as pre-battle deploy) */}
+      <AnimatePresence>
+        {deployPanelOpen && (
+          <motion.div
+            key="deploy-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute z-40 inset-0 flex justify-end p-4 pt-16 pointer-events-none"
+            style={{ top: 52, bottom: 130 }}
+          >
+            <div className="w-[min(100%,320px)] h-full pointer-events-auto">
+              <LaneDeployPanel
+                mode={deployPanelMode}
+                onModeChange={setDeployPanelMode}
+                lanes={lanes}
+                plan={commandPlan}
+                onPlanChange={handleCommandPlanChange}
+                selectedHeroId={deploySelectedHeroId}
+                onSelectHero={setDeploySelectedHeroId}
+                selectedBuildId={deploySelectedBuildId}
+                onSelectBuild={setDeploySelectedBuildId}
+                onClose={() => setDeployPanelOpen(false)}
+                title="Command Tower"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── FLOATING COMBAT LOG (bottom-right, above minimap) ─────────────── */}
       <div

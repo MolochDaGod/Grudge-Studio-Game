@@ -13,6 +13,7 @@ import CharacterSelect from "@/pages/character-select";
 import LevelSelect from "@/pages/level-select";
 import SkillTree from "@/pages/skill-tree";
 import Battle from "@/pages/battle";
+import Deploy from "@/pages/deploy";
 import GrudgeTriadPage from "@/pages/triad";
 import Result from "@/pages/result";
 import Leaderboard from "@/pages/leaderboard";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/select">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
       <Route path="/character">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
       <Route path="/level-select">{() => <AuthGuard><LevelSelect /></AuthGuard>}</Route>
+      <Route path="/deploy">{() => <AuthGuard><Deploy /></AuthGuard>}</Route>
       <Route path="/skill-tree">{() => <AuthGuard><SkillTree /></AuthGuard>}</Route>
       <Route path="/triad">{() => <AuthGuard><GrudgeTriadPage /></AuthGuard>}</Route>
       <Route path="/combat">{() => <AuthGuard><GrudgeTriadPage /></AuthGuard>}</Route>

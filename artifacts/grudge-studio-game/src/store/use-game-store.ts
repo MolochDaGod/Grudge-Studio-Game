@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Character } from '@workspace/api-client-react';
 import { SkillSlot } from '@/lib/weapon-skills';
 import type { WorgeFormId } from '@/lib/character-model-map';
+import type { DeployPlan } from '@/lib/lane-deploy';
 
 export interface TacticalUnit {
   id: string;
@@ -77,6 +78,12 @@ export interface GameState {
   currentLevelId: string;
   /** Staging area: hero selection data carried to level-select for battle init */
   pendingSquad: PendingSquad | null;
+  /** Lane assignments + build placements set on deploy screen */
+  deployPlan: DeployPlan | null;
+  /** Draft units previewed on deploy screen before initBattle */
+  draftUnits: TacticalUnit[] | null;
+  /** Command-post overlay (tower E) open during battle */
+  deployPanelOpen: boolean;
 
   setPhase: (phase: GameState['phase']) => void;
   setAllCharacters: (characters: Character[]) => void;
@@ -100,6 +107,9 @@ export interface GameState {
   applyStatus: (unitId: string, effect: string, duration: number) => void;
   tickStatusEffects: (unitId: string) => void;
   setCurrentLevelId: (id: string) => void;
+  setDeployPlan: (plan: DeployPlan | null) => void;
+  setDraftUnits: (units: TacticalUnit[] | null) => void;
+  setDeployPanelOpen: (open: boolean) => void;
   rotateFacing: (unitId: string, direction: 'cw' | 'ccw') => void;
   reset: () => void;
 }
@@ -129,6 +139,9 @@ export const useGameStore = create<GameState>((set) => ({
   usedUltimates: {},
   currentLevelId: 'ruins',
   pendingSquad: null,
+  deployPlan: null,
+  draftUnits: null,
+  deployPanelOpen: false,
 
   setPhase: (phase) => set({ phase }),
   setAllCharacters: (characters) => set({ allCharacters: characters }),
@@ -229,6 +242,9 @@ export const useGameStore = create<GameState>((set) => ({
   }),
 
   setCurrentLevelId: (id) => set({ currentLevelId: id }),
+  setDeployPlan: (plan) => set({ deployPlan: plan }),
+  setDraftUnits: (units) => set({ draftUnits: units }),
+  setDeployPanelOpen: (open) => set({ deployPanelOpen: open }),
 
   rotateFacing: (unitId, direction) => set((state) => ({
     units: state.units.map(u => {
@@ -250,5 +266,8 @@ export const useGameStore = create<GameState>((set) => ({
     skillCooldowns: {},
     usedUltimates: {},
     pendingSquad: null,
+    deployPlan: null,
+    draftUnits: null,
+    deployPanelOpen: false,
   })
 }));

@@ -23,7 +23,7 @@ export interface Skill {
   description: string;
   icon: string;
   slot: SkillSlot;
-  tier: 'T1' | 'T2' | 'T3';
+  tier: 'T0' | 'T1' | 'T2' | 'T3';
   cooldown: number;
   range: number;
   tags: SkillTag[];
@@ -124,7 +124,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'axe_cleave', name: 'Cleave', icon: '🪓',
             description: 'Wide horizontal swing that cleaves through armor.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['100% DMG', 'cleave'],
             dmgMultiplier: 1.0
@@ -132,7 +132,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'axe_rend', name: 'Rend', icon: '⚔️',
             description: 'Savage rending strike that shreds armor. +15% armor penetration.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['90% DMG', '+15% armor pen'],
             dmgMultiplier: 0.9, armorPen: 15
@@ -140,7 +140,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'axe_overhead', name: 'Overhead Slam', icon: '💥',
             description: 'Overhead downward slam. High damage, low speed.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['130% DMG', 'slow'],
             dmgMultiplier: 1.3
@@ -256,7 +256,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'fire_bolt', name: 'Fire Bolt', icon: '🔥',
             description: 'Launch a bolt of fire at an enemy.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 5,
+            slot: 1, tier: 'T0', cooldown: 0, range: 5,
             tags: ['attack', 'damage'],
             stats: ['100% DMG', 'fire', 'range 5'],
             dmgMultiplier: 1.0
@@ -264,7 +264,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'magma_spit', name: 'Magma Spit', icon: '🌋',
             description: 'Spit molten rock. Burns through armor.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 5,
+            slot: 1, tier: 'T0', cooldown: 0, range: 5,
             tags: ['attack', 'damage'],
             stats: ['85% DMG', '+20% armor pen', 'fire'],
             dmgMultiplier: 0.85, armorPen: 20
@@ -272,7 +272,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'cinder_blast', name: 'Cinder Blast', icon: '💨',
             description: 'Wide cinder spray hitting a larger area.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 4,
+            slot: 1, tier: 'T0', cooldown: 0, range: 4,
             tags: ['attack', 'damage', 'aoe'],
             stats: ['80% DMG', 'wide spray', 'range 4'],
             dmgMultiplier: 0.8
@@ -388,7 +388,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'eldritch_bolt', name: 'Eldritch Bolt', icon: '🌑',
             description: 'Launch a bolt of eldritch energy.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 5,
+            slot: 1, tier: 'T0', cooldown: 0, range: 5,
             tags: ['attack', 'damage'],
             stats: ['100% DMG', 'dark', 'range 5'],
             dmgMultiplier: 1.0
@@ -396,7 +396,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'shadow_grasp', name: 'Shadow Grasp', icon: '🖤',
             description: 'Tendrils of shadow squeeze the target.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 5,
+            slot: 1, tier: 'T0', cooldown: 0, range: 5,
             tags: ['attack', 'damage', 'debuff'],
             stats: ['90% DMG', 'slows target', 'range 5'],
             dmgMultiplier: 0.9
@@ -404,7 +404,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'cursed_touch', name: 'Cursed Touch', icon: '☠️',
             description: 'Apply a corrupting curse that lingers.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage', 'debuff'],
             stats: ['80% DMG', 'curse stacks'],
             dmgMultiplier: 0.8
@@ -520,7 +520,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'dagger_quick_slash', name: 'Quick Slash', icon: '🗡️',
             description: 'Two fast slashing strikes in quick succession.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['90% DMG', 'fast, 2-hit'],
             dmgMultiplier: 0.9
@@ -528,7 +528,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'dagger_backstab', name: 'Backstab', icon: '🔪',
             description: 'Strike from behind for devastating bonus damage.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['120% DMG', '+30% from behind'],
             dmgMultiplier: 1.2
@@ -536,7 +536,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'dagger_poison_throw', name: 'Poison Throw', icon: '🧪',
             description: 'Throw a poison-coated dagger from range.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T0', cooldown: 0, range: 3,
             tags: ['attack', 'damage', 'debuff'],
             stats: ['70% DMG', 'range 3', 'POISON 3 turns'],
             dmgMultiplier: 0.7, applyStatus: 'poisoned', statusDuration: 3
@@ -652,7 +652,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'gs_power_strike', name: 'Power Strike', icon: '⚔️',
             description: 'A powerful overhead strike with your full weight.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['110% DMG', 'power'],
             dmgMultiplier: 1.1
@@ -660,7 +660,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'gs_sweeping_cut', name: 'Sweeping Cut', icon: '🌊',
             description: 'A wide sweeping slash hitting multiple enemies.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage', 'aoe'],
             stats: ['90% DMG', 'hits 2-wide'],
             dmgMultiplier: 0.9, aoe: true
@@ -668,7 +668,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'gs_impale', name: 'Impale', icon: '🏹',
             description: 'Drive the blade deep into the target with armor penetration.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['95% DMG', '+20% armor pen'],
             dmgMultiplier: 0.95, armorPen: 20
@@ -784,7 +784,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'bow_arrow_shot', name: 'Arrow Shot', icon: '🏹',
             description: 'A precise arrow aimed at the target.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 4,
+            slot: 1, tier: 'T0', cooldown: 0, range: 4,
             tags: ['attack', 'damage'],
             stats: ['100% DMG', 'range 4', 'precise'],
             dmgMultiplier: 1.0
@@ -792,7 +792,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'bow_piercing_arrow', name: 'Piercing Arrow', icon: '🔱',
             description: 'Arrow that pierces through armor and continues.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 4,
+            slot: 1, tier: 'T0', cooldown: 0, range: 4,
             tags: ['attack', 'damage'],
             stats: ['90% DMG', '+25% armor pen', 'piercing'],
             dmgMultiplier: 0.9, armorPen: 25
@@ -800,7 +800,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'bow_flurry', name: 'Arrow Flurry', icon: '💨',
             description: 'Fire three rapid arrows at reduced damage each.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 3,
+            slot: 1, tier: 'T0', cooldown: 0, range: 3,
             tags: ['attack', 'damage'],
             stats: ['80% DMG', '3-hit', 'rapid'],
             dmgMultiplier: 0.8
@@ -916,7 +916,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'ss_slash', name: 'Slash', icon: '⚔️',
             description: 'A disciplined sword slash.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['100% DMG', 'disciplined'],
             dmgMultiplier: 1.0
@@ -924,7 +924,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'ss_shield_bash', name: 'Shield Bash', icon: '🛡️',
             description: 'Strike with the shield. Lower damage but disrupts the target.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage', 'debuff'],
             stats: ['70% DMG', 'disrupts target', 'shield'],
             dmgMultiplier: 0.7
@@ -932,7 +932,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'ss_thrust', name: 'Thrust', icon: '🎯',
             description: 'Precise thrusting attack. High armor penetration.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['90% DMG', '+20% armor pen', 'precise'],
             dmgMultiplier: 0.9, armorPen: 20
@@ -1049,7 +1049,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'wh_crush', name: 'Crushing Blow', icon: '🔨',
             description: 'A heavy overhead hammer blow.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['110% DMG', 'crushing', 'reduces armor'],
             dmgMultiplier: 1.1
@@ -1057,7 +1057,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'wh_forge_strike', name: 'Forge Strike', icon: '⚒️',
             description: 'Strike with the precision of a master smith.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['95% DMG', '+25% armor pen', 'forge'],
             dmgMultiplier: 0.95, armorPen: 25
@@ -1065,7 +1065,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'wh_ground_slam', name: 'Ground Slam', icon: '💥',
             description: 'Slam the ground, sending shockwaves outward.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage', 'aoe'],
             stats: ['90% DMG', 'shockwave', 'small AoE'],
             dmgMultiplier: 0.9, aoe: true
@@ -1181,7 +1181,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'rs_undead_slash', name: 'Undead Slash', icon: '🗡️',
             description: 'A slash carried out with unthinking, tireless precision.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['100% DMG', 'tireless'],
             dmgMultiplier: 1.0
@@ -1189,7 +1189,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'rs_corroded_thrust', name: 'Corroded Thrust', icon: '☠️',
             description: 'Drive the rusted blade into the target, applying poison corrosion.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage', 'debuff'],
             stats: ['85% DMG', 'corrosion', 'POISON 2 turns'],
             dmgMultiplier: 0.85, applyStatus: 'poisoned', statusDuration: 2
@@ -1197,7 +1197,7 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
           {
             id: 'rs_bone_strike', name: 'Bone Strike', icon: '🦴',
             description: 'Strike with skeletal strength that ignores fatigue.',
-            slot: 1, tier: 'T1', cooldown: 0, range: 1,
+            slot: 1, tier: 'T0', cooldown: 0, range: 1,
             tags: ['attack', 'damage'],
             stats: ['110% DMG', 'bone strength'],
             dmgMultiplier: 1.1
@@ -1304,9 +1304,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A reliable one-handed blade. Balanced between offense and defense, versatile in any warrior\'s hand.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Striking options', skills: [
-        { id: 'swd_slash',  name: 'Slash',       icon: '⚔️', description: 'Clean horizontal cut. Reliable damage.',          slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['95% DMG'],                   dmgMultiplier: 0.95 },
-        { id: 'swd_thrust', name: 'Thrust',      icon: '🗡️', description: 'Precise stab. Pierces gaps in armor.',            slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['85% DMG','+12% armor pen'],   dmgMultiplier: 0.85, armorPen: 12 },
-        { id: 'swd_quick',  name: 'Quick Strike', icon: '💨', description: 'Rapid strike, trade power for positioning.',      slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['80% DMG','+1 move'],          dmgMultiplier: 0.80, moveBonus: 1 },
+        { id: 'swd_slash',  name: 'Slash',       icon: '⚔️', description: 'Clean horizontal cut. Reliable damage.',          slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['95% DMG'],                   dmgMultiplier: 0.95 },
+        { id: 'swd_thrust', name: 'Thrust',      icon: '🗡️', description: 'Precise stab. Pierces gaps in armor.',            slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['85% DMG','+12% armor pen'],   dmgMultiplier: 0.85, armorPen: 12 },
+        { id: 'swd_quick',  name: 'Quick Strike', icon: '💨', description: 'Rapid strike, trade power for positioning.',      slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['80% DMG','+1 move'],          dmgMultiplier: 0.80, moveBonus: 1 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Battle techniques', skills: [
         { id: 'swd_parry',   name: 'Parry',    icon: '🛡️', description: 'Deflect and counter immediately.',           slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['buff','attack'],  stats: ['50% DEF 1t','80% counter'],   dmgMultiplier: 0.80 },
@@ -1336,9 +1336,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A one-handed chopping axe. Brutal and efficient, landing powerful overhead blows that splinter shields.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Chop options', skills: [
-        { id: 'axe1_chop',   name: 'Chop',       icon: '🪓', description: 'Downward chop. Raw impact.',       slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['100% DMG'],              dmgMultiplier: 1.0 },
-        { id: 'axe1_hack',   name: 'Hack',        icon: '⚔️', description: 'Rapid hack. Low damage, fast.',   slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['75% DMG','fast'],         dmgMultiplier: 0.75 },
-        { id: 'axe1_hurl',   name: 'Throw Axe',   icon: '🎯', description: 'Hurl the axe. Short range throw.',slot: 1, tier: 'T1', cooldown: 1, range: 3, tags: ['attack','damage'], stats: ['85% DMG','range 3'],      dmgMultiplier: 0.85 },
+        { id: 'axe1_chop',   name: 'Chop',       icon: '🪓', description: 'Downward chop. Raw impact.',       slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['100% DMG'],              dmgMultiplier: 1.0 },
+        { id: 'axe1_hack',   name: 'Hack',        icon: '⚔️', description: 'Rapid hack. Low damage, fast.',   slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['75% DMG','fast'],         dmgMultiplier: 0.75 },
+        { id: 'axe1_hurl',   name: 'Throw Axe',   icon: '🎯', description: 'Hurl the axe. Short range throw.',slot: 1, tier: 'T0', cooldown: 1, range: 3, tags: ['attack','damage'], stats: ['85% DMG','range 3'],      dmgMultiplier: 0.85 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Axe techniques', skills: [
         { id: 'axe1_shatter', name: 'Shield Shatter', icon: '💥', description: 'Smash through blocking stance.',slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','damage'], stats: ['90% DMG','break block'],  dmgMultiplier: 0.90 },
@@ -1368,9 +1368,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A heavy blunt weapon. Crushes armor and bones alike. Preferred by holy warriors and siege fighters.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Bludgeon options', skills: [
-        { id: 'mce_smash',  name: 'Smash',       icon: '🔨', description: 'Crushing blow. Ignores some armor.',  slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['100% DMG','+10% armor pen'], dmgMultiplier: 1.0, armorPen: 10 },
-        { id: 'mce_bash',   name: 'Shield Bash', icon: '🛡️', description: 'Bash with shield edge, stagger foe.', slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','debuff'],  stats: ['70% DMG','stagger'],          dmgMultiplier: 0.70 },
-        { id: 'mce_pummel', name: 'Pummel',      icon: '👊', description: 'Rapid blows. Low per-hit damage.',    slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['2×50% DMG'],                  dmgMultiplier: 1.0 },
+        { id: 'mce_smash',  name: 'Smash',       icon: '🔨', description: 'Crushing blow. Ignores some armor.',  slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['100% DMG','+10% armor pen'], dmgMultiplier: 1.0, armorPen: 10 },
+        { id: 'mce_bash',   name: 'Shield Bash', icon: '🛡️', description: 'Bash with shield edge, stagger foe.', slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','debuff'],  stats: ['70% DMG','stagger'],          dmgMultiplier: 0.70 },
+        { id: 'mce_pummel', name: 'Pummel',      icon: '👊', description: 'Rapid blows. Low per-hit damage.',    slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['2×50% DMG'],                  dmgMultiplier: 1.0 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Impact techniques', skills: [
         { id: 'mce_concuss',  name: 'Concussion', icon: '💫', description: 'Daze target. Reduce accuracy.',          slot: 2, tier: 'T1', cooldown: 2, range: 1, tags: ['attack','debuff'],  stats: ['80% DMG','Stun 1t'],         dmgMultiplier: 0.80, applyStatus: 'stunned', statusDuration: 1 },
@@ -1400,9 +1400,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A massive two-handed maul. Crushes everything in its path. Slow to swing but devastating on contact.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Maul options', skills: [
-        { id: 'ghm_maul',    name: 'Maul',        icon: '🔩', description: 'Massive overhead crush.',         slot: 1, tier: 'T1', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['130% DMG','+20% armor pen'], dmgMultiplier: 1.30, armorPen: 20 },
-        { id: 'ghm_sweep',   name: 'Wide Sweep',  icon: '↔️', description: 'Horizontal sweep, hits 2 targets.',slot: 1, tier: 'T1', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['90% DMG','2 targets'],       dmgMultiplier: 0.90 },
-        { id: 'ghm_pound',   name: 'Ground Pound',icon: '💢', description: 'Slam into ground, AoE shockwave.', slot: 1, tier: 'T1', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['80% DMG','push back'],       dmgMultiplier: 0.80, aoe: true },
+        { id: 'ghm_maul',    name: 'Maul',        icon: '🔩', description: 'Massive overhead crush.',         slot: 1, tier: 'T0', cooldown: 0, range: 1, tags: ['attack','damage'], stats: ['130% DMG','+20% armor pen'], dmgMultiplier: 1.30, armorPen: 20 },
+        { id: 'ghm_sweep',   name: 'Wide Sweep',  icon: '↔️', description: 'Horizontal sweep, hits 2 targets.',slot: 1, tier: 'T0', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['90% DMG','2 targets'],       dmgMultiplier: 0.90 },
+        { id: 'ghm_pound',   name: 'Ground Pound',icon: '💢', description: 'Slam into ground, AoE shockwave.', slot: 1, tier: 'T0', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['80% DMG','push back'],       dmgMultiplier: 0.80, aoe: true },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Demolition', skills: [
         { id: 'ghm_shockwave', name: 'Shockwave',    icon: '🌊', description: 'Impact sends shockwave forward.',     slot: 2, tier: 'T1', cooldown: 2, range: 3, tags: ['attack','aoe'],    stats: ['70% DMG','line of 3'],       dmgMultiplier: 0.70 },
@@ -1432,9 +1432,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A long reach polearm. Strikes enemies from 2 tiles away and punishes advancing foes with brutal counters.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Reach strikes', skills: [
-        { id: 'lnc_pierce',  name: 'Piercing Thrust', icon: '🏹', description: 'Thrust forward at reach-2.',      slot: 1, tier: 'T1', cooldown: 0, range: 2, tags: ['attack','damage'], stats: ['95% DMG','range 2'],         dmgMultiplier: 0.95 },
-        { id: 'lnc_sweep',   name: 'Pole Sweep',       icon: '↔️', description: 'Wide polearm sweep at melee.',   slot: 1, tier: 'T1', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['80% DMG','hits adjacent'],    dmgMultiplier: 0.80, aoe: true },
-        { id: 'lnc_poke',    name: 'Quick Poke',        icon: '💨', description: 'Fast jab, no cooldown.',        slot: 1, tier: 'T1', cooldown: 0, range: 2, tags: ['attack','damage'], stats: ['70% DMG','fast'],             dmgMultiplier: 0.70 },
+        { id: 'lnc_pierce',  name: 'Piercing Thrust', icon: '🏹', description: 'Thrust forward at reach-2.',      slot: 1, tier: 'T0', cooldown: 0, range: 2, tags: ['attack','damage'], stats: ['95% DMG','range 2'],         dmgMultiplier: 0.95 },
+        { id: 'lnc_sweep',   name: 'Pole Sweep',       icon: '↔️', description: 'Wide polearm sweep at melee.',   slot: 1, tier: 'T0', cooldown: 1, range: 1, tags: ['attack','aoe'],    stats: ['80% DMG','hits adjacent'],    dmgMultiplier: 0.80, aoe: true },
+        { id: 'lnc_poke',    name: 'Quick Poke',        icon: '💨', description: 'Fast jab, no cooldown.',        slot: 1, tier: 'T0', cooldown: 0, range: 2, tags: ['attack','damage'], stats: ['70% DMG','fast'],             dmgMultiplier: 0.70 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Polearm control', skills: [
         { id: 'lnc_opport',  name: 'Opportunity',  icon: '⚡', description: 'Counter any enemy entering melee.',  slot: 2, tier: 'T1', cooldown: 2, range: 2, tags: ['buff'],            stats: ['150% counter on approach'] },
@@ -1464,9 +1464,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A mechanical ranged weapon. Powerful bolts pierce deeply. Slower to reload but devastating accuracy.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Bolt options', skills: [
-        { id: 'xbw_bolt',   name: 'Bolt Shot',    icon: '🎯', description: 'Fire a heavy bolt. High penetration.', slot: 1, tier: 'T1', cooldown: 0, range: 5, tags: ['attack','damage'], stats: ['105% DMG','+15% armor pen'], dmgMultiplier: 1.05, armorPen: 15 },
-        { id: 'xbw_rapid',  name: 'Rapid Bolt',   icon: '💨', description: 'Two quick bolts, lower accuracy.',      slot: 1, tier: 'T1', cooldown: 1, range: 5, tags: ['attack','damage'], stats: ['2×65% DMG'],                  dmgMultiplier: 1.30 },
-        { id: 'xbw_snipe',  name: 'Aimed Shot',   icon: '🔭', description: 'Take aim. Higher crit chance.',        slot: 1, tier: 'T1', cooldown: 1, range: 7, tags: ['attack','damage'], stats: ['90% DMG','crit+25%','range 7'],dmgMultiplier: 0.90 },
+        { id: 'xbw_bolt',   name: 'Bolt Shot',    icon: '🎯', description: 'Fire a heavy bolt. High penetration.', slot: 1, tier: 'T0', cooldown: 0, range: 5, tags: ['attack','damage'], stats: ['105% DMG','+15% armor pen'], dmgMultiplier: 1.05, armorPen: 15 },
+        { id: 'xbw_rapid',  name: 'Rapid Bolt',   icon: '💨', description: 'Two quick bolts, lower accuracy.',      slot: 1, tier: 'T0', cooldown: 1, range: 5, tags: ['attack','damage'], stats: ['2×65% DMG'],                  dmgMultiplier: 1.30 },
+        { id: 'xbw_snipe',  name: 'Aimed Shot',   icon: '🔭', description: 'Take aim. Higher crit chance.',        slot: 1, tier: 'T0', cooldown: 1, range: 7, tags: ['attack','damage'], stats: ['90% DMG','crit+25%','range 7'],dmgMultiplier: 0.90 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Bolt techniques', skills: [
         { id: 'xbw_pin',     name: 'Pinning Bolt', icon: '📌', description: 'Pin enemy to ground. Can\'t move 1t.',  slot: 2, tier: 'T1', cooldown: 2, range: 5, tags: ['attack','debuff'],  stats: ['80% DMG','Pin 1t'],          dmgMultiplier: 0.80, applyStatus: 'stunned', statusDuration: 1 },
@@ -1496,9 +1496,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A fearsome ranged firearm. Loud, powerful, and unexpected on the battlefield. Long range with punishing hits.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Fire options', skills: [
-        { id: 'gun_shot',   name: 'Fire',        icon: '🔫', description: 'Single powerful shot at range.',     slot: 1, tier: 'T1', cooldown: 1, range: 7, tags: ['attack','damage'], stats: ['120% DMG','long range'],     dmgMultiplier: 1.20 },
-        { id: 'gun_shot2',  name: 'Double Shot', icon: '⚡', description: 'Two barrels at once. Short range.',  slot: 1, tier: 'T1', cooldown: 2, range: 4, tags: ['attack','damage'], stats: ['2×80% DMG','range 4'],       dmgMultiplier: 1.60 },
-        { id: 'gun_quick',  name: 'Quick Draw',  icon: '💨', description: 'Fast unholster and fire.',           slot: 1, tier: 'T1', cooldown: 1, range: 5, tags: ['attack','damage'], stats: ['90% DMG','fast'],            dmgMultiplier: 0.90 },
+        { id: 'gun_shot',   name: 'Fire',        icon: '🔫', description: 'Single powerful shot at range.',     slot: 1, tier: 'T0', cooldown: 1, range: 7, tags: ['attack','damage'], stats: ['120% DMG','long range'],     dmgMultiplier: 1.20 },
+        { id: 'gun_shot2',  name: 'Double Shot', icon: '⚡', description: 'Two barrels at once. Short range.',  slot: 1, tier: 'T0', cooldown: 2, range: 4, tags: ['attack','damage'], stats: ['2×80% DMG','range 4'],       dmgMultiplier: 1.60 },
+        { id: 'gun_quick',  name: 'Quick Draw',  icon: '💨', description: 'Fast unholster and fire.',           slot: 1, tier: 'T0', cooldown: 1, range: 5, tags: ['attack','damage'], stats: ['90% DMG','fast'],            dmgMultiplier: 0.90 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Gunfighter tricks', skills: [
         { id: 'gun_smoke',  name: 'Smoke Shot', icon: '💨', description: 'Smoke-loaded shot. Blind enemy 2t.',  slot: 2, tier: 'T1', cooldown: 2, range: 5, tags: ['attack','debuff'],  stats: ['70% DMG','Blind 2t'],        dmgMultiplier: 0.70 },
@@ -1528,9 +1528,9 @@ export const WEAPON_SKILL_TREES: Record<string, WeaponSkillTree> = {
     description: 'A crystalline arcane amplifier. Channels pure magical energy with precision, utility, and arcane mastery.',
     slots: [
       { slot: 1, label: 'Basic Attack', sublabel: 'Arcane bolts', skills: [
-        { id: 'fcs_bolt',   name: 'Arcane Bolt',  icon: '🔮', description: 'Pure arcane projectile at range.',    slot: 1, tier: 'T1', cooldown: 0, range: 5, tags: ['attack','damage'], stats: ['90% DMG (magic)'],            dmgMultiplier: 0.90 },
-        { id: 'fcs_pulse',  name: 'Mana Pulse',   icon: '💜', description: 'Wave of force. Low damage, no armor.', slot: 1, tier: 'T1', cooldown: 0, range: 4, tags: ['attack','damage'], stats: ['70% DMG','ignores DEF'],      dmgMultiplier: 0.70, armorPen: 100 },
-        { id: 'fcs_siphon', name: 'Mana Siphon',  icon: '🧲', description: 'Drain enemy MP on hit.',              slot: 1, tier: 'T1', cooldown: 1, range: 4, tags: ['attack','debuff'],  stats: ['60% DMG','-20 MP target'],    dmgMultiplier: 0.60 },
+        { id: 'fcs_bolt',   name: 'Arcane Bolt',  icon: '🔮', description: 'Pure arcane projectile at range.',    slot: 1, tier: 'T0', cooldown: 0, range: 5, tags: ['attack','damage'], stats: ['90% DMG (magic)'],            dmgMultiplier: 0.90 },
+        { id: 'fcs_pulse',  name: 'Mana Pulse',   icon: '💜', description: 'Wave of force. Low damage, no armor.', slot: 1, tier: 'T0', cooldown: 0, range: 4, tags: ['attack','damage'], stats: ['70% DMG','ignores DEF'],      dmgMultiplier: 0.70, armorPen: 100 },
+        { id: 'fcs_siphon', name: 'Mana Siphon',  icon: '🧲', description: 'Drain enemy MP on hit.',              slot: 1, tier: 'T0', cooldown: 1, range: 4, tags: ['attack','debuff'],  stats: ['60% DMG','-20 MP target'],    dmgMultiplier: 0.60 },
       ]},
       { slot: 2, label: 'Core', sublabel: 'Arcane techniques', skills: [
         { id: 'fcs_shield', name: 'Arcane Shield',icon: '🛡️', description: 'Barrier absorbs 1 hit.',              slot: 2, tier: 'T1', cooldown: 2, range: 0, tags: ['buff'],            stats: ['Absorb 1 attack'],             selfTarget: true },
@@ -1962,6 +1962,7 @@ export const SLOT_LABELS: Record<SkillSlot, { roman: string; label: string; colo
 };
 
 export const TIER_STYLES: Record<string, { label: string; color: string; bg: string }> = {
+  T0: { label: 'T0', color: '#cbd5e1', bg: '#334155' },
   T1: { label: 'T1', color: '#9ca3af', bg: '#1f2937' },
   T2: { label: 'T2', color: '#34d399', bg: '#064e3b' },
   T3: { label: 'T3', color: '#d4a017', bg: '#451a03' },
