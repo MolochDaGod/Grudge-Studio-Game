@@ -1085,12 +1085,7 @@ export function BattleScene({
         );
       })()}
 
-      <Suspense fallback={
-        <mesh position={[centerX, 0.5, centerZ]}>
-          <boxGeometry args={[2, 1, 2]} />
-          <meshBasicMaterial color="#4488ff" wireframe />
-        </mesh>
-      }>
+      <Suspense fallback={null}>
         <group>
           <TileGrid
             level={level}

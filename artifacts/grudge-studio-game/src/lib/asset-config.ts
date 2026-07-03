@@ -29,8 +29,7 @@ export const OBJECT_STORE_API: string =
  * Enable by setting VITE_USE_CDN=true in your .env or Vercel env vars.
  */
 export const USE_CDN: boolean =
-  import.meta.env.VITE_USE_CDN === 'true' ||
-  import.meta.env.PROD === true;
+  import.meta.env.VITE_USE_CDN === 'true';
 
 // ── Path Helpers ─────────────────────────────────────────────────────────────
 

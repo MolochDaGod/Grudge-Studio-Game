@@ -23,6 +23,8 @@ import { collectBoneNames, retargetClip } from '@/lib/animation-retarget';
 import { loadWeaponAnimations, hasExternalAnimations } from '@/lib/animation-library';
 import { characterModelUrl, weaponModelUrl, textureAssetUrl } from '@/lib/asset-config';
 import { VoxelCharacterModel } from './VoxelCharacterModel';
+import { Grudge6CharacterModel } from './Grudge6CharacterModel';
+import { usesGrudge6Model } from '@/lib/grudge6-character';
 import { SceneErrorBoundary } from './ErrorBoundary';
 
 export type { AnimState };
@@ -648,9 +650,9 @@ function CharacterModelTextureLoader(props: CharacterModelInnerProps & { texture
 function LoadingPlaceholder({ color }: { color: string }) {
   return (
     <group>
-      <mesh position={[0, 0.6, 0]}>
-        <capsuleGeometry args={[0.25, 0.6, 4, 8]} />
-        <meshBasicMaterial color={color} wireframe />
+      <mesh position={[0, 0.75, 0]}>
+        <capsuleGeometry args={[0.22, 0.5, 6, 12]} />
+        <meshStandardMaterial color={color} roughness={0.85} metalness={0.05} />
       </mesh>
     </group>
   );
@@ -666,6 +668,24 @@ export function CharacterModel(props: CharacterModelProps) {
   }, [props.weaponType, props.unit.weaponType, config]);
 
   const placeholderColor = props.unit.isPlayerControlled ? '#4488ff' : '#ff4444';
+
+  // Grudge6 race FBX — canonical hero meshes (CDN), equipment toggled per hero
+  if (usesGrudge6Model(props.unit.characterId, props.activeForm)) {
+    return (
+      <SceneErrorBoundary fallback={<LoadingPlaceholder color={placeholderColor} />}>
+        <Grudge6CharacterModel
+          unit={props.unit}
+          position={props.position}
+          facingAngle={props.facingAngle}
+          isSelected={props.isSelected}
+          animState={props.animState}
+          weaponType={props.weaponType}
+          targetWorldPos={props.targetWorldPos}
+          isTargeted={props.isTargeted}
+        />
+      </SceneErrorBoundary>
+    );
+  }
 
   // Voxel model branch — delegate to VoxelCharacterModel for skeleton-less models
   if (config.isVoxel && config.voxelModelUrl) {

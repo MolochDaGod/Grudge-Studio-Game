@@ -12,6 +12,9 @@ const STRIP_PREFIXES = [
   /^Root\//i,
   // Reallusion Character Creator rigs use CC_Base_* prefix
   /^CC_Base_/i,
+  // Grudge6 / Toon RTS Bip001 skeleton
+  /^Bip001\s*/i,
+  /^Bip01\s*/i,
 ];
 
 export function normalizeBoneName(name: string): string {
@@ -95,6 +98,29 @@ const CANONICAL_ALIASES: Record<string, CanonicalBone> = {
   'r_foot':         'rightfoot',
   'l_toebase':      'lefttoebase',
   'r_toebase':      'righttoebase',
+  // Grudge6 Bip001 skeleton (after stripping Bip001 prefix)
+  'pelvis':         'hips',
+  'spine':          'spine',
+  'spine1':         'spine1',
+  'spine2':         'spine2',
+  'neck':           'neck',
+  'head':           'head',
+  'l clavicle':     'leftshoulder',
+  'r clavicle':     'rightshoulder',
+  'l upperarm':     'leftarm',
+  'r upperarm':     'rightarm',
+  'l forearm':      'leftforearm',
+  'r forearm':      'rightforearm',
+  'l hand':         'lefthand',
+  'r hand':         'righthand',
+  'l thigh':        'leftupleg',
+  'r thigh':        'rightupleg',
+  'l calf':         'leftleg',
+  'r calf':         'rightleg',
+  'l foot':         'leftfoot',
+  'r foot':         'rightfoot',
+  'l toe0':         'lefttoebase',
+  'r toe0':         'righttoebase',
 };
 
 // Bones that should NEVER have position tracks retargeted (causes floating/explosion)
