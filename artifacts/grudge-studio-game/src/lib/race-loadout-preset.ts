@@ -4,7 +4,7 @@
  * Root cause fix: paths must resolve under the Vite base (/game/) or CDN.
  * Absolute `/assets/...` without the base prefix 404 on Vercel.
  */
-import { ASSET_CDN_BASE, assetUrl } from '@/lib/asset-config';
+import { ASSET_CDN_BASE } from '@/lib/asset-config';
 import type { RaceId } from '@/lib/toon-rts-registry';
 
 export interface RaceAssetPreset {
@@ -17,14 +17,15 @@ export interface RaceAssetPreset {
 }
 
 /** grudge6 race FBX on assets.grudge-studio.com CDN */
-function grudge6RaceAsset(prefix: string, localFolder: string, modelFile: string, textureFile: string): {
+function grudge6RaceAsset(prefix: string, localFolder: string, _modelFile: string, textureFile: string): {
   modelUrl: string;
   textureUrl: string;
 } {
   const cdnModel = `${ASSET_CDN_BASE}/models/grudge6/races/${prefix}_Characters.fbx`;
+  const cdnTexture = `${ASSET_CDN_BASE}/assets/${localFolder}/textures/${textureFile}`;
   return {
     modelUrl: cdnModel,
-    textureUrl: assetUrl(`/assets/${localFolder}/textures/${textureFile}`),
+    textureUrl: cdnTexture,
   };
 }
 

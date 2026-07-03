@@ -6,11 +6,15 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three-stdlib';
 import { ASSET_CDN_BASE } from './asset-config';
+import type { Grudge6RacePrefix } from './grudge6-character';
+import { grudge6RaceTextureUrl } from './grudge6-prefabs';
 
 const TARGET_HEIGHT = 1.5;
 const _loader = new FBXLoader();
+const _texLoader = new THREE.TextureLoader();
 const _cache = new Map<string, THREE.Group>();
 const _pending = new Map<string, Promise<THREE.Group>>();
+const _textureCache = new Map<string, THREE.Texture>();
 
 /** Same-origin proxy avoids CDN CORS blocking FBXLoader XHR in production. */
 export function grudge6RaceModelUrl(prefix: string): string {
@@ -88,5 +92,53 @@ export function loadGrudge6RaceModel(prefix: string, heightMult = 1.0): Promise<
 export function preloadGrudge6Races(prefixes: string[]): void {
   for (const p of prefixes) {
     loadGrudge6RaceModel(p).catch(() => { /* non-fatal */ });
+    preloadGrudge6Texture(p as Grudge6RacePrefix);
   }
+}
+
+function loadRaceTexture(prefix: Grudge6RacePrefix): Promise<THREE.Texture | null> {
+  const url = grudge6RaceTextureUrl(prefix);
+  if (!url) return Promise.resolve(null);
+
+  const cached = _textureCache.get(url);
+  if (cached) return Promise.resolve(cached);
+
+  return new Promise((resolve) => {
+    _texLoader.load(
+      url,
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.flipY = false;
+        _textureCache.set(url, tex);
+        resolve(tex);
+      },
+      undefined,
+      () => resolve(null),
+    );
+  });
+}
+
+export function preloadGrudge6Texture(prefix: Grudge6RacePrefix): void {
+  loadRaceTexture(prefix).catch(() => { /* non-fatal */ });
+}
+
+/** Apply baked race atlas from prefab library (WK_Standard_Units.webp, etc.) */
+export async function applyGrudge6RaceTexture(
+  root: THREE.Object3D,
+  prefix: Grudge6RacePrefix,
+): Promise<void> {
+  const tex = await loadRaceTexture(prefix);
+  if (!tex) return;
+
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh && !(mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of mats) {
+      if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhongMaterial) {
+        mat.map = tex;
+        mat.needsUpdate = true;
+      }
+    }
+  });
 }

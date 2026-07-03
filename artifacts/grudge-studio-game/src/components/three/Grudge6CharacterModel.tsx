@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { TacticalUnit } from '@/store/use-game-store';
 import type { AnimState } from '@/lib/character-model-map';
 import { heroToGrudge6Config } from '@/lib/grudge6-character';
-import { loadGrudge6RaceModel } from '@/lib/grudge6-model-loader';
+import { applyGrudge6RaceTexture, loadGrudge6RaceModel } from '@/lib/grudge6-model-loader';
 import { setupGrudge6Equipment } from '@/lib/grudge6-equipment';
 import { buildAnimMap } from '@/lib/animation-retarget';
 import { collectBoneNames } from '@/lib/animation-retarget';
@@ -74,7 +74,7 @@ export function Grudge6CharacterModel({
     setLoadError(false);
 
     loadGrudge6RaceModel(config.racePrefix, config.heightMult)
-      .then((scene) => {
+      .then(async (scene) => {
         if (cancelled || !groupRef.current) return;
 
         if (modelRootRef.current) {
@@ -83,6 +83,7 @@ export function Grudge6CharacterModel({
         }
 
         setupGrudge6Equipment(config.racePrefix, scene, config.model3d);
+        await applyGrudge6RaceTexture(scene, config.racePrefix);
 
         const meshes: typeof cachedMeshes.current = [];
         scene.traverse((obj) => {

@@ -3,6 +3,7 @@
  */
 import type { WorgeFormId } from './character-model-map';
 import type { Model3DField } from './grudge6-equipment';
+import { heroToModel3d } from './grudge6-prefabs';
 
 export type Grudge6RacePrefix = 'WK' | 'BRB' | 'DWF' | 'ELF' | 'ORC' | 'UD';
 
@@ -79,12 +80,6 @@ export interface Grudge6HeroConfig {
   selectionRingRadius: number;
 }
 
-function hashVariant(id: string, salt: number): string {
-  let h = salt;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return ['A', 'B', 'C'][Math.abs(h) % 3];
-}
-
 function raceFromCharacterId(characterId: string): Grudge6RacePrefix {
   for (const [faction, prefix] of Object.entries(RACE_GRUDGE6)) {
     if (characterId.startsWith(`${faction}_`)) return prefix;
@@ -108,42 +103,6 @@ function animWeaponForRole(role: ReturnType<typeof roleFromCharacterId>): string
   }
 }
 
-function buildLoadout(characterId: string): Model3DField {
-  const role = roleFromCharacterId(characterId);
-  const body = hashVariant(characterId, 1);
-  const head = hashVariant(characterId, 7);
-  const weaponSlots: Record<string, string> = {};
-
-  switch (role) {
-    case 'warrior':
-      weaponSlots.sword = 'A';
-      weaponSlots.shield = 'A';
-      break;
-    case 'mage':
-      weaponSlots.staff = 'A';
-      break;
-    case 'ranger':
-      weaponSlots.bow = '_default';
-      weaponSlots.quiver = '_default';
-      break;
-    case 'worg':
-      weaponSlots.axe = 'A';
-      break;
-  }
-
-  return {
-    equippedMeshes: {
-      body,
-      arms: body,
-      legs: body,
-      head,
-      shoulders: body,
-    },
-    weaponSlots,
-    armorColor: ARMOR_TINT[characterId],
-  };
-}
-
 export function usesGrudge6Model(
   characterId: string,
   activeForm?: WorgeFormId | null,
@@ -163,9 +122,14 @@ export function heroToGrudge6Config(
   const animWeaponType = weaponType ?? animWeaponForRole(role);
   const h = 1.5 * heightMult;
 
+  const model3d = heroToModel3d(characterId);
+  if (ARMOR_TINT[characterId] && !model3d.armorColor) {
+    model3d.armorColor = ARMOR_TINT[characterId];
+  }
+
   return {
     racePrefix,
-    model3d: buildLoadout(characterId),
+    model3d,
     heightMult,
     animWeaponType,
     labelHeight: h + 0.30,

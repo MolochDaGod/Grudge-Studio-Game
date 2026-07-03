@@ -21,6 +21,8 @@ import { LevelDef } from '@/lib/levels';
 import type { BuildPlacement } from '@/lib/lane-deploy';
 import type { BuildCatalogEntry } from '@/lib/build-catalog';
 import { getBackTowerZone } from '@/lib/lane-deploy';
+import { usesGrudge6Model } from '@/lib/grudge6-character';
+import { preloadGrudge6Races } from '@/lib/grudge6-model-loader';
 import {
   DeployOverlays,
   BuildPlacementLayer,
@@ -1012,6 +1014,21 @@ export function BattleScene({
   const maxDist   = camDist * 2.2;
 
   React.useMemo(() => preloadLevelProps(level.props), [level.id]);
+
+  useEffect(() => {
+    const prefixes = new Set<string>();
+    for (const u of units) {
+      if (usesGrudge6Model(u.characterId, u.activeForm)) {
+        const faction = u.characterId.split('_')[0];
+        const map: Record<string, string> = {
+          human: 'WK', barbarian: 'BRB', dwarf: 'DWF', elf: 'ELF', orc: 'ORC', undead: 'UD',
+        };
+        const p = map[faction];
+        if (p) prefixes.add(p);
+      }
+    }
+    if (prefixes.size) preloadGrudge6Races([...prefixes]);
+  }, [units]);
 
   const canvasDpr = typeof window !== 'undefined'
     ? Math.min(2, window.devicePixelRatio || 1)

@@ -23,9 +23,11 @@ const SLOT_DEFS: SlotDef[] = [
   { slot: 'legs', re: /^Units_Legs_([A-Z])$/i, group: 'armor' },
   { slot: 'head', re: /^Units_head_([A-Z])$/i, group: 'armor' },
   { slot: 'shoulders', re: /^Units_shoulderpads_([A-Z])$/i, group: 'armor' },
-  { slot: 'axe', re: /(?:Units_|weapon_)axe_([A-Z])$/i, group: 'weapon_r' },
-  { slot: 'hammer', re: /(?:Units_|weapon_)hammer_([A-Z])$/i, group: 'weapon_r' },
-  { slot: 'sword', re: /(?:Units_|weapon_)[Ss]word_([A-Z])$/i, group: 'weapon_r' },
+  { slot: 'axe', re: /(?:Units_|weapon_)[Aa]xe(?:_([A-Z]))?$/i, group: 'weapon_r' },
+  { slot: 'hammer', re: /(?:Units_|weapon_)[Hh]ammer(?:_([A-Z]))?$/i, group: 'weapon_r' },
+  { slot: 'mace', re: /(?:Units_|weapon_)[Mm]ace$/i, group: 'weapon_r', noVariant: true },
+  { slot: 'sword', re: /(?:Units_|weapon_)[Ss]word(?:_([A-Z]))?$/i, group: 'weapon_r' },
+  { slot: 'dagger', re: /(?:Units_|weapon_)[Dd]agger$/i, group: 'weapon_r', noVariant: true },
   { slot: 'pick', re: /(?:Units_|weapon_)pick$/i, group: 'weapon_r', noVariant: true },
   { slot: 'spear', re: /(?:Units_|weapon_)[Ss]pear$/i, group: 'weapon_r', noVariant: true },
   { slot: 'bow', re: /(?:Units_|weapon_)[Bb]ow$/i, group: 'weapon_l', noVariant: true },
@@ -36,7 +38,9 @@ const SLOT_DEFS: SlotDef[] = [
   { slot: 'quiver', re: /(?:Xtra_|Units_)quiver$/i, group: 'utility', noVariant: true },
 ];
 
-const WEAPON_SLOTS = new Set(['axe', 'hammer', 'sword', 'pick', 'spear', 'bow', 'staff', 'shield']);
+const WEAPON_SLOTS = new Set([
+  'axe', 'hammer', 'mace', 'sword', 'dagger', 'pick', 'spear', 'bow', 'staff', 'shield',
+]);
 
 export class Grudge6EquipmentManager {
   readonly prefix: string;
