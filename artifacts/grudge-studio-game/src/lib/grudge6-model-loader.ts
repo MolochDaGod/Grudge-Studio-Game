@@ -12,8 +12,14 @@ const _loader = new FBXLoader();
 const _cache = new Map<string, THREE.Group>();
 const _pending = new Map<string, Promise<THREE.Group>>();
 
+/** Same-origin proxy avoids CDN CORS blocking FBXLoader XHR in production. */
 export function grudge6RaceModelUrl(prefix: string): string {
-  return `${ASSET_CDN_BASE}/models/grudge6/races/${prefix}_Characters.fbx`;
+  const path = `/models/grudge6/races/${prefix}_Characters.fbx`;
+  if (typeof window !== 'undefined') {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    return `${base}/api/assets${path}`;
+  }
+  return `${ASSET_CDN_BASE}${path}`;
 }
 
 function normalizeModel(root: THREE.Group, heightMult = 1.0): void {
