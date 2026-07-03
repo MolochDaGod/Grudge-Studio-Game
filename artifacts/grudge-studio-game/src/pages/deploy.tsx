@@ -8,12 +8,12 @@ import {
   applyDeployPlanToPositions,
   type DeployPlan,
   type LaneId,
-  type GridPos,
 } from '@/lib/lane-deploy';
 import { buildBattleRoster, defaultLoadoutForWeapon } from '@/lib/battle-setup';
 import { BUILD_CATALOG, getBuildEntry } from '@/lib/build-catalog';
 import { LaneDeployPanel, placeBuildAtTile, type DeployPanelMode } from '@/components/deploy/LaneDeployPanel';
 import { BattleScene } from '@/components/three/BattleScene';
+import { GameViewport, GameOverlayPanel, GAME_CHROME } from '@/components/game/GameViewport';
 import { ArrowLeft } from 'lucide-react';
 import type { AnimState } from '@/lib/character-model-map';
 import type { TacticalUnit } from '@/store/use-game-store';
@@ -26,7 +26,6 @@ export default function DeployPage() {
     deployPlan,
     setDeployPlan,
     setDraftUnits,
-    draftUnits,
     initBattle,
     setPlayerSquad,
     setEquippedSkills,
@@ -169,8 +168,10 @@ export default function DeployPage() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-black">
-      <div className="absolute inset-0">
+    <GameViewport
+      topHeight={GAME_CHROME.deployTop}
+      bottomHeight={GAME_CHROME.deployBottom}
+      canvas={
         <BattleScene
           units={previewUnits}
           level={level}
@@ -186,24 +187,30 @@ export default function DeployPage() {
           buildPlacements={plan.builds}
           buildCatalog={BUILD_CATALOG}
           showBackTower
+          enablePostProcessing={false}
         />
-      </div>
-
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-3 px-4 py-3 bg-black/70 border-b border-white/10">
-        <button
-          type="button"
-          onClick={() => setLocation('/level-select')}
-          className="flex items-center gap-1 text-xs text-white/50 hover:text-white"
-        >
-          <ArrowLeft className="w-4 h-4" /> Maps
-        </button>
-        <div>
-          <h1 className="font-display text-lg uppercase tracking-widest text-violet-300">Lane Deployment</h1>
-          <p className="text-[10px] text-white/40">{level.name} — assign lanes & march paths before combat</p>
+      }
+      topBar={
+        <div className="h-full flex items-center gap-3 px-4 bg-[#0a0a10]/96 border-b border-white/10">
+          <button
+            type="button"
+            onClick={() => setLocation('/level-select')}
+            className="flex items-center gap-1 text-xs text-white/50 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Maps
+          </button>
+          <div className="min-w-0">
+            <h1 className="font-display text-base sm:text-lg uppercase tracking-widest text-violet-300 truncate">
+              Lane Deployment
+            </h1>
+            <p className="text-[10px] text-white/40 truncate">
+              {level.name} — assign lanes &amp; march paths
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div className="absolute top-16 right-4 bottom-4 z-20 w-[min(100%,320px)]">
+      }
+    >
+      <GameOverlayPanel position="right" className="w-[min(100%,320px)] pt-3 pb-3">
         <LaneDeployPanel
           mode={panelMode}
           onModeChange={setPanelMode}
@@ -216,12 +223,14 @@ export default function DeployPage() {
           onSelectBuild={setSelectedBuildId}
           onStartBattle={handleStartBattle}
         />
-      </div>
+      </GameOverlayPanel>
 
-      <div className="absolute bottom-4 left-4 z-20 text-[10px] text-white/35 max-w-xs leading-relaxed">
-        RTS view · Click hero in panel, then deploy tile on map · Build mode: pick structure, click tile ·
-        Grudge6 prefab heroes with T0 basics equipped
-      </div>
-    </div>
+      <GameOverlayPanel position="bottom-left" className="max-w-sm">
+        <p className="text-[10px] text-white/40 leading-relaxed bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10">
+          RTS view · Select hero → click deploy tile · Build mode: pick structure → click map ·
+          Grudge6 heroes with T0 basics
+        </p>
+      </GameOverlayPanel>
+    </GameViewport>
   );
 }

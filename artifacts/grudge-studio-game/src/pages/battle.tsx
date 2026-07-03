@@ -13,6 +13,7 @@ import { tileToWorld } from "@/components/three/TileGrid";
 import { CHARACTER_LORE } from "@/lib/lore";
 import { Minimap } from "@/components/ui/Minimap";
 import { BattleLoadingScreen } from "@/components/ui/battle-loading-screen";
+import { GameViewport, GameOverlayPanel, GAME_CHROME } from "@/components/game/GameViewport";
 import { SkillTooltip } from "@/components/ui/skill-tooltip";
 import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
@@ -1363,15 +1364,46 @@ export default function Battle() {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-black select-none">
-
-      {/* ── LOADING SCREEN (overlays everything while GLBs stream in) ───── */}
-      {showLoading && (
+    <GameViewport
+      topHeight={GAME_CHROME.battleTop}
+      bottomHeight={GAME_CHROME.battleBottom}
+      loading={showLoading ? (
         <BattleLoadingScreen levelName={level.name} onDone={handleLoadDone} />
-      )}
-
-      {/* ── TOP TURN ORDER STRIP ─────────────────────────────────────────── */}
-      <div className="absolute top-0 left-0 right-0 z-30 h-[52px] bg-[#0a0a10]/96 backdrop-blur-sm border-b border-white/10 flex items-center px-3 gap-3">
+      ) : undefined}
+      canvas={
+        <BattleScene
+          units={units}
+          level={level}
+          reachableTiles={reachableTiles}
+          attackableTiles={attackableTiles}
+          attackableColor={zoneColor}
+          currentUnitId={currentUnitId}
+          actionMode={actionMode}
+          onTileClick={handleTileClick}
+          animStates={animStates}
+          combatEffects={combatEffects}
+          cameraFocus={cameraFocus}
+          cameraMode={cameraMode}
+          onUnitDoubleClick={handleUnitDoubleClick}
+          showUnitInfo={showUnitInfo}
+          mapPings={mapPings}
+          onUnitRightClick={handleUnitRightClick}
+          onUnitClick={handleUnitClick}
+          onUnitHover={setHoveredUnitId}
+          onUnitUnhover={() => setHoveredUnitId(null)}
+          targetedUnitId={actionMode !== 'idle' && actionMode !== 'move' ? hoveredUnitId : null}
+          onMapRightClick={handleMapRightClick}
+          walkPaths={walkPaths}
+          onWalkComplete={onWalkComplete}
+          onWalkStep={onWalkStep}
+          showBackTower
+          deployOverlays={deployPanelOpen ? laneOverlayTiles : undefined}
+          buildPlacements={commandPlan.builds}
+          buildCatalog={BUILD_CATALOG}
+        />
+      }
+      topBar={
+      <div className="h-full bg-[#0a0a10]/96 backdrop-blur-sm border-b border-white/10 flex items-center px-3 gap-3">
         {/* Game label */}
         <div className="shrink-0 font-display text-[9px] uppercase tracking-[0.2em] text-white/20 whitespace-nowrap">
           Grudge Triad
@@ -1496,231 +1528,9 @@ export default function Battle() {
           ← Flee
         </button>
       </div>
-
-      {/* ── 3D SCENE: fills viewport minus top/bottom bars ─────────────────── */}
-      <div className="absolute inset-0" style={{ top: 52, bottom: 130 }}>
-        <BattleScene
-          units={units}
-          level={level}
-          reachableTiles={reachableTiles}
-          attackableTiles={attackableTiles}
-          attackableColor={zoneColor}
-          currentUnitId={currentUnitId}
-          actionMode={actionMode}
-          onTileClick={handleTileClick}
-          animStates={animStates}
-          combatEffects={combatEffects}
-          cameraFocus={cameraFocus}
-          cameraMode={cameraMode}
-          onUnitDoubleClick={handleUnitDoubleClick}
-          showUnitInfo={showUnitInfo}
-          mapPings={mapPings}
-          onUnitRightClick={handleUnitRightClick}
-          onUnitClick={handleUnitClick}
-          onUnitHover={setHoveredUnitId}
-          onUnitUnhover={() => setHoveredUnitId(null)}
-          targetedUnitId={actionMode !== 'idle' && actionMode !== 'move' ? hoveredUnitId : null}
-          onMapRightClick={handleMapRightClick}
-          walkPaths={walkPaths}
-          onWalkComplete={onWalkComplete}
-          onWalkStep={onWalkStep}
-          showBackTower
-          deployOverlays={deployPanelOpen ? laneOverlayTiles : undefined}
-          buildPlacements={commandPlan.builds}
-          buildCatalog={BUILD_CATALOG}
-        />
-      </div>
-
-      {/* Command tower hint — walk ally to back tower, press E */}
-      <AnimatePresence>
-        {nearCommandTower && !deployPanelOpen && (
-          <motion.div
-            key="tower-hint"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            className="absolute z-25 pointer-events-none"
-            style={{ top: 64, left: '50%', transform: 'translateX(-50%)' }}
-          >
-            <div className="flex items-center gap-2 rounded-full border border-violet-500/40 bg-violet-950/80 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.35)] backdrop-blur-sm">
-              <span className="rounded border border-violet-400/50 px-1.5 py-0.5 text-[10px] font-mono">E</span>
-              Command Tower — RTS Deploy &amp; Build
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* In-battle command post overlay (same panel as pre-battle deploy) */}
-      <AnimatePresence>
-        {deployPanelOpen && (
-          <motion.div
-            key="deploy-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute z-40 inset-0 flex justify-end p-4 pt-16 pointer-events-none"
-            style={{ top: 52, bottom: 130 }}
-          >
-            <div className="w-[min(100%,320px)] h-full pointer-events-auto">
-              <LaneDeployPanel
-                mode={deployPanelMode}
-                onModeChange={setDeployPanelMode}
-                lanes={lanes}
-                plan={commandPlan}
-                onPlanChange={handleCommandPlanChange}
-                selectedHeroId={deploySelectedHeroId}
-                onSelectHero={setDeploySelectedHeroId}
-                selectedBuildId={deploySelectedBuildId}
-                onSelectBuild={setDeploySelectedBuildId}
-                onClose={() => setDeployPanelOpen(false)}
-                title="Command Tower"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── FLOATING COMBAT LOG (bottom-right, above minimap) ─────────────── */}
-      <div
-        className="absolute right-3 z-20 flex flex-col-reverse gap-0.5 pointer-events-none"
-        style={{ bottom: 300, width: 220 }}
-      >
-        <AnimatePresence initial={false}>
-          {[...combatLog].reverse().slice(0, 8).map(log => (
-            <motion.div
-              key={log.id}
-              initial={{ opacity: 0, x: 18 }}
-              animate={{ opacity: 0.85, x: 0 }}
-              exit={{ opacity: 0 }}
-              className={cn(
-                "text-[10px] font-mono px-2 py-0.5 rounded-sm bg-black/70 backdrop-blur-sm border border-white/5 leading-snug",
-                log.type === 'damage' ? 'text-orange-400' :
-                log.type === 'heal'   ? 'text-green-400'  :
-                log.type === 'buff'   ? 'text-blue-400'   :
-                log.type === 'debuff' ? 'text-purple-400' :
-                'text-white/35'
-              )}
-            >
-              {log.text}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      {/* ── HOTKEY BUTTONS (bottom-left) ───────────────────────────────────── */}
-      <div className="absolute left-3 z-20 flex flex-col gap-1.5" style={{ bottom: 138 }}>
-        <button
-          onClick={() => setShowUnitInfo(v => !v)}
-          className={cn(
-            "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1.5 rounded border transition-all",
-            showUnitInfo
-              ? "bg-blue-950/90 border-blue-500/60 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
-              : "bg-black/60 border-white/10 text-white/35 hover:text-white/65 hover:border-white/25"
-          )}
-          title="Toggle unit circles & health bars (U)"
-        >
-          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-            <circle cx="12" cy="8" r="4"/><ellipse cx="12" cy="17" rx="7" ry="4"/>
-          </svg>
-          Units [U]
-        </button>
-      </div>
-
-      {/* ── MINIMAP ────────────────────────────────────────────────────────── */}
-      <div className="absolute right-3 z-20" style={{ bottom: 138 }}>
-        <Minimap
-          units={units}
-          gridW={GRID_W}
-          gridH={GRID_H}
-          tileSize={tileSize}
-          currentUnitId={currentUnitId}
-          onFocusTile={(wx, wz) => setCameraFocus([wx, 0, wz])}
-        />
-      </div>
-
-      {/* ── ATTACK PREVIEW TOOLTIP ──────────────────────────────── */}
-      <AnimatePresence>
-        {attackPreview && (
-          <motion.div
-            key="attack-preview"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            className="absolute z-40 pointer-events-none"
-            style={{ bottom: 142, left: '50%', transform: 'translateX(-50%)' }}
-          >
-            <div className="flex items-center gap-3 rounded-xl border border-orange-500/40 bg-[#0d0810]/90 px-4 py-2.5 shadow-[0_4px_28px_rgba(200,80,0,0.35)] backdrop-blur-md">
-              {/* Position badge */}
-              <div className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
-                attackPreview.front
-                  ? "border-blue-500/50 bg-blue-950/60 text-blue-300"
-                  : "border-amber-500/50 bg-amber-950/60 text-amber-300"
-              )}>
-                {attackPreview.front ? '⬡ Front' : '⬡ Rear'}
-              </div>
-              {/* Damage range */}
-              <div className="flex flex-col items-center">
-                <div className="text-[9px] text-white/30 uppercase tracking-widest">Damage</div>
-                <div className="text-base font-bold font-display text-orange-300 leading-none">
-                  {attackPreview.lo}–{attackPreview.hi}
-                </div>
-              </div>
-              {/* Crit */}
-              <div className="flex flex-col items-center border-l border-white/10 pl-3">
-                <div className="text-[9px] text-white/30 uppercase tracking-widest">Crit({Math.round(attackPreview.critChance * 100)}%)</div>
-                <div className="text-base font-bold font-display text-yellow-300 leading-none">
-                  ↑{attackPreview.critHi}
-                </div>
-              </div>
-              {/* Cover indicator */}
-              {attackPreview.cover?.isProtected && (
-                <div className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
-                  attackPreview.cover.label === 'heavy'
-                    ? "border-cyan-500/60 bg-cyan-950/60 text-cyan-300"
-                    : "border-teal-500/50 bg-teal-950/50 text-teal-300"
-                )}>
-                  🛡 {attackPreview.cover.label === 'heavy' ? 'Heavy Cover' : 'Half Cover'}
-                </div>
-              )}
-              {/* Lethal indicator */}
-              {(attackPreview.isLethal || attackPreview.isCritLethal) && (
-                <div className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
-                  attackPreview.isLethal
-                    ? "border-red-500/70 bg-red-950/70 text-red-300"
-                    : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
-                )}>
-                  {attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill'}
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── ENEMY TURN BANNER ──────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {activeUnit && !activeUnit.isPlayerControlled && (
-          <motion.div
-            key="enemy-banner"
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            className="absolute z-40 pointer-events-none"
-            style={{ top: 60, left: '50%', transform: 'translateX(-50%)' }}
-          >
-            <div className="bg-red-950/90 border border-red-700/50 rounded-full px-4 py-1.5 flex items-center gap-2 text-sm font-bold text-red-300 shadow-[0_4px_24px_rgba(180,20,20,0.5)] backdrop-blur-sm">
-              <Skull className="w-3.5 h-3.5 animate-pulse" />
-              {activeUnit.name} is acting…
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── BOTTOM HUD ─────────────────────────────────────────────────────── */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 h-[130px] bg-[#070710]/97 backdrop-blur-sm border-t border-white/10 flex items-stretch">
+      }
+      bottomBar={
+      <div className="h-full game-chrome-panel border-t flex items-stretch">
 
         {/* LEFT column: portrait + stats (shows clicked/inspected unit, defaults to active unit) */}
         <div className="flex items-center gap-2.5 px-3 border-r border-white/8 shrink-0" style={{ width: 310 }}>
@@ -1932,6 +1742,176 @@ export default function Battle() {
         </div>
 
       </div>
+      }
+    >
+      <AnimatePresence>
+        {nearCommandTower && !deployPanelOpen && (
+          <motion.div
+            key="tower-hint"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="absolute z-30 pointer-events-none"
+            style={{ top: 'calc(var(--game-chrome-top) + 8px)', left: '50%', transform: 'translateX(-50%)' }}
+          >
+            <div className="game-hud-chip border-violet-500/40 bg-violet-950/80 text-violet-200 shadow-[0_4px_20px_rgba(139,92,246,0.35)] flex items-center gap-2">
+              <span className="rounded border border-violet-400/50 px-1.5 py-0.5 text-[10px] font-mono">E</span>
+              Command Tower — RTS Deploy &amp; Build
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deployPanelOpen && (
+          <GameOverlayPanel key="deploy-overlay" position="right" className="w-[min(100%,320px)] pt-3 pb-3">
+            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="h-full">
+              <LaneDeployPanel
+                mode={deployPanelMode}
+                onModeChange={setDeployPanelMode}
+                lanes={lanes}
+                plan={commandPlan}
+                onPlanChange={handleCommandPlanChange}
+                selectedHeroId={deploySelectedHeroId}
+                onSelectHero={setDeploySelectedHeroId}
+                selectedBuildId={deploySelectedBuildId}
+                onSelectBuild={setDeploySelectedBuildId}
+                onClose={() => setDeployPanelOpen(false)}
+                title="Command Tower"
+              />
+            </motion.div>
+          </GameOverlayPanel>
+        )}
+      </AnimatePresence>
+
+      <div
+        className="absolute right-3 z-20 flex flex-col-reverse gap-0.5 pointer-events-none"
+        style={{ bottom: 'calc(var(--game-chrome-bottom) + 168px)', width: 220 }}
+      >
+        <AnimatePresence initial={false}>
+          {[...combatLog].reverse().slice(0, 8).map(log => (
+            <motion.div
+              key={log.id}
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 0.85, x: 0 }}
+              exit={{ opacity: 0 }}
+              className={cn(
+                "text-[10px] font-mono px-2 py-0.5 rounded-sm bg-black/70 backdrop-blur-sm border border-white/5 leading-snug",
+                log.type === 'damage' ? 'text-orange-400' :
+                log.type === 'heal'   ? 'text-green-400'  :
+                log.type === 'buff'   ? 'text-blue-400'   :
+                log.type === 'debuff' ? 'text-purple-400' :
+                'text-white/35'
+              )}
+            >
+              {log.text}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <div className="absolute left-3 z-20 flex flex-col gap-1.5 pointer-events-auto" style={{ bottom: 'calc(var(--game-chrome-bottom) + 8px)' }}>
+        <button
+          onClick={() => setShowUnitInfo(v => !v)}
+          className={cn(
+            "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1.5 rounded border transition-all",
+            showUnitInfo
+              ? "bg-blue-950/90 border-blue-500/60 text-blue-300 shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+              : "bg-black/60 border-white/10 text-white/35 hover:text-white/65 hover:border-white/25"
+          )}
+          title="Toggle unit circles & health bars (U)"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <circle cx="12" cy="8" r="4"/><ellipse cx="12" cy="17" rx="7" ry="4"/>
+          </svg>
+          Units [U]
+        </button>
+      </div>
+
+      <div className="absolute right-3 z-20 pointer-events-auto" style={{ bottom: 'calc(var(--game-chrome-bottom) + 8px)' }}>
+        <Minimap
+          units={units}
+          gridW={GRID_W}
+          gridH={GRID_H}
+          tileSize={tileSize}
+          currentUnitId={currentUnitId}
+          onFocusTile={(wx, wz) => setCameraFocus([wx, 0, wz])}
+        />
+      </div>
+
+      <AnimatePresence>
+        {attackPreview && (
+          <motion.div
+            key="attack-preview"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="absolute z-40 pointer-events-none"
+            style={{ bottom: 'calc(var(--game-chrome-bottom) + 12px)', left: '50%', transform: 'translateX(-50%)' }}
+          >
+            <div className="flex items-center gap-3 rounded-xl border border-orange-500/40 bg-[#0d0810]/90 px-4 py-2.5 shadow-[0_4px_28px_rgba(200,80,0,0.35)] backdrop-blur-md">
+              <div className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
+                attackPreview.front
+                  ? "border-blue-500/50 bg-blue-950/60 text-blue-300"
+                  : "border-amber-500/50 bg-amber-950/60 text-amber-300"
+              )}>
+                {attackPreview.front ? '⬡ Front' : '⬡ Rear'}
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="text-[9px] text-white/30 uppercase tracking-widest">Damage</div>
+                <div className="text-base font-bold font-display text-orange-300 leading-none">
+                  {attackPreview.lo}–{attackPreview.hi}
+                </div>
+              </div>
+              <div className="flex flex-col items-center border-l border-white/10 pl-3">
+                <div className="text-[9px] text-white/30 uppercase tracking-widest">Crit({Math.round(attackPreview.critChance * 100)}%)</div>
+                <div className="text-base font-bold font-display text-yellow-300 leading-none">
+                  ↑{attackPreview.critHi}
+                </div>
+              </div>
+              {attackPreview.cover?.isProtected && (
+                <div className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border",
+                  attackPreview.cover.label === 'heavy'
+                    ? "border-cyan-500/60 bg-cyan-950/60 text-cyan-300"
+                    : "border-teal-500/50 bg-teal-950/50 text-teal-300"
+                )}>
+                  🛡 {attackPreview.cover.label === 'heavy' ? 'Heavy Cover' : 'Half Cover'}
+                </div>
+              )}
+              {(attackPreview.isLethal || attackPreview.isCritLethal) && (
+                <div className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border animate-pulse",
+                  attackPreview.isLethal
+                    ? "border-red-500/70 bg-red-950/70 text-red-300"
+                    : "border-yellow-500/60 bg-yellow-950/60 text-yellow-300"
+                )}>
+                  {attackPreview.isLethal ? '☠ Lethal' : '☠ Crit-Kill'}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {activeUnit && !activeUnit.isPlayerControlled && (
+          <motion.div
+            key="enemy-banner"
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            className="absolute z-40 pointer-events-none"
+            style={{ top: 'calc(var(--game-chrome-top) + 8px)', left: '50%', transform: 'translateX(-50%)' }}
+          >
+            <div className="game-hud-chip border-red-700/50 bg-red-950/90 text-red-300 shadow-[0_4px_24px_rgba(180,20,20,0.5)] flex items-center gap-2 text-sm">
+              <Skull className="w-3.5 h-3.5 animate-pulse" />
+              {activeUnit.name} is acting…
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── CONTEXT MENU OVERLAY ─────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -2054,7 +2034,7 @@ export default function Battle() {
         )}
       </AnimatePresence>
 
-    </div>
+    </GameViewport>
   );
 }
 

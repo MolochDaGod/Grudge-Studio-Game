@@ -27,6 +27,7 @@ import {
   BackTowerMarker,
   type DeployOverlayTile,
 } from './DeployOverlays';
+import { RendererSetup } from './RendererSetup';
 import {
   generateThemeGroundTexture,
   generateThemeGroundNormal,
@@ -79,6 +80,8 @@ interface BattleSceneProps {
   buildPlacements?: BuildPlacement[];
   buildCatalog?: BuildCatalogEntry[];
   showBackTower?: boolean;
+  /** Disable bloom/vignette post stack (deploy preview / low-power) */
+  enablePostProcessing?: boolean;
 }
 
 // ── Camera Shaker ─────────────────────────────────────────────────────────────
@@ -933,6 +936,7 @@ export function BattleScene({
   buildPlacements = [],
   buildCatalog = [],
   showBackTower = false,
+  enablePostProcessing = true,
 }: BattleSceneProps) {
   const backTower = getBackTowerZone(level);
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
@@ -1009,14 +1013,35 @@ export function BattleScene({
 
   React.useMemo(() => preloadLevelProps(level.props), [level.id]);
 
+  const canvasDpr = typeof window !== 'undefined'
+    ? Math.min(2, window.devicePixelRatio || 1)
+    : 1;
+
   return (
     <SceneErrorBoundary>
     <Canvas
-      style={{ width: '100%', height: '100%' }}
-      camera={{ position: [centerX, camHeight, centerZ + camDist], fov: 50 }}
-      shadows="percentage"
-      gl={{ antialias: true, alpha: false, outputColorSpace: THREE.SRGBColorSpace }}
+      className="game-r3f-canvas"
+      style={{ width: '100%', height: '100%', display: 'block' }}
+      dpr={[1, canvasDpr]}
+      camera={{
+        position: [centerX, camHeight, centerZ + camDist],
+        fov: 50,
+        near: 0.4,
+        far: maxDist * 5,
+      }}
+      shadows
+      gl={{
+        antialias: true,
+        alpha: false,
+        depth: true,
+        stencil: false,
+        powerPreference: 'high-performance',
+        outputColorSpace: THREE.SRGBColorSpace,
+      }}
+      eventPrefix="client"
+      flat={false}
     >
+      <RendererSetup />
       <color attach="background" args={[level.skyColor]} />
       <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
 
@@ -1191,11 +1216,12 @@ export function BattleScene({
 
       </PhysicsProvider>
 
-      {/* Post-processing: Bloom makes emissive materials & combat effects glow */}
-      <EffectComposer>
-        <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.4} intensity={0.4} mipmapBlur />
-        <Vignette offset={0.3} darkness={0.55} />
-      </EffectComposer>
+      {enablePostProcessing && (
+        <EffectComposer multisampling={canvasDpr >= 2 ? 4 : 0}>
+          <Bloom luminanceThreshold={0.62} luminanceSmoothing={0.35} intensity={0.38} mipmapBlur />
+          <Vignette offset={0.28} darkness={0.48} />
+        </EffectComposer>
+      )}
     </Canvas>
     </SceneErrorBoundary>
   );
