@@ -9,6 +9,7 @@
  */
 
 import { getCharacterConfig } from '@/lib/character-model-map';
+import { heroToGrudge6Config, usesGrudge6Model } from '@/lib/grudge6-character';
 
 export interface BodyDimensions {
   /** Half-height of the capsule cylinder segment (Rapier uses half-height) */
@@ -46,6 +47,21 @@ const MIN_HEIGHT = 0.80;
  *    making CC hero meshes + HP bars invisible in battle).
  */
 export function getBodyDimensions(characterId: string): BodyDimensions {
+  // Grudge6 FBX heroes are normalized to ~1.5 m in the loader — not the
+  // tiny CC/Quaternius scale in CharacterConfig (which breaks placement).
+  if (usesGrudge6Model(characterId)) {
+    const g6 = heroToGrudge6Config(characterId);
+    const fullHeight = 1.5 * g6.heightMult;
+    const radius = 0.28 * g6.heightMult;
+    const cylinderHeight = Math.max(0.1, fullHeight - radius * 2);
+    return {
+      halfHeight: cylinderHeight / 2,
+      radius,
+      fullHeight,
+      feetOffset: fullHeight / 2,
+    };
+  }
+
   const config = getCharacterConfig(characterId);
 
   const scaleY  = config.scale[1];

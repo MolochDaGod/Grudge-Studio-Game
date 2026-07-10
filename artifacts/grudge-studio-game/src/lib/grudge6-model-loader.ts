@@ -4,7 +4,7 @@
  * per-hero CC GLBs often 404 there.
  */
 import * as THREE from 'three';
-import { FBXLoader } from 'three-stdlib';
+import { FBXLoader, SkeletonUtils } from 'three-stdlib';
 import { ASSET_CDN_BASE, cdnProxyUrl } from './asset-config';
 import type { Grudge6RacePrefix } from './grudge6-character';
 import { grudge6RaceTextureUrl } from './grudge6-prefabs';
@@ -30,20 +30,70 @@ export function grudge6RaceModelUrl(prefix: string): string {
   return `${ASSET_CDN_BASE}${path}`;
 }
 
+/** Update skinned-mesh skeletons so bbox + clones reflect bind pose. */
+function prepareSkinnedMeshes(root: THREE.Object3D): void {
+  root.traverse((obj) => {
+    const sm = obj as THREE.SkinnedMesh;
+    if (!sm.isSkinnedMesh || !sm.skeleton) return;
+    sm.skeleton.update();
+    sm.updateMatrixWorld(true);
+  });
+  root.updateMatrixWorld(true);
+}
+
+/**
+ * Measure model height in world units. Skinned FBX often reports ~0 from
+ * Box3.setFromObject before skeletons update — that drove scale factors
+ * of 1000+ and heroes ~100× taller than the 1.5-unit tile grid.
+ */
+function measureModelHeight(root: THREE.Object3D): number {
+  prepareSkinnedMeshes(root);
+
+  const geomBox = new THREE.Box3();
+  let hasGeom = false;
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh && !(mesh as THREE.SkinnedMesh).isSkinnedMesh) return;
+    const geom = mesh.geometry;
+    if (!geom) return;
+    if (!geom.boundingBox) geom.computeBoundingBox();
+    if (!geom.boundingBox) return;
+    const local = geom.boundingBox.clone();
+    local.applyMatrix4(mesh.matrixWorld);
+    geomBox.union(local);
+    hasGeom = true;
+  });
+
+  if (hasGeom && !geomBox.isEmpty()) {
+    const geomSize = new THREE.Vector3();
+    geomBox.getSize(geomSize);
+    if (geomSize.y >= 0.5) return geomSize.y;
+  }
+
+  const objectBox = new THREE.Box3().setFromObject(root);
+  const objectSize = new THREE.Vector3();
+  objectBox.getSize(objectSize);
+  return Math.max(objectSize.y, 0.001);
+}
+
 function normalizeModel(root: THREE.Group, heightMult = 1.0): void {
+  root.scale.set(1, 1, 1);
+  root.position.set(0, 0, 0);
+  root.updateMatrixWorld(true);
+
+  const height = measureModelHeight(root);
+  const scale = (TARGET_HEIGHT * heightMult) / height;
+  root.scale.setScalar(scale);
+  root.updateMatrixWorld(true);
+
   const box = new THREE.Box3().setFromObject(root);
-  const size = new THREE.Vector3();
-  box.getSize(size);
   const center = new THREE.Vector3();
   box.getCenter(center);
 
-  const height = Math.max(size.y, 0.001);
-  const scale = (TARGET_HEIGHT * heightMult) / height;
-  root.scale.setScalar(scale);
-
-  root.position.x = -center.x * scale;
-  root.position.z = -center.z * scale;
-  root.position.y = -box.min.y * scale;
+  root.position.x = -center.x;
+  root.position.z = -center.z;
+  root.position.y = -box.min.y;
+  root.updateMatrixWorld(true);
 
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -59,13 +109,18 @@ function normalizeModel(root: THREE.Group, heightMult = 1.0): void {
   });
 }
 
+/** Deep clone skinned FBX — Object3D.clone(true) breaks skeleton bindings. */
+export function cloneGrudge6Model(source: THREE.Group): THREE.Group {
+  return SkeletonUtils.clone(source) as THREE.Group;
+}
+
 export function loadGrudge6RaceModel(prefix: string, heightMult = 1.0): Promise<THREE.Group> {
   const url = grudge6RaceModelUrl(prefix);
   const cacheKey = `${url}@${heightMult}`;
 
   const cached = _cache.get(cacheKey);
   if (cached) {
-    return Promise.resolve(cached.clone(true));
+    return Promise.resolve(cloneGrudge6Model(cached));
   }
 
   const inflight = _pending.get(cacheKey);
@@ -79,7 +134,7 @@ export function loadGrudge6RaceModel(prefix: string, heightMult = 1.0): Promise<
         normalizeModel(root, heightMult);
         _cache.set(cacheKey, root);
         _pending.delete(cacheKey);
-        resolve(root.clone(true));
+        resolve(cloneGrudge6Model(root));
       },
       undefined,
       (err) => {

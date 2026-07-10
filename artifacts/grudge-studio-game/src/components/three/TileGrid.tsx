@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
+import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { LevelDef } from '@/lib/levels';
 import {
@@ -16,6 +17,69 @@ export function tileToWorld(x: number, y: number, tileSize: number, elevation = 
   return [x * tileSize + tileSize / 2, elevation, y * tileSize + tileSize / 2];
 }
 
+/** World position → integer tile index (matches click/hover math in TileGrid). */
+export function worldToTile(
+  worldX: number,
+  worldZ: number,
+  tileSize: number,
+): { x: number; y: number } {
+  return {
+    x: Math.floor(worldX / tileSize),
+    y: Math.floor(worldZ / tileSize),
+  };
+}
+
+/** Clamp a tile coordinate to walkable grid bounds. */
+export function clampTile(
+  x: number,
+  y: number,
+  gridW: number,
+  gridH: number,
+): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(gridW - 1, Math.floor(x))),
+    y: Math.max(0, Math.min(gridH - 1, Math.floor(y))),
+  };
+}
+
+export function isWalkableTile(
+  x: number,
+  y: number,
+  gridW: number,
+  gridH: number,
+  obstacleTiles: Set<string>,
+): boolean {
+  if (x < 0 || y < 0 || x >= gridW || y >= gridH) return false;
+  return !obstacleTiles.has(`${x},${y}`);
+}
+
+/** Snap spawn/placement to the nearest in-bounds, non-obstacle tile. */
+export function snapTileToGrid(
+  x: number,
+  y: number,
+  gridW: number,
+  gridH: number,
+  obstacleTiles: Set<string>,
+): { x: number; y: number } {
+  const clamped = clampTile(x, y, gridW, gridH);
+  if (isWalkableTile(clamped.x, clamped.y, gridW, gridH, obstacleTiles)) {
+    return clamped;
+  }
+  for (let r = 1; r < Math.max(gridW, gridH); r++) {
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dy = -r; dy <= r; dy++) {
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+        const tx = clamped.x + dx;
+        const ty = clamped.y + dy;
+        if (isWalkableTile(tx, ty, gridW, gridH, obstacleTiles)) {
+          return { x: tx, y: ty };
+        }
+      }
+    }
+  }
+  return clamped;
+}
+
 interface TileGridProps {
   level: LevelDef;
   reachableTiles: Array<{ x: number; y: number }>;
@@ -26,6 +90,8 @@ interface TileGridProps {
   hoveredTile: { x: number; y: number } | null;
   setHoveredTile: (t: { x: number; y: number } | null) => void;
   onRightClick?: (x: number, y: number, screenX: number, screenY: number) => void;
+  /** Show X/Y axis labels along grid edges (debug / placement aid). */
+  showGridCoords?: boolean;
 }
 
 const TILE_H = 0.18;
@@ -36,7 +102,64 @@ const COLOR_DARK    = new THREE.Color(0x2a2a35);
 const COLOR_LIGHT   = new THREE.Color(0x3a3a45);
 const COLOR_BLOCKED = new THREE.Color(0x1a1218);
 
-export function TileGrid({ level, reachableTiles, attackableTiles, attackableColor, onTileClick, hoveredTile, setHoveredTile, onRightClick }: TileGridProps) {
+function GridCoordinateLabels({
+  gridW,
+  gridH,
+  tileSize,
+}: {
+  gridW: number;
+  gridH: number;
+  tileSize: number;
+}) {
+  const labels = useMemo(() => {
+    const items: Array<{ key: string; pos: [number, number, number]; text: string }> = [];
+    const yOff = 0.28;
+    const zEdge = -0.42;
+    const xEdge = -0.42;
+    for (let x = 0; x < gridW; x++) {
+      const [wx, ,] = tileToWorld(x, 0, tileSize);
+      items.push({ key: `x_${x}`, pos: [wx, yOff, zEdge], text: String(x) });
+    }
+    for (let y = 0; y < gridH; y++) {
+      const [, , wz] = tileToWorld(0, y, tileSize);
+      items.push({ key: `y_${y}`, pos: [xEdge, yOff, wz], text: String(y) });
+    }
+    return items;
+  }, [gridW, gridH, tileSize]);
+
+  return (
+    <group>
+      {labels.map(({ key, pos, text }) => (
+        <Text
+          key={key}
+          position={pos}
+          rotation={[-Math.PI / 2, 0, 0]}
+          fontSize={tileSize * 0.22}
+          color="#c8d4e0"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.02}
+          outlineColor="#0a0c10"
+          fillOpacity={0.88}
+        >
+          {text}
+        </Text>
+      ))}
+    </group>
+  );
+}
+
+export function TileGrid({
+  level,
+  reachableTiles,
+  attackableTiles,
+  attackableColor,
+  onTileClick,
+  hoveredTile,
+  setHoveredTile,
+  onRightClick,
+  showGridCoords = true,
+}: TileGridProps) {
   const { gridW, gridH, tileSize, obstacleTiles, groundColor, groundColor2, theme } = level;
   const instRef = useRef<THREE.InstancedMesh>(null!);
   const totalTiles = gridW * gridH;
@@ -103,33 +226,29 @@ export function TileGrid({ level, reachableTiles, attackableTiles, attackableCol
   const worldW = gridW * tileSize;
   const worldH = gridH * tileSize;
 
+  const tileFromPoint = (p: { x: number; z: number }) => {
+    const { x, y } = worldToTile(p.x, p.z, tileSize);
+    if (x >= 0 && x < gridW && y >= 0 && y < gridH) return { x, y };
+    return null;
+  };
+
   const handleClick = (e: any) => {
     e.stopPropagation();
-    const p = e.point;
-    const x = Math.floor(p.x / tileSize);
-    const y = Math.floor(p.z / tileSize);
-    if (x >= 0 && x < gridW && y >= 0 && y < gridH) onTileClick(x, y);
+    const tile = tileFromPoint(e.point);
+    if (tile) onTileClick(tile.x, tile.y);
   };
 
   const handleRightClick = (e: any) => {
     e.stopPropagation();
-    const p = e.point;
-    const x = Math.floor(p.x / tileSize);
-    const y = Math.floor(p.z / tileSize);
-    if (x >= 0 && x < gridW && y >= 0 && y < gridH) {
-      onRightClick?.(x, y, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
+    const tile = tileFromPoint(e.point);
+    if (tile) {
+      onRightClick?.(tile.x, tile.y, e.nativeEvent?.clientX ?? 0, e.nativeEvent?.clientY ?? 0);
     }
   };
   const handleMove = (e: any) => {
     e.stopPropagation();
-    const p = e.point;
-    const x = Math.floor(p.x / tileSize);
-    const y = Math.floor(p.z / tileSize);
-    if (x >= 0 && x < gridW && y >= 0 && y < gridH) {
-      setHoveredTile({ x, y });
-    } else {
-      setHoveredTile(null);
-    }
+    const tile = tileFromPoint(e.point);
+    setHoveredTile(tile);
   };
 
   return (
@@ -172,6 +291,25 @@ export function TileGrid({ level, reachableTiles, attackableTiles, attackableCol
           </mesh>
         );
       })}
+
+      {showGridCoords && (
+        <GridCoordinateLabels gridW={gridW} gridH={gridH} tileSize={tileSize} />
+      )}
+
+      {hoveredTile && (
+        <Text
+          position={[...tileToWorld(hoveredTile.x, hoveredTile.y, tileSize, 0.34)] as [number, number, number]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          fontSize={tileSize * 0.28}
+          color="#fff8b0"
+          anchorX="center"
+          anchorY="middle"
+          outlineWidth={0.03}
+          outlineColor="#000000"
+        >
+          {`(${hoveredTile.x}, ${hoveredTile.y})`}
+        </Text>
+      )}
     </group>
   );
 }

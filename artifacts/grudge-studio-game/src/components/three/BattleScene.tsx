@@ -5,6 +5,7 @@ import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
+import { heroToGrudge6Config, usesGrudge6Model } from '@/lib/grudge6-character';
 import { CharacterModel, AnimState } from './CharacterModel';
 import { tickSequences } from '@/lib/animation-events';
 import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
@@ -21,7 +22,6 @@ import { LevelDef } from '@/lib/levels';
 import type { BuildPlacement } from '@/lib/lane-deploy';
 import type { BuildCatalogEntry } from '@/lib/build-catalog';
 import { getBackTowerZone } from '@/lib/lane-deploy';
-import { usesGrudge6Model } from '@/lib/grudge6-character';
 import { preloadGrudge6Races } from '@/lib/grudge6-model-loader';
 import {
   DeployOverlays,
@@ -640,6 +640,13 @@ worldPosRef = { worldPosRef }
 }
 
 // ── Unit team rings + floating health bars ────────────────────────────────────
+function unitLabelHeight(unit: TacticalUnit): number {
+  if (usesGrudge6Model(unit.characterId, unit.activeForm)) {
+    return heroToGrudge6Config(unit.characterId, unit.weaponType).labelHeight + 0.35;
+  }
+  return 2.1;
+}
+
 function UnitMarkers({ units, tileSize }: { units: TacticalUnit[]; tileSize: number }) {
   return (
     <>
@@ -649,6 +656,7 @@ function UnitMarkers({ units, tileSize }: { units: TacticalUnit[]; tileSize: num
         const ringColor = unit.isPlayerControlled ? '#4488ff' : '#ff4444';
         const barColor  = hpPct > 60 ? '#22cc55' : hpPct > 30 ? '#ffaa00' : '#ff3333';
         const borderColor = unit.isPlayerControlled ? '#4488ffaa' : '#ff4444aa';
+        const barY = unitLabelHeight(unit);
         return (
           <group key={unit.id + '_marker'}>
             {/* Glowing team ring around character base */}
@@ -657,7 +665,7 @@ function UnitMarkers({ units, tileSize }: { units: TacticalUnit[]; tileSize: num
               <meshBasicMaterial color={ringColor} transparent opacity={0.82} depthWrite={false} />
             </mesh>
             {/* Floating health bar */}
-            <Html position={[wx, 4.8, wz]} center distanceFactor={16} zIndexRange={[0, 10]}>
+            <Html position={[wx, barY, wz]} center distanceFactor={16} zIndexRange={[0, 10]}>
               <div style={{ width: 58, pointerEvents: 'none' }}>
                 <div style={{
                   background: 'rgba(0,0,0,0.88)',
@@ -1035,6 +1043,16 @@ export function BattleScene({
     : 1;
 
   return (
+    <div className="relative h-full w-full">
+    {hoveredTile && (
+      <div
+        className="pointer-events-none absolute left-3 top-3 z-20 rounded-md border border-white/15 bg-black/70 px-3 py-1.5 font-mono text-xs text-white/90 shadow-lg"
+        aria-live="polite"
+      >
+        Tile <span className="text-amber-200">X={hoveredTile.x}</span>
+        {' '}<span className="text-amber-200">Y={hoveredTile.y}</span>
+      </div>
+    )}
     <SceneErrorBoundary>
     <Canvas
       className="game-r3f-canvas"
@@ -1241,5 +1259,6 @@ export function BattleScene({
       )}
     </Canvas>
     </SceneErrorBoundary>
+    </div>
   );
 }

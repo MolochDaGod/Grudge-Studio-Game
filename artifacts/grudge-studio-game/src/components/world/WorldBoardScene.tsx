@@ -5,6 +5,7 @@ import { useGameStore } from '@/store/use-game-store';
 import { CHARACTERS } from '@/lib/characters';
 import { heroToTacticalUnit } from '@/lib/grudge-bridge';
 import { getLevelWithEdits } from '@/lib/levels';
+import { snapTileToGrid } from '@/components/three/TileGrid';
 
 /** Demo gameboard — one hero per race on the training arena grid. */
 export default function WorldBoardScene() {
@@ -28,11 +29,18 @@ export default function WorldBoardScene() {
       if (!hero) return null;
       const col = i % 3;
       const row = Math.floor(i / 3);
-      return heroToTacticalUnit(
-        hero,
-        0,
-        { x: level.playerSpawn.xMin + col * 2, y: level.playerSpawn.yMin + row * 2 },
+      const raw = {
+        x: level.playerSpawn.xMin + col * 2,
+        y: level.playerSpawn.yMin + row * 2,
+      };
+      const position = snapTileToGrid(
+        raw.x,
+        raw.y,
+        level.gridW,
+        level.gridH,
+        level.obstacleTiles,
       );
+      return heroToTacticalUnit(hero, 0, position);
     }).filter(Boolean);
   }, [level]);
 
