@@ -7,7 +7,9 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/store/use-auth-store";
 
 import Login from "@/pages/login";
+import AuthCallback from "@/pages/auth-callback";
 import Home from "@/pages/home";
+import { consumeFleetSsoParams } from "@/lib/grudge-api";
 import TeamBuilder from "@/pages/team-builder";
 import CharacterSelect from "@/pages/character-select";
 import LevelSelect from "@/pages/level-select";
@@ -41,6 +43,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/">{() => <AuthGuard><Home /></AuthGuard>}</Route>
       <Route path="/teams">{() => <AuthGuard><TeamBuilder /></AuthGuard>}</Route>
       <Route path="/select">{() => <AuthGuard><CharacterSelect /></AuthGuard>}</Route>
@@ -70,23 +73,10 @@ function Router() {
   );
 }
 
-// Consume Grudge ID SSO token from WCS / fleet launcher (?token= & ?grudgeId=)
-(function consumeFleetAuth() {
-  if (typeof window === 'undefined') return;
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('token');
-  if (!token) return;
-  try {
-    localStorage.setItem('grudge_auth_token', token);
-    const grudgeId = params.get('grudgeId');
-    if (grudgeId) localStorage.setItem('grudge_id', grudgeId);
-    params.delete('token');
-    params.delete('grudgeId');
-    const qs = params.toString();
-    const clean = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
-    window.history.replaceState(null, '', clean);
-  } catch { /* ignore */ }
-})();
+// Consume Grudge ID SSO tokens (grudge_token / sso_token / token) ASAP
+if (typeof window !== "undefined") {
+  consumeFleetSsoParams();
+}
 
 function App() {
   const restoreSession = useAuthStore(s => s.restoreSession);

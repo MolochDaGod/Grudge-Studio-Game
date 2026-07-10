@@ -7,7 +7,10 @@
   "outputDirectory": "../grudge-studio-game/dist",
   "env": {
     "VITE_USE_CDN": "false",
-    "VITE_ASSET_CDN_URL": "https://assets.grudge-studio.com"
+    "VITE_ASSET_CDN_URL": "https://assets.grudge-studio.com",
+    "VITE_AUTH_URL": "https://id.grudge-studio.com",
+    "VITE_API_URL": "/api",
+    "VITE_OBJECTSTORE_URL": "https://objectstore.grudge-studio.com"
   },
   "redirects": [
     { "source": "/", "destination": "/game/", "permanent": false },
@@ -21,16 +24,31 @@
     { "source": "/favicon-192.png", "destination": "/game/favicon-192.png" },
     { "source": "/assets/:path*", "destination": "/game/assets/:path*" },
     { "source": "/anims/:path*", "destination": "/game/anims/:path*" },
-    { "source": "/api/game/:path*", "destination": "https://api.grudge-studio.com/:path*" },
-    { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
-    { "source": "/api/account/:path*", "destination": "https://account.grudge-studio.com/:path*" },
+
+    { "source": "/api/auth/:path*", "destination": "https://id.grudge-studio.com/api/auth/:path*" },
+    { "source": "/auth/:path*", "destination": "https://id.grudge-studio.com/auth/:path*" },
+
     { "source": "/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
     { "source": "/game/api/assets/:path*", "destination": "https://assets.grudge-studio.com/:path*" },
+
+    { "source": "/api/characters", "destination": "https://grudge-api-production-0d46.up.railway.app/api/characters" },
+    { "source": "/api/characters/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/characters/:path*" },
+    { "source": "/api/account", "destination": "https://grudge-api-production-0d46.up.railway.app/api/account" },
+    { "source": "/api/account/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/account/:path*" },
+    { "source": "/api/inventory/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/inventory/:path*" },
+    { "source": "/api/wallet/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/wallet/:path*" },
+    { "source": "/api/island/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/island/:path*" },
+    { "source": "/api/professions/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/professions/:path*" },
+    { "source": "/api/health", "destination": "https://grudge-api-production-0d46.up.railway.app/api/health" },
+    { "source": "/api/healthz", "destination": "https://grudge-api-production-0d46.up.railway.app/api/health" },
+    { "source": "/api/:path*", "destination": "https://grudge-api-production-0d46.up.railway.app/api/:path*" },
+
     { "source": "/game/assets/:path*", "destination": "/assets/:path*" },
     { "source": "/game/models/:path*", "destination": "/models/:path*" },
     { "source": "/game/images/:path*", "destination": "/images/:path*" },
     { "source": "/game/favicon-32.png", "destination": "/favicon-32.png" },
     { "source": "/game/favicon-192.png", "destination": "/favicon-192.png" },
+    { "source": "/game/auth/callback", "destination": "/index.html" },
     { "source": "/game/:path((?!.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
