@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { FBXLoader } from 'three-stdlib';
-import { ASSET_CDN_BASE } from './asset-config';
+import { ASSET_CDN_BASE, cdnProxyUrl } from './asset-config';
 import type { Grudge6RacePrefix } from './grudge6-character';
 import { grudge6RaceTextureUrl } from './grudge6-prefabs';
 
@@ -16,12 +16,16 @@ const _cache = new Map<string, THREE.Group>();
 const _pending = new Map<string, Promise<THREE.Group>>();
 const _textureCache = new Map<string, THREE.Texture>();
 
-/** Same-origin proxy avoids CDN CORS blocking FBXLoader XHR in production. */
+/**
+ * Race FBX on R2 (WK/BRB/DWF/ELF/ORC/UD_Characters.fbx).
+ * Always use domain-root same-origin proxy `/api/assets/...` — never
+ * `${BASE_URL}/api/assets` (`/game/api/assets` returns the SPA HTML and
+ * leaves heroes stuck on capsule placeholders).
+ */
 export function grudge6RaceModelUrl(prefix: string): string {
   const path = `/models/grudge6/races/${prefix}_Characters.fbx`;
   if (typeof window !== 'undefined') {
-    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-    return `${base}/api/assets${path}`;
+    return cdnProxyUrl(path);
   }
   return `${ASSET_CDN_BASE}${path}`;
 }

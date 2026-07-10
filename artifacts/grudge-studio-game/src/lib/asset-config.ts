@@ -38,11 +38,28 @@ function clean(path: string): string {
 }
 
 /**
+ * Same-origin R2 proxy used in production (Vercel rewrite):
+ *   /api/assets/*  →  https://assets.grudge-studio.com/*
+ *
+ * CRITICAL: do NOT prefix with Vite BASE_URL (`/game`).
+ * `/game/api/assets/...` falls through to the SPA shell (HTML) and
+ * FBXLoader/GLTFLoader then fail → capsule/cylinder hero placeholders.
+ */
+export function cdnProxyUrl(path: string): string {
+  return `/api/assets${clean(path)}`;
+}
+
+/**
  * Resolve to CDN (prod) or local (dev).
  * @example assetUrl('/models/characters/orc.glb')
  */
 export function assetUrl(path: string): string {
   if (USE_CDN) {
+    // Prefer same-origin proxy in the browser so CORS is never an issue
+    // for FBX XHR / texture loads on game.grudge-studio.com.
+    if (typeof window !== 'undefined') {
+      return cdnProxyUrl(path);
+    }
     return `${ASSET_CDN_BASE}${clean(path)}`;
   }
   // Absolute /assets/* paths must include the Vite base (e.g. /game) — otherwise

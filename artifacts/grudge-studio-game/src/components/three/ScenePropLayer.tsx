@@ -7,6 +7,8 @@ import { PropPlacement } from '@/lib/levels';
 const BASE = import.meta.env.BASE_URL;
 
 function getPackAtlas(modelUrl: string): string | null {
+  // Same origin as map GLBs (public/models/maps) — keep atlas co-located
+  // so texture + mesh scale/UVs stay matched per pack.
   if (modelUrl.includes('/maps/medieval/')) return `${BASE}models/maps/medieval/atlas.png`;
   if (modelUrl.includes('/maps/elven/'))    return `${BASE}models/maps/elven/atlas.png`;
   if (modelUrl.includes('/maps/orc/'))      return `${BASE}models/maps/orc/atlas.png`;

@@ -169,7 +169,7 @@ export function heroToModel3d(characterId: string): Model3DField {
   return prefabLoadoutToModel3d(loadout, preset?.color);
 }
 
-/** CDN texture for race — same-origin proxy in browser */
+/** CDN texture for race — same-origin proxy in browser (domain-root, not /game/...) */
 export function grudge6RaceTextureUrl(racePrefix: Grudge6RacePrefix): string {
   const raceId = PREFIX_TO_RACE[racePrefix];
   const preset = RACE_ASSET_PRESETS[raceId];
@@ -178,8 +178,8 @@ export function grudge6RaceTextureUrl(racePrefix: Grudge6RacePrefix): string {
   let path = preset.textureUrl;
   if (path.startsWith(ASSET_CDN_BASE)) path = path.slice(ASSET_CDN_BASE.length);
   if (typeof window !== 'undefined') {
-    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-    return `${base}/api/assets${path.startsWith('/') ? path : `/${path}`}`;
+    // Must be /api/assets/... (not /game/api/assets/...) — see asset-config.cdnProxyUrl
+    return `/api/assets${path.startsWith('/') ? path : `/${path}`}`;
   }
   return preset.textureUrl;
 }

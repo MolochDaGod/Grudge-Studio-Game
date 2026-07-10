@@ -32,9 +32,17 @@ export interface LevelDef {
   wallHeight: number;
 }
 
-declare const import_meta_env: { BASE_URL: string };
+/**
+ * Map prop GLB — always from the game origin public/ mirror
+ * (`/game/models/maps/...` in prod). R2 CDN is incomplete for medieval/
+ * and returns HTML 200s for missing keys; local public/ is the SSOT for
+ * battle scenery so one scene source matches grid collision scales.
+ */
 const BASE = import.meta.env.BASE_URL;
-const M = (theme: string, file: string) => `${BASE}models/maps/${theme}/${file}`;
+const M = (theme: string, file: string) => {
+  const name = file.endsWith('.glb') ? file : `${file}.glb`;
+  return `${BASE}models/maps/${theme}/${name}`.replace(/([^:]\/)\/+/g, '$1');
+};
 
 function K(x: number, y: number) { return `${x},${y}`; }
 
