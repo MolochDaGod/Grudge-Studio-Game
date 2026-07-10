@@ -28,6 +28,7 @@ import { preloadGrudge6Races } from '@/lib/grudge6-model-loader';
 import {
   DeployOverlays,
   BuildPlacementLayer,
+  StructureCombatOverlay,
   BackTowerMarker,
   type DeployOverlayTile,
 } from './DeployOverlays';
@@ -83,6 +84,7 @@ interface BattleSceneProps {
   deployOverlays?: DeployOverlayTile[];
   buildPlacements?: BuildPlacement[];
   buildCatalog?: BuildCatalogEntry[];
+  tacticalStructures?: import('@/lib/structure-combat').TacticalStructure[];
   showBackTower?: boolean;
   /** Disable bloom/vignette post stack (deploy preview / low-power) */
   enablePostProcessing?: boolean;
@@ -946,6 +948,7 @@ export function BattleScene({
   targetedUnitId,
   deployOverlays,
   buildPlacements = [],
+  tacticalStructures = [],
   buildCatalog = [],
   showBackTower = false,
   enablePostProcessing = true,
@@ -1201,6 +1204,14 @@ export function BattleScene({
           {buildPlacements.length > 0 && buildCatalog.length > 0 && (
             <BuildPlacementLayer
               placements={buildPlacements}
+              catalog={buildCatalog}
+              tileSize={tileSize}
+            />
+          )}
+
+          {tacticalStructures.length > 0 && buildCatalog.length > 0 && (
+            <StructureCombatOverlay
+              structures={tacticalStructures}
               catalog={buildCatalog}
               tileSize={tileSize}
             />

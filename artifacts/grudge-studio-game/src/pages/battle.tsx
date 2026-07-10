@@ -19,6 +19,12 @@ import {
   getSkillById, getDefaultSkillLoadout, SLOT_LABELS, TIER_STYLES,
   SkillSlot, Skill, CHARACTER_WEAPON_MAP, getPassiveBonuses,
 } from "@/lib/weapon-skills";
+import { getClassSkillById } from "@/lib/class-skills";
+import {
+  initStructuresFromBuilds, watchtowersThreateningTile, structuresOfType,
+  brazierHealAmount, findElfSpire, findTrapAt, structureFromPlacement,
+  RECALL_COOLDOWN_TURNS, type TacticalStructure, type TrapTile,
+} from "@/lib/structure-combat";
 import { getLevelWithEdits, LevelDef, hasLineOfSight } from "@/lib/levels";
 import {
   calcFacing, facingDefenseMultiplier, isFrontAttack,
@@ -47,6 +53,17 @@ import {
 
 const BASE = import.meta.env.BASE_URL;
 const UI = (path: string) => `${BASE}images/ui/${path}`;
+
+function resolveSkill(skillId: string): Skill | undefined {
+  return getSkillById(skillId) ?? getClassSkillById(skillId);
+}
+
+function isEnemyTargetable(unit: TacticalUnit, viewerIsPlayer: boolean): boolean {
+  if (unit.hp <= 0) return false;
+  if (unit.isPlayerControlled === viewerIsPlayer) return false;
+  if (unit.statusEffects.includes('invisible')) return false;
+  return true;
+}
 
 export default function Battle() {
   const [, setLocation] = useLocation();
@@ -92,6 +109,14 @@ export default function Battle() {
   const [commandPlan, setCommandPlan] = useState<DeployPlan>(() =>
     deployPlan ?? defaultDeployPlan(level, pendingSquad?.selectedIds ?? units.filter(u => u.isPlayerControlled).map(u => u.characterId)),
   );
+  const [tacticalStructures, setTacticalStructures] = useState<TacticalStructure[]>(() =>
+    initStructuresFromBuilds(
+      (deployPlan ?? defaultDeployPlan(level, pendingSquad?.selectedIds ?? [])).builds,
+      true,
+    ),
+  );
+  const [trapTiles, setTrapTiles] = useState<TrapTile[]>([]);
+  const [recallCooldowns, setRecallCooldowns] = useState<Record<string, number>>({});
 
   const lanes = useMemo(() => getLanesForLevel(level), [level]);
   const laneOverlayTiles = useMemo(() => {
@@ -191,7 +216,7 @@ export default function Battle() {
         const loadout = equippedSkills[unit.id] || getDefaultSkillLoadout(unit.characterId);
         const skillId = loadout[slotIdx];
         if (!skillId) return;
-        const skill = getSkillById(skillId);
+        const skill = resolveSkill(skillId);
         if (!skill || skill.isPassive) return;
         const isActive = actionMode === slotKey;
         if (isActive) {
@@ -231,7 +256,14 @@ export default function Battle() {
       const entry = getBuildEntry(deploySelectedBuildId);
       if (!entry) return;
       const next = placeBuildAtTile(commandPlan, entry, { x, y });
-      if (next) handleCommandPlanChange(next);
+      if (next) {
+        handleCommandPlanChange(next);
+        const added = next.builds.find((b) => !commandPlan.builds.some((p) => p.id === b.id));
+        if (added) {
+          const struct = structureFromPlacement(added, true);
+          if (struct) setTacticalStructures((prev) => [...prev, struct]);
+        }
+      }
       return;
     }
     if (deployPanelMode !== 'deploy' || !deploySelectedHeroId) return;
@@ -308,6 +340,29 @@ export default function Battle() {
     setCombatEffects(prev => [...prev, { id, type, from, to, color, createdAt: performance.now(), duration }]);
   }, []);
 
+  const handleRecall = useCallback((unit: TacticalUnit) => {
+    const spire = findElfSpire(tacticalStructures);
+    if (!spire || spire.hp <= 0) {
+      addLog('No Elven Spire available for Recall.', 'info');
+      return;
+    }
+    const cd = recallCooldowns[unit.id] ?? 0;
+    if (cd > 0) {
+      addLog(`Recall on cooldown (${cd} turns remaining).`, 'info');
+      return;
+    }
+    if (!unit.isPlayerControlled || unit.hp <= 0) return;
+    const toPos = tileToWorld(spire.x, spire.y, level.tileSize, 0.9);
+    window.dispatchEvent(new CustomEvent('unit-teleport', {
+      detail: { unitId: unit.id, targetX: toPos[0], targetZ: toPos[2], durationMs: 420 },
+    }));
+    updateUnit(unit.id, { position: { x: spire.x, y: spire.y } });
+    setRecallCooldowns((prev) => ({ ...prev, [unit.id]: RECALL_COOLDOWN_TURNS }));
+    spawnEffect('magic_circle', toPos, toPos, '#44ccaa', 850);
+    addLog(`${unit.name} recalls to the Elven Spire! (${RECALL_COOLDOWN_TURNS}-turn CD)`, 'buff');
+    setContextMenu(null);
+  }, [tacticalStructures, recallCooldowns, level.tileSize, addLog, updateUnit, spawnEffect]);
+
   // Route protection
   useEffect(() => {
     if (phase !== 'battle' || units.length === 0) {
@@ -382,7 +437,7 @@ export default function Battle() {
       const slotNum = parseInt(actionMode.replace('skill', '')) as 1 | 2 | 3 | 4 | 5;
       const loadout = equippedSkills[attacker.id] || getDefaultSkillLoadout(attacker.characterId);
       const skillId = loadout[slotNum];
-      const skill = skillId ? getSkillById(skillId) : null;
+      const skill = skillId ? resolveSkill(skillId) : null;
       if (!skill || skill.dmgMultiplier === undefined) return null;
       const penFactor = 1 + (skill.armorPen || 0) / 100;
       const base = Math.max(1, Math.floor((attacker.attack * skill.dmgMultiplier - effectiveDef * (1 / penFactor)) * coverMult));
@@ -433,6 +488,7 @@ export default function Battle() {
   /** Resolve target type from skill: heal/buff→friendly, mobility→empty, selfTarget→self, default→enemy */
   const resolveTargetType = (skill?: Skill): 'enemy' | 'friendly' | 'self' | 'empty' | 'any' => {
     if (!skill) return 'enemy';
+    if (skill.trapDamage !== undefined) return 'empty';
     if (skill.targetType) return skill.targetType;
     if (skill.mobilityType) return 'empty';
     if (skill.selfTarget) return 'self';
@@ -487,7 +543,8 @@ export default function Battle() {
             tiles.push({x, y});
           }
         } else {
-          // Enemy targeting (default)
+          const unitOn = getUnitAt(x, y);
+          if (unitOn && activeUnit && !isEnemyTargetable(unitOn, activeUnit.isPlayerControlled)) continue;
           tiles.push({x, y});
         }
       }
@@ -593,11 +650,37 @@ export default function Battle() {
       addLog(`${unit.name} regenerates ${healed} HP.`, 'heal');
     }
 
+    // Tick recall cooldowns for all units
+    setRecallCooldowns((prev) => {
+      const next = { ...prev };
+      for (const id of Object.keys(next)) {
+        if (next[id] > 0) next[id]--;
+      }
+      return next;
+    });
+
+    // Signal Brazier: heal all living units 5% at end of each turn
+    const braziers = structuresOfType(tacticalStructures, 'brazier');
+    if (braziers.length > 0) {
+      const live = useGameStore.getState().units.filter((u) => u.hp > 0);
+      for (const u of live) {
+        if (u.hp < u.maxHp) {
+          const heal = brazierHealAmount(u.maxHp);
+          updateUnit(u.id, { hp: Math.min(u.maxHp, u.hp + heal) });
+        }
+      }
+      addLog('Signal Brazier heals all units for 5% HP.', 'heal');
+      for (const b of braziers) {
+        const pos = tileToWorld(b.x, b.y, level.tileSize, 0.9);
+        spawnEffect('heal_ring', pos, pos, '#ff8844', 900);
+      }
+    }
+
     setCurrentUnitId(null);
     setActionMode('idle');
     setReachableTiles([]);
     setAttackableTiles([]);
-  }, [currentUnitId, units, updateUnit, setCurrentUnitId, setActionMode, setReachableTiles, setAttackableTiles, tickSkillCooldowns, tickStatusEffects, addLog]);
+  }, [currentUnitId, units, updateUnit, setCurrentUnitId, setActionMode, setReachableTiles, setAttackableTiles, tickSkillCooldowns, tickStatusEffects, addLog, tacticalStructures, level.tileSize, spawnEffect, equippedSkills]);
 
   // ── Animation Event Dispatcher listener ─────────────────────────────────
   useEffect(() => {
@@ -684,11 +767,38 @@ export default function Battle() {
       const loadout = equippedSkills[unit.id] || getDefaultSkillLoadout(unit.characterId);
       const skillId = loadout[slotNum];
       if (!skillId) return;
-      const skill = getSkillById(skillId);
+      const skill = resolveSkill(skillId);
       if (!skill) return;
 
       const isAttackable = attackableTiles.some(t => t.x === x && t.y === y);
       if (!isAttackable) return;
+
+      // ── Trap placement (class skills) ─────────────────────────────────────
+      if (skill.trapDamage !== undefined) {
+        if (getUnitAt(x, y)) return;
+        const trap: TrapTile = {
+          id: `trap_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          x, y,
+          ownerUnitId: unit.id,
+          damage: Math.max(1, Math.floor(unit.maxHp * skill.trapDamage)),
+          applyStatus: skill.applyStatus,
+          statusDuration: skill.statusDuration,
+          turnsLeft: 8,
+        };
+        setTrapTiles((prev) => [...prev, trap]);
+        updateUnit(unit.id, { hasActed: true, facing: calcFacing(unit.position, { x, y }) });
+        if (skill.cooldown > 0) setSkillCooldown(unit.id, skill.id, skill.cooldown);
+        setActionMode('idle'); setAttackableTiles([]);
+        addLog(`${unit.name} places ${skill.name} at [${x},${y}].`, 'buff');
+        setAnimStates((prev) => ({ ...prev, [unit.id]: 'cast' }));
+        const pos = tileToWorld(x, y, level.tileSize, 0.9);
+        spawnEffect('magic_circle', pos, pos, '#8844ff', 700);
+        setTimeout(() => {
+          setAnimStates((prev) => ({ ...prev, [unit.id]: 'idle' }));
+          setTimeout(() => endTurn(), 150);
+        }, 500);
+        return;
+      }
 
       // ── Mobility skills: target empty tiles ───────────────────────────────
       if (isMobilitySkill(skill)) {
@@ -730,7 +840,7 @@ export default function Battle() {
 
       // ── Enemy attack skills ───────────────────────────────────────────────
       const target = getUnitAt(x, y);
-      if (target && target.hp > 0 && target.isPlayerControlled !== unit.isPlayerControlled) {
+      if (target && isEnemyTargetable(target, unit.isPlayerControlled)) {
         executeSkill(unit, skill, target);
       }
     }
@@ -756,10 +866,51 @@ export default function Battle() {
   // Hook point for traps, zone abilities, and movement-triggered effects
   const onWalkStep = (unitId: string, tile: { x: number; y: number }) => {
     const unit = units.find(u => u.id === unitId);
-    if (!unit) return;
-    // Future: check level.traps for this tile and apply effects
-    // Example stub: addLog(`${unit.name} steps on [${tile.x},${tile.y}].`);
-    void tile;
+    if (!unit || unit.hp <= 0) return;
+
+    // Trap trigger
+    const trap = findTrapAt(trapTiles, tile);
+    if (trap) {
+      const owner = units.find((u) => u.id === trap.ownerUnitId);
+      if (owner && unit.isPlayerControlled !== owner.isPlayerControlled) {
+        updateUnit(unit.id, { hp: Math.max(0, unit.hp - trap.damage) });
+        if (trap.applyStatus && trap.statusDuration) {
+          applyStatus(unit.id, trap.applyStatus, trap.statusDuration);
+        }
+        setTrapTiles((prev) => prev.filter((t) => t.id !== trap.id));
+        addLog(`${unit.name} triggers a trap! (${trap.damage} dmg)`, 'damage');
+        const pos = tileToWorld(tile.x, tile.y, level.tileSize, 0.9);
+        spawnEffect('impact_flash', pos, pos, '#aa44ff', 500);
+        setAnimStates((prev) => ({ ...prev, [unitId]: 'hurt' }));
+      }
+    }
+
+    // Watchtower auto-attack when enemy enters 5-tile radius
+    const towers = watchtowersThreateningTile(
+      tacticalStructures, BUILD_CATALOG, tile, unit.isPlayerControlled,
+    );
+    if (towers.length > 0) {
+      const entry = getBuildEntry('watchtower');
+      const dmg = entry?.attackDamage ?? 14;
+      updateUnit(unit.id, { hp: Math.max(0, unit.hp - dmg) });
+      applyStatus(unit.id, 'barracked', 1);
+      addLog(`${unit.name} is barracked by Watchtower! (-${dmg} HP)`, 'debuff');
+      const tower = towers[0];
+      const fromPos = tileToWorld(tower.x, tower.y, level.tileSize, 1.2);
+      const toPos = tileToWorld(tile.x, tile.y, level.tileSize, 0.9);
+      spawnEffect('projectile', fromPos, toPos, '#cc6622', 450);
+      setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, '#cc6622', 380), 300);
+      setWalkPaths((prev) => {
+        const next = { ...prev };
+        delete next[unitId];
+        return next;
+      });
+      updateUnit(unit.id, { hasMoved: true, hasActed: true });
+      setAnimStates((prev) => ({ ...prev, [unitId]: 'hurt' }));
+      if (unitId === currentUnitId) {
+        setTimeout(() => endTurn(), 450);
+      }
+    }
   };
 
   // ── Execute friendly skill (heal/buff on allies) ─────────────────────────
@@ -779,6 +930,10 @@ export default function Battle() {
       addLog(`${caster.name} uses ${skill.name} on ${target.id === caster.id ? 'self' : target.name} — heals ${healAmt} HP!`, 'heal');
     } else {
       addLog(`${caster.name} uses ${skill.name} on ${target.id === caster.id ? 'self' : target.name}!`, 'buff');
+    }
+    if (skill.applyStatus && skill.statusDuration) {
+      applyStatus(target.id, skill.applyStatus, skill.statusDuration);
+      addLog(`${target.name} gains ${skill.applyStatus}! (${skill.statusDuration} turns)`, 'buff');
     }
 
     setAnimStates(prev => ({ ...prev, [caster.id]: 'cast' }));
@@ -806,7 +961,8 @@ export default function Battle() {
     const baseDmg = skill.dmgMultiplier !== undefined
       ? Math.max(1, Math.floor(((attacker.attack * skill.dmgMultiplier - target.defense * (1 / penFactor)) + Math.floor(Math.random() * 6) - 2) * coverMult))
       : 0;
-    const finalDmg = isCrit ? Math.floor(baseDmg * 1.8) : baseDmg;
+    let finalDmg = isCrit ? Math.floor(baseDmg * 1.8) : baseDmg;
+    if (target.statusEffects.includes('invincible')) finalDmg = 0;
     const newHp    = target.hp - finalDmg;
 
     // Immediate game-state changes
@@ -1135,9 +1291,10 @@ export default function Battle() {
     const delay = unit.hasMoved ? 420 : 1300;
 
     const aiTimer = setTimeout(() => {
-      // ── STUNNED: lose entire turn ────────────────────────────────────────
-      if (unit.statusEffects.includes('stunned')) {
-        addLog(`${unit.name} is STUNNED and loses their turn!`, 'debuff');
+      // ── STUNNED / BARRACKED: lose entire turn ─────────────────────────────
+      if (unit.statusEffects.includes('stunned') || unit.statusEffects.includes('barracked')) {
+        const reason = unit.statusEffects.includes('barracked') ? 'BARRACKED' : 'STUNNED';
+        addLog(`${unit.name} is ${reason} and loses their turn!`, 'debuff');
         updateUnit(unit.id, { hasMoved: true, hasActed: true });
         endTurn();
         return;
@@ -1145,7 +1302,7 @@ export default function Battle() {
 
       // ── MOVE PHASE ───────────────────────────────────────────────────────
       if (!unit.hasMoved) {
-        const players = units.filter(u => u.isPlayerControlled && u.hp > 0);
+        const players = units.filter(u => u.isPlayerControlled && u.hp > 0 && !u.statusEffects.includes('invisible'));
         if (players.length === 0) { endTurn(); return; }
 
         const isRanged = unit.range >= 2;
@@ -1236,7 +1393,7 @@ export default function Battle() {
 
         const currentPos = useGameStore.getState().units.find(u => u.id === unit.id)?.position ?? unit.position;
         const inRange = units.filter(u =>
-          u.isPlayerControlled && u.hp > 0 &&
+          u.isPlayerControlled && u.hp > 0 && !u.statusEffects.includes('invisible') &&
           Math.abs(u.position.x - currentPos.x) + Math.abs(u.position.y - currentPos.y) <= unit.range
         );
 
@@ -1257,7 +1414,7 @@ export default function Battle() {
             if (!skillId) continue;
             const cd = cdMap[skillId] || 0;
             if (cd > 0) continue; // on cooldown
-            const skill = getSkillById(skillId);
+            const skill = resolveSkill(skillId);
             if (!skill) continue;
             // Check range
             const dist = Math.abs(currentPos.x - target.position.x) + Math.abs(currentPos.y - target.position.y);
@@ -1324,9 +1481,10 @@ export default function Battle() {
   useEffect(() => {
     const unit = units.find(u => u.id === currentUnitId);
     if (!unit || !unit.isPlayerControlled || unit.hp <= 0) return;
-    if (!unit.statusEffects.includes('stunned')) return;
+    if (!unit.statusEffects.includes('stunned') && !unit.statusEffects.includes('barracked')) return;
     const t = setTimeout(() => {
-      addLog(`${unit.name} is STUNNED and loses their turn!`, 'debuff');
+      const reason = unit.statusEffects.includes('barracked') ? 'BARRACKED' : 'STUNNED';
+      addLog(`${unit.name} is ${reason} and loses their turn!`, 'debuff');
       endTurn();
     }, 1800);
     return () => clearTimeout(t);
@@ -1400,6 +1558,7 @@ export default function Battle() {
           deployOverlays={deployPanelOpen ? laneOverlayTiles : undefined}
           buildPlacements={commandPlan.builds}
           buildCatalog={BUILD_CATALOG}
+          tacticalStructures={tacticalStructures}
         />
       }
       topBar={
@@ -1607,7 +1766,7 @@ export default function Battle() {
               const slotKey = `skill_${slot}` as const;
               const loadout = equippedSkills[activeUnit.id] || getDefaultSkillLoadout(activeUnit.characterId);
               const skillId = loadout[slot];
-              const skill = skillId ? getSkillById(skillId) : undefined;
+              const skill = skillId ? resolveSkill(skillId) : undefined;
               const cdMap = skillCooldowns[activeUnit.id] || {};
               const cd = skillId ? (cdMap[skillId] || 0) : 0;
               const isUltimateUsed = skillId ? (cdMap[skillId] === 999) : false;
@@ -1940,7 +2099,7 @@ export default function Battle() {
               const loadout = equippedSkills[u.id] || getDefaultSkillLoadout(u.characterId);
               const skills = ([1,2,3,4,5] as const)
                 .map(s => loadout[s]).filter(Boolean)
-                .map(id => getSkillById(id!)).filter(Boolean);
+                .map(id => resolveSkill(id!)).filter(Boolean);
               return (
                 <div className={cn(
                   "w-56 rounded-lg border overflow-hidden shadow-2xl backdrop-blur-md",
@@ -1994,6 +2153,21 @@ export default function Battle() {
                   </div>
                   {/* Action buttons */}
                   <div className="border-t border-white/8 flex flex-col">
+                    {isAlly && findElfSpire(tacticalStructures)?.hp ? (
+                      <button
+                        className={cn(
+                          "px-3 py-1.5 text-[10px] text-left transition-colors",
+                          (recallCooldowns[u.id] ?? 0) > 0
+                            ? "text-white/25 cursor-not-allowed"
+                            : "text-emerald-400/80 hover:text-emerald-300 hover:bg-white/5",
+                        )}
+                        disabled={(recallCooldowns[u.id] ?? 0) > 0}
+                        onClick={() => handleRecall(u)}
+                      >
+                        🏰 Recall to Elven Spire
+                        {(recallCooldowns[u.id] ?? 0) > 0 && ` (${recallCooldowns[u.id]}t)`}
+                      </button>
+                    ) : null}
                     <button className="px-3 py-1.5 text-[10px] text-left text-white/50 hover:text-white hover:bg-white/5 transition-colors"
                       onClick={() => { const [wx,,wz]=tileToWorld(u.position.x,u.position.y,tileSize,0.5); setCameraFocus([wx,0,wz]); setContextMenu(null); }}>
                       📸 Focus Camera

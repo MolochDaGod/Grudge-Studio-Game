@@ -65,6 +65,8 @@ export function calculateDamage(
   attackerPassives?: PassiveBonuses,
   defenderPassives?: PassiveBonuses,
 ): number {
+  if (defender.statusEffects.includes('invincible')) return 0;
+
   const atkBonus = attackerPassives?.attack ?? 0;
   const defBonus = defenderPassives?.defense ?? 0;
   const dmgReduction = defenderPassives?.damageReduction ?? 0;

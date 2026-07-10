@@ -13,18 +13,27 @@ export interface BuildCatalogEntry {
   blocksMovement?: boolean;
   /** Max placements per battle (0 = unlimited) */
   maxPerBattle: number;
+  /** Structure HP (0 = indestructible decorative) */
+  maxHp?: number;
+  /** Auto-attack radius in tiles (watchtower) */
+  attackRadius?: number;
+  /** Damage per watchtower shot */
+  attackDamage?: number;
 }
 
 export const BUILD_CATALOG: BuildCatalogEntry[] = [
   {
     id: 'watchtower',
     label: 'Watchtower',
-    description: 'Vision and cover at lane mouth',
+    description: 'Auto-fires at enemies within 5 tiles. Barracks them on hit.',
     theme: 'medieval',
     modelFile: 'tower_01',
-    scale: 0.018,
+    scale: 0.013,
     blocksMovement: true,
     maxPerBattle: 2,
+    maxHp: 75,
+    attackRadius: 5,
+    attackDamage: 14,
   },
   {
     id: 'barricade',
@@ -32,28 +41,31 @@ export const BUILD_CATALOG: BuildCatalogEntry[] = [
     description: 'Half-cover wall segment',
     theme: 'medieval',
     modelFile: 'wall_1_full',
-    scale: 0.014,
+    scale: 0.010,
     blocksMovement: true,
     maxPerBattle: 4,
+    maxHp: 50,
   },
   {
     id: 'brazier',
     label: 'Signal Brazier',
-    description: 'Marks rally point on march path',
+    description: 'Heals all units 5% HP at end of each turn',
     theme: 'orc',
     modelFile: 'brazier_01',
-    scale: 0.012,
+    scale: 0.008,
     maxPerBattle: 3,
+    maxHp: 40,
   },
   {
     id: 'elf_tower',
     label: 'Elven Spire',
-    description: 'Back-line mage focus tower',
+    description: 'Recall friendly units here (4-turn cooldown)',
     theme: 'elven',
     modelFile: 'tower_1',
-    scale: 0.016,
+    scale: 0.011,
     blocksMovement: true,
     maxPerBattle: 1,
+    maxHp: 90,
   },
 ];
 

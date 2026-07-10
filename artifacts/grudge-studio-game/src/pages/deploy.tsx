@@ -9,7 +9,8 @@ import {
   type DeployPlan,
   type LaneId,
 } from '@/lib/lane-deploy';
-import { buildBattleRoster, defaultLoadoutForWeapon } from '@/lib/battle-setup';
+import { buildBattleRoster, defaultLoadoutForHero } from '@/lib/battle-setup';
+import { CHARACTERS as LOCAL_CHARACTERS } from '@/lib/characters';
 import { BUILD_CATALOG, getBuildEntry } from '@/lib/build-catalog';
 import { LaneDeployPanel, placeBuildAtTile, type DeployPanelMode } from '@/components/deploy/LaneDeployPanel';
 import { BattleScene } from '@/components/three/BattleScene';
@@ -132,12 +133,18 @@ export default function DeployPage() {
       if (chosen) {
         setEquippedSkills(unit.id, chosen);
       } else {
-        const loadout = unit.weaponType ? defaultLoadoutForWeapon(unit.weaponType) : null;
+        const char = LOCAL_CHARACTERS.find((c) => c.id === charId);
+        const loadout = char
+          ? defaultLoadoutForHero(char.id, char.role, unit.weaponType)
+          : null;
         if (loadout) setEquippedSkills(unit.id, loadout);
       }
     });
     enemyUnits.forEach((unit) => {
-      const loadout = unit.weaponType ? defaultLoadoutForWeapon(unit.weaponType) : null;
+      const char = LOCAL_CHARACTERS.find((c) => c.id === unit.characterId);
+      const loadout = char
+        ? defaultLoadoutForHero(char.id, char.role, unit.weaponType)
+        : null;
       if (loadout) setEquippedSkills(unit.id, loadout);
     });
 

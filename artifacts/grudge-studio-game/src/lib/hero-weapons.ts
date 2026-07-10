@@ -57,3 +57,16 @@ export function getHeroWeaponOptions(characterId: string): WeaponSkillTree[] {
   const keys = HERO_WEAPON_OPTIONS[characterId] ?? ['sword', 'bow', 'fire_staff'];
   return keys.map(k => WEAPON_SKILL_TREES[k]).filter(Boolean);
 }
+
+/** Canonical single weapon for level-20 tactical battle (first hero option). */
+export function getHeroCanonicalWeapon(characterId: string, role: string): string {
+  const opts = HERO_WEAPON_OPTIONS[characterId];
+  if (opts?.[0]) return opts[0];
+  const byRole: Record<string, string> = {
+    Warrior: 'sword_shield',
+    Worg: 'greataxe',
+    Mage: 'fire_staff',
+    Ranger: 'bow',
+  };
+  return byRole[role] ?? 'sword_shield';
+}

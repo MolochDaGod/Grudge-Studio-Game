@@ -13,6 +13,16 @@ export interface PortraitPalette {
   hair: THREE.Color;
 }
 
+/** Disabled by default — rely on model3d.armorColor instead of heavy portrait tinting. */
+export const PORTRAIT_TINT_ENABLED = false;
+
+const TINT_STRENGTH = {
+  skin: 0.22,
+  armor: 0.28,
+  accent: 0.25,
+  default: 0.18,
+};
+
 const _cache = new Map<string, PortraitPalette | null>();
 
 function loadImage(url: string): Promise<HTMLImageElement | null> {
@@ -130,13 +140,13 @@ export function applyPortraitPaletteToModel(
 
     for (const mat of mats) {
       if (!(mat instanceof THREE.MeshStandardMaterial)) continue;
-      if (slot === 'head') tintMaterial(mat, palette.skin, 0.5);
+      if (slot === 'head') tintMaterial(mat, palette.skin, TINT_STRENGTH.skin);
       else if (['body', 'arms', 'legs', 'shoulders', 'shield'].includes(slot)) {
-        tintMaterial(mat, armorTint, 0.62);
+        tintMaterial(mat, armorTint, TINT_STRENGTH.armor);
       } else if (['axe', 'hammer', 'mace', 'sword', 'dagger', 'pick', 'spear', 'staff', 'bow'].includes(slot)) {
-        tintMaterial(mat, palette.accent, 0.35);
+        tintMaterial(mat, palette.accent, TINT_STRENGTH.accent);
       } else {
-        tintMaterial(mat, palette.skin, 0.25);
+        tintMaterial(mat, palette.skin, TINT_STRENGTH.default);
       }
     }
   });
@@ -147,6 +157,7 @@ export async function applyHeroPortraitStyle(
   characterId: string,
   model3d: Model3DField,
 ): Promise<void> {
+  if (!PORTRAIT_TINT_ENABLED) return;
   const palette = await extractPortraitPalette(characterId);
   if (!palette) return;
   applyPortraitPaletteToModel(root, palette, model3d);

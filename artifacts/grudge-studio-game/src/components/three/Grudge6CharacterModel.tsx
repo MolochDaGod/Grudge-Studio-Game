@@ -245,6 +245,8 @@ export function Grudge6CharacterModel({
   const isStunned = unit.statusEffects.includes('stunned');
   const isPoisoned = unit.statusEffects.includes('poisoned');
   const isFrozen = unit.statusEffects.includes('frozen');
+  const isInvisible = unit.statusEffects.includes('invisible');
+  const isInvincible = unit.statusEffects.includes('invincible');
   const isBlocked = animState === 'block';
   const isDead = unit.hp <= 0 || animState === 'dead';
   const hpPct = unit.hp / unit.maxHp;
@@ -283,6 +285,11 @@ export function Grudge6CharacterModel({
         mat.emissive.setRGB(0.0, 0.3, 0.04);
         mat.emissiveIntensity = 0.2 + 0.12 * Math.sin(poisonPhase.current);
       }
+    } else if (isInvincible) {
+      for (const { mat } of cms) {
+        mat.emissive.setRGB(0.45, 0.38, 0.08);
+        mat.emissiveIntensity = 0.22 + 0.1 * Math.sin(poisonPhase.current);
+      }
     } else {
       for (const { mat } of cms) {
         mat.emissive.setRGB(0, 0, 0);
@@ -302,6 +309,21 @@ export function Grudge6CharacterModel({
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI / 2, delta * 2);
     } else {
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, delta * 8);
+    }
+
+    if (groupRef.current) {
+      const targetOpacity = isInvisible ? 0.28 : 1;
+      groupRef.current.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of mats) {
+          if (!('opacity' in mat)) continue;
+          const m = mat as THREE.MeshStandardMaterial;
+          m.transparent = isInvisible || m.transparent;
+          m.opacity = THREE.MathUtils.lerp(m.opacity, targetOpacity, 1 - Math.exp(-delta * 6));
+        }
+      });
     }
   });
 

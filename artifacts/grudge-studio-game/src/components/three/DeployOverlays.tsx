@@ -4,6 +4,7 @@ import { tileToWorld } from './TileGrid';
 import type { BuildPlacement } from '@/lib/lane-deploy';
 import type { BuildCatalogEntry } from '@/lib/build-catalog';
 import { buildModelUrl } from '@/lib/build-catalog';
+import type { TacticalStructure } from '@/lib/structure-combat';
 import { useGLTF } from '@react-three/drei';
 
 export interface DeployOverlayTile {
@@ -76,6 +77,58 @@ export function BuildPlacementLayer({
         if (!entry) return null;
         return (
           <BuildProp key={p.id} entry={entry} x={p.x} y={p.y} tileSize={tileSize} />
+        );
+      })}
+    </group>
+  );
+}
+
+/** HP bars + watchtower threat radius for live tactical structures. */
+export function StructureCombatOverlay({
+  structures,
+  catalog,
+  tileSize,
+}: {
+  structures: TacticalStructure[];
+  catalog: BuildCatalogEntry[];
+  tileSize: number;
+}) {
+  return (
+    <group>
+      {structures.map((s) => {
+        if (s.hp <= 0) return null;
+        const [wx, , wz] = tileToWorld(s.x, s.y, tileSize, 0.08);
+        const hpPct = s.hp / s.maxHp;
+        const hpColor = hpPct > 0.5 ? '#44cc66' : hpPct > 0.25 ? '#ccaa22' : '#cc3333';
+        const entry = catalog.find((c) => c.id === s.catalogId);
+        const isWatchtower = s.catalogId === 'watchtower';
+        const radius = entry?.attackRadius ?? 5;
+        const ringOuter = tileSize * radius;
+        const ringInner = ringOuter - tileSize * 0.35;
+
+        return (
+          <group key={`struct-${s.id}`}>
+            <mesh position={[wx, 0.12, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.55, 0.72, 24]} />
+              <meshBasicMaterial color="#111820" transparent opacity={0.7} depthWrite={false} />
+            </mesh>
+            <mesh position={[wx, 0.13, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.55, 0.55 + 0.17 * hpPct, 24]} />
+              <meshBasicMaterial color={hpColor} transparent opacity={0.9} depthWrite={false} />
+            </mesh>
+            {isWatchtower && (
+              <mesh position={[wx, 0.05, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[ringInner, ringOuter, 48]} />
+                <meshBasicMaterial color="#cc6622" transparent opacity={0.12} depthWrite={false} />
+              </mesh>
+            )}
+            {s.catalogId === 'brazier' && (
+              <mesh position={[wx, 0.9, wz]}>
+                <sphereGeometry args={[0.18, 8, 8]} />
+                <meshBasicMaterial color="#ff6622" transparent opacity={0.35} depthWrite={false} />
+              </mesh>
+            )}
+          </group>
         );
       })}
     </group>

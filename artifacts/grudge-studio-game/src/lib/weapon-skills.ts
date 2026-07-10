@@ -35,9 +35,11 @@ export interface Skill {
   aoe?: boolean;
   selfTarget?: boolean;
   /** Applies a status effect to the target on hit */
-  applyStatus?: 'stunned' | 'poisoned' | 'frozen';
+  applyStatus?: 'stunned' | 'poisoned' | 'frozen' | 'invisible' | 'invincible' | 'barracked';
   /** How many turns the status lasts */
   statusDuration?: number;
+  /** Place a trap at target tile (class skills) — fraction of caster max HP as damage */
+  trapDamage?: number;
   /** How this skill reaches its target. Default: 'normal'. */
   attackType?: AttackType;
   /** Extra tiles added to range when attackType is 'dash'. Default 0. */
