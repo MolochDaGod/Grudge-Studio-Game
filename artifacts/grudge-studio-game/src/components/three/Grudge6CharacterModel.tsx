@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Text } from '@react-three/drei';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Billboard, Text, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { TacticalUnit } from '@/store/use-game-store';
 import type { AnimState } from '@/lib/character-model-map';
+import { portraitUrl } from '@/lib/asset-config';
 import { heroToGrudge6Config } from '@/lib/grudge6-character';
 import { applyGrudge6RaceTexture, loadGrudge6RaceModel } from '@/lib/grudge6-model-loader';
 import { setupGrudge6Equipment } from '@/lib/grudge6-equipment';
 import { buildAnimMap } from '@/lib/animation-retarget';
 import { collectBoneNames } from '@/lib/animation-retarget';
 import { loadWeaponAnimations, hasExternalAnimations } from '@/lib/animation-library';
+import { applyHeroPortraitStyle } from '@/lib/hero-portrait-style';
 
 interface Grudge6CharacterModelProps {
   unit: TacticalUnit;
@@ -33,6 +35,24 @@ function SolidSilhouette({ color }: { color: string }) {
       <capsuleGeometry args={[0.22, 0.5, 6, 12]} />
       <meshStandardMaterial color={color} roughness={0.85} metalness={0.05} />
     </mesh>
+  );
+}
+
+function HeroPortraitBadge({ characterId, y }: { characterId: string; y: number }) {
+  const texture = useTexture(portraitUrl(characterId));
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  return (
+    <Billboard position={[0, y, 0]} follow lockX lockZ>
+      <mesh renderOrder={10}>
+        <circleGeometry args={[0.34, 48]} />
+        <meshBasicMaterial map={texture} transparent depthTest={false} />
+      </mesh>
+      <mesh position={[0, 0, -0.01]} renderOrder={9}>
+        <ringGeometry args={[0.34, 0.39, 48]} />
+        <meshBasicMaterial color="#d4a017" depthTest={false} />
+      </mesh>
+    </Billboard>
   );
 }
 
@@ -60,6 +80,7 @@ export function Grudge6CharacterModel({
   const poisonRef = useRef<THREE.Mesh>(null!);
 
   const [modelReady, setModelReady] = useState(false);
+  const [clipsReady, setClipsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const cachedMeshes = useRef<Array<{ mesh: THREE.Mesh; mat: THREE.MeshStandardMaterial }>>([]);
 
@@ -71,6 +92,7 @@ export function Grudge6CharacterModel({
   useEffect(() => {
     let cancelled = false;
     setModelReady(false);
+    setClipsReady(false);
     setLoadError(false);
 
     loadGrudge6RaceModel(config.racePrefix, config.heightMult)
@@ -84,6 +106,7 @@ export function Grudge6CharacterModel({
 
         setupGrudge6Equipment(config.racePrefix, scene, config.model3d);
         await applyGrudge6RaceTexture(scene, config.racePrefix);
+        await applyHeroPortraitStyle(scene, unit.characterId, config.model3d);
 
         const meshes: typeof cachedMeshes.current = [];
         scene.traverse((obj) => {
@@ -96,6 +119,7 @@ export function Grudge6CharacterModel({
 
         modelRootRef.current = scene;
         groupRef.current.add(scene);
+        setModelReady(true);
 
         const mixer = new THREE.AnimationMixer(scene);
         mixerRef.current = mixer;
@@ -111,15 +135,17 @@ export function Grudge6CharacterModel({
             const action = mixer.clipAction(clip);
             actionsRef.current[clip.name] = action;
           }
-          setModelReady(true);
+          setClipsReady(true);
         };
 
         if (hasExternalAnimations(animWeapon)) {
           loadWeaponAnimations(animWeapon, boneNames)
             .then(registerClips)
-            .catch(() => setLoadError(true));
+            .catch(() => {
+              if (!cancelled) setLoadError(true);
+            });
         } else {
-          setModelReady(true);
+          setClipsReady(true);
         }
       })
       .catch(() => {
@@ -139,12 +165,12 @@ export function Grudge6CharacterModel({
         modelRootRef.current = null;
       }
     };
-  }, [unit.characterId, config.racePrefix, config.heightMult, config.animWeaponType]);
+  }, [unit.characterId, config.racePrefix, config.heightMult, config.animWeaponType, config.model3d]);
 
   useEffect(() => {
     const mixer = mixerRef.current;
     const actions = actionsRef.current;
-    if (!mixer || !modelReady) return;
+    if (!mixer || !modelReady || !clipsReady) return;
 
     const name = resolvedAnimMap[animState] ?? 'Idle';
     let action =
@@ -182,7 +208,7 @@ export function Grudge6CharacterModel({
 
     action.reset().fadeIn(0.2).play();
     currentActionRef.current = action;
-  }, [animState, modelReady, resolvedAnimMap]);
+  }, [animState, modelReady, clipsReady, resolvedAnimMap]);
 
   const targetPos = useRef(new THREE.Vector3(...position));
   const targetFacing = useRef(facingAngle);
@@ -304,6 +330,12 @@ export function Grudge6CharacterModel({
           <sphereGeometry args={[0.04, 8, 8]} />
           <meshBasicMaterial color={unit.isPlayerControlled ? '#d4a017' : '#cc2222'} />
         </mesh>
+      )}
+
+      {!isDead && modelReady && (
+        <Suspense fallback={null}>
+          <HeroPortraitBadge characterId={unit.characterId} y={config.labelHeight + 0.42} />
+        </Suspense>
       )}
 
       {!isDead && (

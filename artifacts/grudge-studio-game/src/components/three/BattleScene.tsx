@@ -6,6 +6,8 @@ import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { TileGrid, tileToWorld } from './TileGrid';
 import { heroToGrudge6Config, usesGrudge6Model } from '@/lib/grudge6-character';
+import { preloadWeaponAnimations } from '@/lib/animation-library';
+import { preloadPortraitPalette } from '@/lib/hero-portrait-style';
 import { CharacterModel, AnimState } from './CharacterModel';
 import { tickSequences } from '@/lib/animation-events';
 import { ScenePropLayer, preloadLevelProps } from './ScenePropLayer';
@@ -1033,6 +1035,10 @@ export function BattleScene({
         };
         const p = map[faction];
         if (p) prefixes.add(p);
+
+        const cfg = heroToGrudge6Config(u.characterId, u.weaponType);
+        preloadWeaponAnimations(cfg.animWeaponType);
+        preloadPortraitPalette(u.characterId);
       }
     }
     if (prefixes.size) preloadGrudge6Races([...prefixes]);
