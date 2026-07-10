@@ -208,15 +208,21 @@ export function consumeFleetSsoParams(): { token: string | null; grudgeId: strin
       hashParams.get("grudge_id") ||
       hashParams.get("grudgeId");
 
+    // username from SSO return (id hub appends grudge_username)
+    const username =
+      params.get("grudge_username") ||
+      params.get("username") ||
+      hashParams.get("grudge_username") ||
+      hashParams.get("username");
+
     if (token) {
       setToken(token);
-      if (grudgeId) {
-        try {
-          localStorage.setItem("grudge_id", grudgeId);
-          localStorage.setItem("grudge_username", grudgeId);
-        } catch {
-          /* */
-        }
+      try {
+        if (grudgeId) localStorage.setItem("grudge_id", grudgeId);
+        if (username) localStorage.setItem("grudge_username", username);
+        else if (grudgeId) localStorage.setItem("grudge_username", grudgeId);
+      } catch {
+        /* */
       }
       // strip sensitive params from URL
       for (const k of RETURN_PARAMS) {
@@ -468,15 +474,31 @@ export async function getMyCharacters(): Promise<GrudgeCharacter[]> {
   );
 }
 
+/**
+ * Create character. `name` is optional — Railway falls back to account
+ * displayName/username from Grudge ID when omitted.
+ */
 export async function createCharacter(
-  name: string,
+  name: string | undefined | null,
   race: string,
   charClass: string,
 ): Promise<GrudgeCharacter> {
+  let accountName = "";
+  try {
+    accountName =
+      localStorage.getItem("grudge_username") ||
+      localStorage.getItem("grudge_id") ||
+      "";
+  } catch {
+    /* */
+  }
   const raw = await apiFetch<Record<string, unknown>>(`${GRUDGE_GAME_API}/characters`, {
     method: "POST",
     body: JSON.stringify({
-      name,
+      // Only send name when player typed one; server uses account displayName otherwise
+      ...(name && String(name).trim() ? { name: String(name).trim() } : {}),
+      username: accountName || undefined,
+      displayName: accountName || undefined,
       race,
       class: charClass,
       raceId: race,
