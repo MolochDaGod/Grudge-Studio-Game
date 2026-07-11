@@ -8,10 +8,14 @@
  *  - Nature / beast / shockwave effect types (were referenced but missing)
  *  - Clean JSX (repairs corrupted spacing that broke builds)
  */
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Sparkles } from '@react-three/drei';
+import { Sparkles, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { BATTLE_ASSETS } from '@/lib/battle-assets';
+import { BUILTIN_SHADERS } from '@workspace/vfx-sandbox';
+import { effectToPreset, load3dFxRegistry } from '@workspace/vfx-sandbox';
+import type { EffectPreset } from '@workspace/vfx-sandbox';
 
 export type EffectType =
   | 'fire_projectile'
@@ -39,7 +43,11 @@ export type EffectType =
   | 'buff_aura'
   | 'nature_projectile'
   | 'beast_javelin'
-  | 'shockwave';
+  | 'shockwave'
+  | 'arrow_impact'
+  | 'trap_snap'
+  | 'shield_pulse'
+  | 'ice_gltf';
 
 export interface CombatEffectData {
   id: string;
@@ -174,8 +182,27 @@ function Projectile({ effect }: EffectProps) {
 }
 
 // ── Arrow ────────────────────────────────────────────────────────────────────
+let _arrowMesh: THREE.Object3D | null = null;
+
 function Arrow({ effect }: EffectProps) {
   const ref = useRef<THREE.Group>(null!);
+  const { scene } = useGLTF(BATTLE_ASSETS.archerTower);
+  const arrowMesh = useMemo(() => {
+    if (!_arrowMesh) {
+      scene.traverse((o) => {
+        if (!_arrowMesh && o.name === 'Arrow_01') _arrowMesh = o;
+      });
+    }
+    if (!_arrowMesh) return null;
+    const clone = _arrowMesh.clone(true);
+    const box = new THREE.Box3().setFromObject(clone);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const s = 0.9 / Math.max(size.length(), 0.01);
+    clone.scale.setScalar(s);
+    return clone;
+  }, [scene]);
+
   const from = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
   const to = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
 
@@ -190,28 +217,205 @@ function Arrow({ effect }: EffectProps) {
     ref.current.lookAt(to.x, to.y + 0.5, to.z);
     const opacity = t < 0.88 ? 1 : 1 - (t - 0.88) / 0.12;
     ref.current.traverse((o) => {
-      if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshBasicMaterial) {
-        o.material.opacity = Math.max(0, opacity);
+      if (!(o instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const mat of mats) {
+        if ('opacity' in mat) {
+          (mat as THREE.Material).transparent = true;
+          (mat as THREE.Material).opacity = Math.max(0, opacity);
+        }
       }
     });
   });
 
+  if (!arrowMesh) {
+    return (
+      <group ref={ref} position={effect.from}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.028, 0.028, 0.95, 6]} />
+          <meshBasicMaterial color="#c8a050" transparent depthWrite={false} />
+        </mesh>
+      </group>
+    );
+  }
+
   return (
     <group ref={ref} position={effect.from}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.028, 0.028, 0.95, 6]} />
-        <meshBasicMaterial color="#c8a050" transparent depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0, 0.52]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.05, 0.22, 6]} />
-        <meshBasicMaterial color="#e8c070" transparent depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0, -0.42]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.07, 0.16, 4]} />
-        <meshBasicMaterial color="#8a6040" transparent opacity={0.9} depthWrite={false} />
-      </mesh>
+      <primitive object={arrowMesh} rotation={[Math.PI / 2, 0, 0]} />
+      <Sparkles count={6} scale={0.35} size={2} speed={1.5} color="#e8c070" />
     </group>
   );
+}
+
+let _iceShardMesh: THREE.Object3D | null = null;
+
+function IceGltfProjectile({ effect }: EffectProps) {
+  const ref = useRef<THREE.Group>(null!);
+  const { scene } = useGLTF(BATTLE_ASSETS.iceShard);
+  const shard = useMemo(() => {
+    if (!_iceShardMesh) {
+      const c = scene.clone(true);
+      const box = new THREE.Box3().setFromObject(c);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const s = 0.42 / Math.max(size.y, 0.01);
+      c.scale.setScalar(s);
+      _iceShardMesh = c;
+    }
+    return _iceShardMesh!.clone(true);
+  }, [scene]);
+
+  const from = useMemo(() => new THREE.Vector3(...effect.from), [effect.from[0], effect.from[1], effect.from[2]]);
+  const to = useMemo(() => new THREE.Vector3(...effect.to), [effect.to[0], effect.to[1], effect.to[2]]);
+  const arcH = Math.max(1.2, from.distanceTo(to) * 0.18);
+
+  useFrame(() => {
+    if (!ref.current) return;
+    const t = progress(effect);
+    const e = easeInOut(t);
+    ref.current.position.set(
+      THREE.MathUtils.lerp(from.x, to.x, e),
+      THREE.MathUtils.lerp(from.y, to.y, e) + arcH * Math.sin(t * Math.PI),
+      THREE.MathUtils.lerp(from.z, to.z, e),
+    );
+    ref.current.rotation.y += 0.2;
+    ref.current.rotation.x += 0.14;
+  });
+
+  return (
+    <group ref={ref}>
+      <primitive object={shard} />
+      <Sparkles count={10} scale={0.5} size={2.5} speed={2} color="#88ddff" />
+    </group>
+  );
+}
+
+function ShaderBurst({
+  effect,
+  shaderKey,
+  primary,
+  secondary,
+}: EffectProps & { shaderKey: keyof typeof BUILTIN_SHADERS; primary: string; secondary: string }) {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const shaders = BUILTIN_SHADERS[shaderKey] ?? BUILTIN_SHADERS.magic;
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uColor1: { value: new THREE.Color(primary) },
+      uColor2: { value: new THREE.Color(secondary) },
+      uIntensity: { value: 1.8 },
+    }),
+    [primary, secondary],
+  );
+
+  useFrame(() => {
+    const t = progress(effect);
+    uniforms.uTime.value = t * 4;
+    uniforms.uProgress.value = t;
+    if (meshRef.current) {
+      meshRef.current.scale.setScalar(0.4 + t * 2.2);
+      (meshRef.current.material as THREE.ShaderMaterial).opacity = Math.max(0, 1 - t * 1.1);
+    }
+  });
+
+  const pos = effect.to;
+  return (
+    <mesh ref={meshRef} position={[pos[0], pos[1] + 0.5, pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[1.2, 1.2]} />
+      <shaderMaterial
+        vertexShader={shaders.vertex}
+        fragmentShader={shaders.fragment}
+        uniforms={uniforms}
+        transparent
+        depthWrite={false}
+        blending={ADD}
+      />
+    </mesh>
+  );
+}
+
+function ArrowImpact({ effect }: EffectProps) {
+  return (
+    <>
+      <ShaderBurst effect={effect} shaderKey="shockwave" primary={effect.color} secondary="#ffffff" />
+      <ImpactFlash effect={effect} />
+      <Sparkles count={16} scale={1.2} size={3} speed={3} color={effect.color} position={effect.to} />
+    </>
+  );
+}
+
+function TrapSnap({ effect }: EffectProps) {
+  return <ShaderBurst effect={effect} shaderKey="shockwave" primary="#aa6622" secondary="#ffcc88" />;
+}
+
+function ShieldPulse({ effect }: EffectProps) {
+  return <ShaderBurst effect={effect} shaderKey="magic" primary="#88ccff" secondary="#ffffff" />;
+}
+
+/** Optional burst from ObjectStore 3dfx registry (vfx-studio-sigma data source). */
+function RegistryVfxBurst({ effect, preset }: EffectProps & { preset: EffectPreset }) {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const shaderKey = (preset.shader ?? preset.category) as keyof typeof BUILTIN_SHADERS;
+  const shaders = BUILTIN_SHADERS[shaderKey] ?? BUILTIN_SHADERS.magic;
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uColor1: { value: new THREE.Color(preset.primaryColor) },
+      uColor2: { value: new THREE.Color(preset.secondaryColor) },
+      uIntensity: { value: preset.intensity },
+    }),
+    [preset],
+  );
+
+  useFrame(() => {
+    const t = progress(effect);
+    uniforms.uTime.value = t * 5;
+    uniforms.uProgress.value = t;
+    if (meshRef.current) {
+      meshRef.current.scale.setScalar(0.5 + t * (preset.category === 'aura' ? 2.5 : 1.8));
+    }
+  });
+
+  const pos = effect.to;
+  return (
+    <mesh ref={meshRef} position={[pos[0], pos[1] + 0.6, pos[2]]}>
+      <sphereGeometry args={[0.55, 16, 16]} />
+      <shaderMaterial
+        vertexShader={shaders.vertex}
+        fragmentShader={shaders.fragment}
+        uniforms={uniforms}
+        transparent
+        depthWrite={false}
+        blending={ADD}
+      />
+    </mesh>
+  );
+}
+
+const REGISTRY_MAP: Partial<Record<EffectType, string>> = {
+  fire_explosion: 'fire_burst',
+  ice_shatter: 'ice_burst',
+  lightning_arc: 'lightning_strike',
+  buff_aura: 'holy_aura',
+  dark_void: 'shadow_nova',
+};
+
+function RegistryMappedBurst({ effect }: EffectProps) {
+  const [preset, setPreset] = useState<EffectPreset | null>(null);
+  const fxId = REGISTRY_MAP[effect.type];
+
+  useEffect(() => {
+    if (!fxId) return;
+    load3dFxRegistry().then((reg) => {
+      const fx = reg.effects[fxId];
+      if (fx) setPreset(effectToPreset(fx));
+    });
+  }, [fxId]);
+
+  if (!preset) return null;
+  return <RegistryVfxBurst effect={effect} preset={preset} />;
 }
 
 // ── Physical slash ───────────────────────────────────────────────────────────
@@ -1186,8 +1390,16 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
           case 'dark_projectile':
           case 'ice_projectile':
             return <Projectile key={key} effect={effect} />;
+          case 'ice_gltf':
+            return <IceGltfProjectile key={key} effect={effect} />;
           case 'arrow':
             return <Arrow key={key} effect={effect} />;
+          case 'arrow_impact':
+            return <ArrowImpact key={key} effect={effect} />;
+          case 'trap_snap':
+            return <TrapSnap key={key} effect={effect} />;
+          case 'shield_pulse':
+            return <ShieldPulse key={key} effect={effect} />;
           case 'physical_slash':
             return <PhysicalSlash key={key} effect={effect} />;
           case 'impact_flash':
@@ -1207,13 +1419,33 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
           case 'crit_burst':
             return <CritBurst key={key} effect={effect} />;
           case 'fire_explosion':
-            return <FireExplosion key={key} effect={effect} />;
+            return (
+              <>
+                <FireExplosion key={key} effect={effect} />
+                <RegistryMappedBurst key={`${key}-reg`} effect={effect} />
+              </>
+            );
           case 'ice_shatter':
-            return <IceShatter key={key} effect={effect} />;
+            return (
+              <>
+                <IceShatter key={key} effect={effect} />
+                <RegistryMappedBurst key={`${key}-reg`} effect={effect} />
+              </>
+            );
           case 'dark_void':
-            return <DarkVoid key={key} effect={effect} />;
+            return (
+              <>
+                <DarkVoid key={key} effect={effect} />
+                <RegistryMappedBurst key={`${key}-reg`} effect={effect} />
+              </>
+            );
           case 'lightning_arc':
-            return <LightningArc key={key} effect={effect} />;
+            return (
+              <>
+                <LightningArc key={key} effect={effect} />
+                <RegistryMappedBurst key={`${key}-reg`} effect={effect} />
+              </>
+            );
           case 'ground_slam':
             return <GroundSlam key={key} effect={effect} />;
           case 'magic_circle':
@@ -1229,7 +1461,12 @@ export function CombatEffectsLayer({ effects }: CombatEffectsLayerProps) {
           case 'heal_ring':
             return <HealRing key={key} effect={effect} />;
           case 'buff_aura':
-            return <BuffAura key={key} effect={effect} />;
+            return (
+              <>
+                <BuffAura key={key} effect={effect} />
+                <RegistryMappedBurst key={`${key}-reg`} effect={effect} />
+              </>
+            );
           default:
             return null;
         }

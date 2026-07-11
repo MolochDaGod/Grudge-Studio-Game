@@ -26,6 +26,7 @@ import { VoxelCharacterModel } from './VoxelCharacterModel';
 import { Grudge6CharacterModel } from './Grudge6CharacterModel';
 import { usesGrudge6Model } from '@/lib/grudge6-character';
 import { SceneErrorBoundary } from './ErrorBoundary';
+import { ShieldAuraModel } from './BattleAssetModels';
 
 export type { AnimState };
 
@@ -643,6 +644,12 @@ function CharacterModelInner({
           <ringGeometry args={[ringRad * 0.9, ringRad * 1.15, 32]} />
           <meshBasicMaterial color="#d4a017" transparent opacity={0.55} depthWrite={false} />
         </mesh>
+      )}
+
+      {isInvincible && !isDead && (
+        <Suspense fallback={null}>
+          <ShieldAuraModel role={unit.role} />
+        </Suspense>
       )}
 
       {/* Targeting reticle — pulsing red ring when this unit is being targeted */}

@@ -32,6 +32,7 @@ import {
   BackTowerMarker,
   type DeployOverlayTile,
 } from './DeployOverlays';
+import { TrapTilesLayer } from './BattleAssetModels';
 import { RendererSetup } from './RendererSetup';
 import {
   generateThemeGroundTexture,
@@ -85,6 +86,8 @@ interface BattleSceneProps {
   buildPlacements?: BuildPlacement[];
   buildCatalog?: BuildCatalogEntry[];
   tacticalStructures?: import('@/lib/structure-combat').TacticalStructure[];
+  trapTiles?: import('@/lib/structure-combat').TrapTile[];
+  triggeredTrapIds?: Set<string>;
   showBackTower?: boolean;
   /** Disable bloom/vignette post stack (deploy preview / low-power) */
   enablePostProcessing?: boolean;
@@ -949,6 +952,8 @@ export function BattleScene({
   deployOverlays,
   buildPlacements = [],
   tacticalStructures = [],
+  trapTiles = [],
+  triggeredTrapIds = new Set<string>(),
   buildCatalog = [],
   showBackTower = false,
   enablePostProcessing = true,
@@ -1214,6 +1219,14 @@ export function BattleScene({
               structures={tacticalStructures}
               catalog={buildCatalog}
               tileSize={tileSize}
+            />
+          )}
+
+          {trapTiles.length > 0 && (
+            <TrapTilesLayer
+              traps={trapTiles}
+              tileSize={tileSize}
+              triggeredIds={triggeredTrapIds}
             />
           )}
 

@@ -159,8 +159,8 @@ export function getEffectType(skill: Skill, weaponType?: string): EffectType {
   const s = (skill.stats.join(' ') + ' ' + (skill.description || '')).toLowerCase();
   if (s.includes('fire'))  return 'fire_projectile';
   if (s.includes('dark') || s.includes('death')) return 'dark_projectile';
-  if (s.includes('ice') || s.includes('frost'))  return 'ice_projectile';
-  if (weaponType === 'bow') return 'arrow';
+  if (s.includes('ice') || s.includes('frost'))  return 'ice_gltf';
+  if (weaponType === 'bow' || weaponType?.includes('bow')) return 'arrow';
   if (skill.applyStatus === 'stunned')  return 'status_stun';
   if (skill.applyStatus === 'poisoned') return 'status_poison';
   if (skill.applyStatus === 'frozen')   return 'status_freeze';

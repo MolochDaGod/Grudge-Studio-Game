@@ -12,6 +12,7 @@ import { buildAnimMap } from '@/lib/animation-retarget';
 import { collectBoneNames } from '@/lib/animation-retarget';
 import { loadWeaponAnimations, hasExternalAnimations } from '@/lib/animation-library';
 import { applyHeroPortraitStyle } from '@/lib/hero-portrait-style';
+import { ShieldAuraModel } from './BattleAssetModels';
 
 interface Grudge6CharacterModelProps {
   unit: TacticalUnit;
@@ -413,6 +414,12 @@ export function Grudge6CharacterModel({
           <ringGeometry args={[ringRad * 0.9, ringRad * 1.15, 32]} />
           <meshBasicMaterial color="#d4a017" transparent opacity={0.55} depthWrite={false} />
         </mesh>
+      )}
+
+      {isInvincible && !isDead && (
+        <Suspense fallback={null}>
+          <ShieldAuraModel role={unit.role} />
+        </Suspense>
       )}
 
       {isTargeted && !isDead && (

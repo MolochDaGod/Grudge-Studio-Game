@@ -16,6 +16,8 @@ export interface TacticalStructure {
   ownerIsPlayer: boolean;
 }
 
+export type TrapModelId = 'bear_trap' | 'spike_trap';
+
 export interface TrapTile {
   id: string;
   x: number;
@@ -25,6 +27,7 @@ export interface TrapTile {
   applyStatus?: string;
   statusDuration?: number;
   turnsLeft: number;
+  trapModel?: TrapModelId;
 }
 
 export function tileDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {

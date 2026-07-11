@@ -19,6 +19,8 @@ export interface BuildCatalogEntry {
   attackRadius?: number;
   /** Damage per watchtower shot */
   attackDamage?: number;
+  /** Use GLB from public/models/battle/ instead of RTS map pack */
+  battleAsset?: 'archer_tower';
 }
 
 export const BUILD_CATALOG: BuildCatalogEntry[] = [
@@ -28,7 +30,8 @@ export const BUILD_CATALOG: BuildCatalogEntry[] = [
     description: 'Auto-fires at enemies within 5 tiles. Barracks them on hit.',
     theme: 'medieval',
     modelFile: 'tower_01',
-    scale: 0.013,
+    battleAsset: 'archer_tower',
+    scale: 1,
     blocksMovement: true,
     maxPerBattle: 2,
     maxHp: 75,

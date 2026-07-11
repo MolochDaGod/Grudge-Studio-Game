@@ -45,6 +45,8 @@ import {
   type LaneId,
 } from "@/lib/lane-deploy";
 import { BUILD_CATALOG, getBuildEntry } from "@/lib/build-catalog";
+import { trapModelForSkill } from "@/lib/battle-assets";
+import { preloadBattleAssets } from "@/components/three/BattleAssetModels";
 import {
   LaneDeployPanel,
   placeBuildAtTile,
@@ -87,6 +89,10 @@ export default function Battle() {
   const [showLoading, setShowLoading] = useState(true);
   const handleLoadDone = useCallback(() => setShowLoading(false), []);
 
+  useEffect(() => {
+    preloadBattleAssets();
+  }, []);
+
   const [animStates, setAnimStates] = useState<Record<string, AnimState>>({});
   const [walkPaths, setWalkPaths] = useState<Record<string, { x: number; y: number }[]>>({});
   // Guard: prevent more than one endTurn per turn (stale closures in animation timers)
@@ -116,6 +122,7 @@ export default function Battle() {
     ),
   );
   const [trapTiles, setTrapTiles] = useState<TrapTile[]>([]);
+  const [triggeredTrapIds, setTriggeredTrapIds] = useState<Set<string>>(() => new Set());
   const [recallCooldowns, setRecallCooldowns] = useState<Record<string, number>>({});
 
   const lanes = useMemo(() => getLanesForLevel(level), [level]);
@@ -784,6 +791,7 @@ export default function Battle() {
           applyStatus: skill.applyStatus,
           statusDuration: skill.statusDuration,
           turnsLeft: 8,
+          trapModel: trapModelForSkill(skill.id),
         };
         setTrapTiles((prev) => [...prev, trap]);
         updateUnit(unit.id, { hasActed: true, facing: calcFacing(unit.position, { x, y }) });
@@ -877,9 +885,18 @@ export default function Battle() {
         if (trap.applyStatus && trap.statusDuration) {
           applyStatus(unit.id, trap.applyStatus, trap.statusDuration);
         }
-        setTrapTiles((prev) => prev.filter((t) => t.id !== trap.id));
+        setTriggeredTrapIds((prev) => new Set(prev).add(trap.id));
+        setTimeout(() => {
+          setTrapTiles((prev) => prev.filter((t) => t.id !== trap.id));
+          setTriggeredTrapIds((prev) => {
+            const next = new Set(prev);
+            next.delete(trap.id);
+            return next;
+          });
+        }, 900);
         addLog(`${unit.name} triggers a trap! (${trap.damage} dmg)`, 'damage');
         const pos = tileToWorld(tile.x, tile.y, level.tileSize, 0.9);
+        spawnEffect('trap_snap', pos, pos, '#aa6622', 650);
         spawnEffect('impact_flash', pos, pos, '#aa44ff', 500);
         setAnimStates((prev) => ({ ...prev, [unitId]: 'hurt' }));
       }
@@ -898,8 +915,9 @@ export default function Battle() {
       const tower = towers[0];
       const fromPos = tileToWorld(tower.x, tower.y, level.tileSize, 1.2);
       const toPos = tileToWorld(tile.x, tile.y, level.tileSize, 0.9);
-      spawnEffect('projectile', fromPos, toPos, '#cc6622', 450);
-      setTimeout(() => spawnEffect('impact_flash', fromPos, toPos, '#cc6622', 380), 300);
+      window.dispatchEvent(new CustomEvent('tower-fire', { detail: { structureId: tower.id } }));
+      spawnEffect('arrow', fromPos, toPos, '#c8a050', 480);
+      setTimeout(() => spawnEffect('arrow_impact', toPos, toPos, '#c8a050', 520), 380);
       setWalkPaths((prev) => {
         const next = { ...prev };
         delete next[unitId];
@@ -939,7 +957,9 @@ export default function Battle() {
     setAnimStates(prev => ({ ...prev, [caster.id]: 'cast' }));
     setTimeout(() => {
       const isHeal = !!skill.healMultiplier;
+      const isShield = skill.applyStatus === 'invincible';
       spawnEffect(isHeal ? 'heal_ring' : 'buff_aura', fromPos, toPos, isHeal ? '#00ff66' : '#4488ff', 800);
+      if (isShield) spawnEffect('shield_pulse', toPos, toPos, '#88ccff', 900);
       spawnEffect('heal_burst', fromPos, toPos, isHeal ? '#00ff66' : '#4488ff', 600);
       setAnimStates(prev => ({ ...prev, [target.id]: 'victory' }));
       setTimeout(() => setAnimStates(prev => ({ ...prev, [target.id]: 'idle' })), 600);
@@ -994,7 +1014,7 @@ export default function Battle() {
     const travelDur = skill.tags.includes('ultimate') ? 900 : 650;
     const fromPos   = tileToWorld(attacker.position.x, attacker.position.y, level.tileSize, 0.9);
     const toPos     = tileToWorld(target.position.x, target.position.y, level.tileSize, 0.9);
-    const weaponType  = CHARACTER_WEAPON_MAP[attacker.characterId];
+    const weaponType  = attacker.weaponType ?? CHARACTER_WEAPON_MAP[attacker.characterId];
     const effectType  = getEffectType(skill, weaponType);
     const effectColor = getEffectColor(skill);
 
@@ -1004,6 +1024,7 @@ export default function Battle() {
     const isMagicSkill = (
       effectType === 'fire_projectile' ||
       effectType === 'ice_projectile' ||
+      effectType === 'ice_gltf' ||
       effectType === 'dark_projectile' ||
       effectType === 'magic_beam' ||
       effectType === 'ultimate_nova'
@@ -1054,8 +1075,10 @@ export default function Battle() {
         const impactDelay = Math.min(350, Math.floor(travelDur * 0.6));
         if (effectType === 'fire_projectile') {
           setTimeout(() => spawnEffect('fire_explosion', fromPos, toPos, '#ff6600', 900), impactDelay);
-        } else if (effectType === 'ice_projectile') {
+        } else if (effectType === 'ice_projectile' || effectType === 'ice_gltf') {
           setTimeout(() => spawnEffect('ice_shatter', fromPos, toPos, '#88ddff', 950), impactDelay);
+        } else if (effectType === 'arrow') {
+          setTimeout(() => spawnEffect('arrow_impact', toPos, toPos, effectColor, 520), impactDelay);
         } else if (effectType === 'dark_projectile') {
           setTimeout(() => spawnEffect('dark_void', fromPos, toPos, '#9900ff', 1000), impactDelay);
         } else if (effectType === 'magic_beam' || skill.description?.toLowerCase().includes('lightning')) {
@@ -1559,6 +1582,8 @@ export default function Battle() {
           buildPlacements={commandPlan.builds}
           buildCatalog={BUILD_CATALOG}
           tacticalStructures={tacticalStructures}
+          trapTiles={trapTiles}
+          triggeredTrapIds={triggeredTrapIds}
         />
       }
       topBar={

@@ -6,6 +6,7 @@ import type { BuildCatalogEntry } from '@/lib/build-catalog';
 import { buildModelUrl } from '@/lib/build-catalog';
 import type { TacticalStructure } from '@/lib/structure-combat';
 import { useGLTF } from '@react-three/drei';
+import { ArcherTowerProp } from './BattleAssetModels';
 
 export interface DeployOverlayTile {
   x: number;
@@ -14,7 +15,18 @@ export interface DeployOverlayTile {
   kind: 'deploy' | 'path';
 }
 
-function BuildProp({ entry, x, y, tileSize }: { entry: BuildCatalogEntry; x: number; y: number; tileSize: number }) {
+function BuildProp({
+  entry, placementId, x, y, tileSize,
+}: {
+  entry: BuildCatalogEntry;
+  placementId: string;
+  x: number;
+  y: number;
+  tileSize: number;
+}) {
+  if (entry.battleAsset === 'archer_tower') {
+    return <ArcherTowerProp structureId={placementId} x={x} y={y} tileSize={tileSize} />;
+  }
   const url = buildModelUrl(entry);
   const { scene } = useGLTF(url);
   const [wx, , wz] = tileToWorld(x, y, tileSize, 0);
@@ -76,7 +88,7 @@ export function BuildPlacementLayer({
         const entry = catalog.find((c) => c.id === p.catalogId);
         if (!entry) return null;
         return (
-          <BuildProp key={p.id} entry={entry} x={p.x} y={p.y} tileSize={tileSize} />
+          <BuildProp key={p.id} entry={entry} placementId={p.id} x={p.x} y={p.y} tileSize={tileSize} />
         );
       })}
     </group>

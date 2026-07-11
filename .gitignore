@@ -52,5 +52,6 @@ Thumbs.db
 
 # Large bundled assets / scratch files (exceed GitHub 100MB limit)
 attached_assets/Toon_RTS.zip
+artifacts/grudge-studio-game/public/models/battle/ice_shard.glb
 gbux.png
 .history/
